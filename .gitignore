@@ -1,0 +1,8 @@
+target
+.classpath
+.settings
+.project
+biz.karms.sinkit.ejb.BlacklistedRecord/
+sinkit-ear.ear.redeploy
+.idea/
+*.iml

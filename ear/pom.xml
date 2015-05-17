@@ -1,0 +1,75 @@
+<?xml version="1.0"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd"
+>
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <artifactId>sinkit</artifactId>
+        <groupId>biz.karms.sinkit</groupId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>sinkit-ear</artifactId>
+    <packaging>ear</packaging>
+
+    <name>SinkIt EAR</name>
+    <description>SinkIt EAR</description>
+
+    <licenses>
+        <license>
+            <name>GNU Library or Lesser General Public License (LGPL)</name>
+            <url>http://www.gnu.org/licenses/lgpl.html</url>
+        </license>
+    </licenses>
+
+    <dependencies>
+        <dependency>
+            <groupId>biz.karms.sinkit</groupId>
+            <artifactId>sinkit-rest</artifactId>
+            <type>war</type>
+        </dependency>
+        <dependency>
+            <groupId>biz.karms.sinkit</groupId>
+            <artifactId>sinkit-ejb</artifactId>
+            <type>ejb</type>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>${project.artifactId}</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-ear-plugin</artifactId>
+                <version>${version.ear.plugin}</version>
+                <!-- configuring the ear plugin -->
+                <configuration>
+                    <!-- Tell Maven we are using Java EE 7,  meh actuall 6 for xml generation...-->
+                    <version>6</version>
+                    <!-- Use Java EE ear libraries as needed. Java EE ear libraries are in easy way to package any libraries 
+                        needed in the ear, and automatically have any modules (EJB-JARs and WARs) use them -->
+                    <defaultLibBundleDir>lib</defaultLibBundleDir>
+                    <modules>
+                        <webModule>
+                            <groupId>biz.karms.sinkit</groupId>
+                            <artifactId>sinkit-rest</artifactId>
+                            <contextRoot>/sinkit</contextRoot>
+                        </webModule>
+                    </modules>
+                    <fileNameMapping>no-version</fileNameMapping>
+                </configuration>
+            </plugin>
+            <!-- WildFly plugin to deploy ear -->
+            <plugin>
+                <groupId>org.wildfly.plugins</groupId>
+                <artifactId>wildfly-maven-plugin</artifactId>
+                <version>${version.wildfly.maven.plugin}</version>
+                <configuration>
+                    <filename>${project.artifactId}.ear</filename>
+                    <skip>false</skip>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
