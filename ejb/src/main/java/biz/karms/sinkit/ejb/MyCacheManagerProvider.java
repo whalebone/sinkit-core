@@ -39,7 +39,7 @@ public class MyCacheManagerProvider {
 
             GlobalConfiguration glob = new GlobalConfigurationBuilder().clusteredDefault() // Builds a default clustered
                     // configuration
-                    .transport().addProperty(JGroupsTransport.CONFIGURATION_FILE, "jgroups-tcp-karm.xml") // provide a specific JGroups configuration
+                    .transport().addProperty(JGroupsTransport.CONFIGURATION_FILE, System.getenv("SINKIT_JGROUPS_NETWORKING")) // provide a specific JGroups configuration
                             //.transport().addProperty("configurationFile", "jgroups-udp.xml") // provide a specific JGroups configuration
                     .globalJmxStatistics().allowDuplicateDomains(true).enable() // This method enables the jmx statistics of
                             // the global configuration and allows for duplicate JMX domains

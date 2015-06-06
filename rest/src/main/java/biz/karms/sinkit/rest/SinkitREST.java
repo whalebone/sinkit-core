@@ -5,6 +5,9 @@ import javax.ws.rs.*;
 
 /**
  * @author Michal Karm Babacek
+ *         <p/>
+ *         TODO: Validation :-)
+ *         TODO: OAuth
  */
 @Path("/")
 public class SinkitREST {
@@ -64,7 +67,7 @@ public class SinkitREST {
     @DELETE
     @Path("/blacklist/record/{key}")
     @Produces({"application/json;charset=UTF-8"})
-    public String deleteTwitterUserNode(@HeaderParam("X-sinkit-token") String token, @PathParam("key") String key) {
+    public String deleteBlacklistedRecord(@HeaderParam("X-sinkit-token") String token, @PathParam("key") String key) {
         if (stupidAuthenticator.isAuthenticated(token)) {
             return sinkitService.deleteBlacklistedRecord(key);
         } else {
@@ -72,10 +75,10 @@ public class SinkitREST {
         }
     }
 
-    @PUT
+    @POST
     @Path("/blacklist/record/")
     @Produces({"application/json;charset=UTF-8"})
-    public String putTwitterUserNode(@HeaderParam("X-sinkit-token") String token, @FormParam("record") String record) {
+    public String putBlacklistedRecord(@HeaderParam("X-sinkit-token") String token, @FormParam("record") String record) {
         if (stupidAuthenticator.isAuthenticated(token)) {
             return sinkitService.putBlacklistedRecord(record);
         } else {

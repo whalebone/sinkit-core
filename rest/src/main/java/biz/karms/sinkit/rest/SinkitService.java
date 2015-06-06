@@ -1,16 +1,13 @@
 package biz.karms.sinkit.rest;
 
-import java.io.Serializable;
+import biz.karms.sinkit.ejb.ServiceEJB;
 
 import javax.ejb.EJB;
 import javax.enterprise.context.SessionScoped;
-
-import biz.karms.sinkit.ejb.ServiceEJB;
+import java.io.Serializable;
 
 /**
- * 
  * @author Michal Karm Babacek
- * 
  */
 @SessionScoped
 public class SinkitService implements Serializable {
@@ -40,6 +37,6 @@ public class SinkitService implements Serializable {
     }
 
     String putBlacklistedRecord(String record) {
-        return serviceEJB.deleteBlacklistedRecord(record);
+        return serviceEJB.putBlacklistedRecord(record);
     }
 }

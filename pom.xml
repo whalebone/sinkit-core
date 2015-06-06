@@ -12,10 +12,20 @@
 
     <licenses>
         <license>
-            <name>GNU Library or Lesser General Public License (LGPL)</name>
-            <url>http://www.gnu.org/licenses/lgpl.html</url>
+            <name>GNU General Public License, Version 3</name>
+            <url>http://www.gnu.org/licenses/gpl-3.0.html</url>
+            <distribution>manual</distribution>
+            <comments>A free, copyleft license for software and other kinds of works</comments>
         </license>
     </licenses>
+
+    <developers>
+        <developer>
+            <id>karm</id>
+            <name>Michal Karm Babacek</name>
+            <organization>BuSab</organization>
+        </developer>
+    </developers>
 
     <modules>
         <module>ejb</module>

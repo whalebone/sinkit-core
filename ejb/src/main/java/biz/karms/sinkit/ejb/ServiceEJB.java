@@ -47,6 +47,7 @@ public class ServiceEJB {
 
     public String putBlacklistedRecord(String json) {
         try {
+            log.info("Received JSON [" + json+ "]");
             BlacklistedRecord blacklistedRecord = new GsonBuilder().create().fromJson(json, BlacklistedRecord.class);
             utx.begin();
             log.info("Putting key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
