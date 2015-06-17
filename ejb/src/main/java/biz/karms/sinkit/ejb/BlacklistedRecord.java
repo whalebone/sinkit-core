@@ -39,10 +39,6 @@ public class BlacklistedRecord implements Serializable {
         this.score = score;
     }
 
-    public static long getSerialVersionUID() {
-        return serialVersionUID;
-    }
-
     public String getSource() {
         return source;
     }
