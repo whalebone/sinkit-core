@@ -59,15 +59,15 @@ public class MyCacheManagerProvider {
                             // TODO: Really? Autocommit? -- Yes, autocommit is true by default.
                     .transactionManagerLookup(new GenericTransactionManagerLookup()).autoCommit(true)
 
-                    //.persistence().addStore(JdbcStringBasedStoreConfigurationBuilder.class)
-                    .persistence().addStore(JdbcBinaryStoreConfigurationBuilder.class)
+                    .persistence().addStore(JdbcStringBasedStoreConfigurationBuilder.class)
+                    //.persistence().addStore(JdbcBinaryStoreConfigurationBuilder.class)
                     .fetchPersistentState(true)
                     .ignoreModifications(false)
                     .purgeOnStartup(false)
                     .table()
                     .dropOnExit(false)
                     .createOnStart(true)
-                    .tableNamePrefix("ISPN_BUCKET_TABLE")
+                    .tableNamePrefix("ISPN_STRING_TABLE")
                     .idColumnName("ID_COLUMN").idColumnType("VARCHAR(255)")
                     .dataColumnName("DATA_COLUMN").dataColumnType("BYTEA")
                     .timestampColumnName("TIMESTAMP_COLUMN").timestampColumnType("BIGINT")

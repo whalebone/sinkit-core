@@ -1,12 +1,8 @@
 package biz.karms.sinkit.ejb;
 
-import biz.karms.sinkit.ejb.util.BigIntegerTransformable;
-import biz.karms.sinkit.ejb.util.CIDRUtils;
 import org.hibernate.search.annotations.*;
-import org.hibernate.search.bridge.builtin.BigIntegerBridge;
 
 import java.io.Serializable;
-import java.net.UnknownHostException;
 import java.util.Calendar;
 import java.util.List;
 
@@ -18,13 +14,11 @@ public class Rule implements Serializable {
 
     private static final long serialVersionUID = 2112325523047755691L;
 
-    @NumericField
-    @FieldBridge(impl = BigIntegerBridge.class)
-    private BigIntegerTransformable startAddress;
+    @Field
+    private String startAddress;
 
-    @NumericField
-    @FieldBridge(impl = BigIntegerBridge.class)
-    private BigIntegerTransformable endAddress;
+    @Field
+    private String endAddress;
 
     @Field
     private String cidrAddress;
@@ -52,22 +46,32 @@ public class Rule implements Serializable {
     @Field
     private char action;
 
-    public Rule(String cidrAddress, List<String> sources, Calendar created, Calendar updated, String organization, String ruleName, char action) {
+    public Rule(String startAddress, String endAddress, String cidrAddress, List<String> sources, Calendar created, Calendar updated, String organization, String ruleName, char action) {
+        this.startAddress = startAddress;
+        this.endAddress = endAddress;
+        this.cidrAddress = cidrAddress;
         this.sources = sources;
         this.created = created;
         this.updated = updated;
         this.organization = organization;
         this.ruleName = ruleName;
         this.action = action;
-        setCidrAddress(cidrAddress);
     }
 
-    public BigIntegerTransformable getStartAddress() {
+    public String getStartAddress() {
         return startAddress;
     }
 
-    public BigIntegerTransformable getEndAddress() {
+    public void setStartAddress(String startAddress) {
+        this.startAddress = startAddress;
+    }
+
+    public String getEndAddress() {
         return endAddress;
+    }
+
+    public void setEndAddress(String endAddress) {
+        this.endAddress = endAddress;
     }
 
     public String getCidrAddress() {
@@ -76,18 +80,6 @@ public class Rule implements Serializable {
 
     public void setCidrAddress(String cidrAddress) {
         this.cidrAddress = cidrAddress;
-        //TODO: Setter for CIDR Utils? Utils Factory?
-        CIDRUtils cidrUtils = null;
-        try {
-            cidrUtils = new CIDRUtils(cidrAddress);
-        } catch (UnknownHostException e) {
-            this.startAddress = null;
-            this.endAddress = null;
-            e.printStackTrace();
-        }
-        this.startAddress = new BigIntegerTransformable(cidrUtils.getStartIp().toString());
-        this.endAddress = new BigIntegerTransformable(cidrUtils.getEndIp().toString());
-        cidrUtils = null;
     }
 
     public List<String> getSources() {
@@ -141,8 +133,8 @@ public class Rule implements Serializable {
     @Override
     public String toString() {
         return "Rule{" +
-                "startAddress=" + startAddress +
-                ", endAddress=" + endAddress +
+                "startAddress='" + startAddress + '\'' +
+                ", endAddress='" + endAddress + '\'' +
                 ", cidrAddress='" + cidrAddress + '\'' +
                 ", sources=" + sources +
                 ", created=" + created +

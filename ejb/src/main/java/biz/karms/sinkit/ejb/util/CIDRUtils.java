@@ -71,7 +71,6 @@ public class CIDRUtils {
 
     }
 
-
     private void calculate() throws UnknownHostException {
 
         ByteBuffer maskBuffer;
@@ -126,16 +125,23 @@ public class CIDRUtils {
         return ret;
     }
 
-    public BigInteger getStartIp() {
+    public BigInteger getStartIP() {
         return startIp;
     }
 
-    public BigInteger getEndIp() {
+    public BigInteger getEndIP() {
         return endIp;
     }
 
-    public String getNetworkAddress() {
+    public String getStartIPBigIntegerString() {
+        return String.format("%040d", startIp);
+    }
 
+    public String getEndIPBigIntegerString() {
+        return  String.format("%040d", endIp);
+    }
+
+    public String getNetworkAddress() {
         return this.startAddress.getHostAddress();
     }
 

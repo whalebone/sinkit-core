@@ -1,9 +1,8 @@
 package biz.karms.sinkit.ejb;
 
-import biz.karms.sinkit.ejb.util.BigIntegerTransformable;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
 import com.google.gson.GsonBuilder;
-import org.apache.lucene.search.NumericRangeQuery;
+import org.apache.lucene.search.Query;
 import org.hibernate.search.query.dsl.QueryBuilder;
 import org.infinispan.Cache;
 import org.infinispan.manager.DefaultCacheManager;
@@ -15,9 +14,7 @@ import javax.ejb.Stateless;
 import javax.ejb.TransactionManagement;
 import javax.ejb.TransactionManagementType;
 import javax.inject.Inject;
-import java.net.UnknownHostException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -38,7 +35,7 @@ public class ServiceEJB {
 
     private Cache<String, BlacklistedRecord> blacklistCache = null;
 
-    private Cache<BigIntegerTransformable, Rule> ruleCache = null;
+    private Cache<String, Rule> ruleCache = null;
 
     @Inject
     private javax.transaction.UserTransaction utx;
@@ -127,13 +124,22 @@ public class ServiceEJB {
         try {
             log.info("Received JSON [" + json + "]");
             Rule rule = new GsonBuilder().create().fromJson(json, Rule.class);
-            // TODO: Move to factory
-            rule.setCidrAddress(rule.getCidrAddress());
-            if (rule == null || rule.getStartAddress() == null) {
+            // TODO: Move to factory or transformer
+            if (rule == null) {
                 throw new IllegalArgumentException("We have failed to construct class Rule from JSON: " + json);
             }
+
+            //TODO: It is very wasteful to calculate the whole thing for just the one /32 or /128 masked client IP.
+            CIDRUtils cidrUtils = new CIDRUtils(rule.getCidrAddress());
+            if (cidrUtils == null) {
+                throw new IllegalArgumentException("We have failed to construct CIDRUtils instance.");
+            }
+            rule.setStartAddress(cidrUtils.getStartIPBigIntegerString());
+            rule.setEndAddress(cidrUtils.getEndIPBigIntegerString());
+            cidrUtils = null;
+
             utx.begin();
-            log.info("Putting key [" + rule.getStartAddress() + "]");
+            log.finest("Putting key [" + rule.getStartAddress() + "]");
             ruleCache.put(rule.getStartAddress(), rule);
             utx.commit();
             return new GsonBuilder().create().toJson(rule);
@@ -153,52 +159,38 @@ public class ServiceEJB {
     }
 
     public String getRules(String clientIPAddress) {
-        CIDRUtils cidrUtils;
         try {
             //TODO: It is very wasteful to calculate the whole thing for just the one /32 or /128 masked client IP.
-            cidrUtils = new CIDRUtils(clientIPAddress);
+            CIDRUtils cidrUtils = new CIDRUtils(clientIPAddress);
+            String clientIPAddressPaddedBigInt = cidrUtils.getStartIPBigIntegerString();
+            cidrUtils = null;
+            log.finest("Getting key [" + clientIPAddress + "] which actually translates to BigInteger zero padded representation " +
+                    "[" + clientIPAddressPaddedBigInt + "]");
+
+            // Let's try to hit it
+            Rule rule = ruleCache.get(clientIPAddressPaddedBigInt);
+            if (rule != null) {
+                // TODO refactor JSON stuff into sinkit-rest project. This is evil and error prone.
+                return new GsonBuilder().create().toJson(new Rule[]{rule});
+            }
+
+            // Let's search subnets
+            SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
+            QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(Rule.class).get();
+
+            Query luceneQuery = queryBuilder
+                    .bool()
+                    .must(queryBuilder.range().onField("startAddress").below(clientIPAddressPaddedBigInt).createQuery())
+                    .must(queryBuilder.range().onField("endAddress").above(clientIPAddressPaddedBigInt).createQuery())
+                    .createQuery();
+
+            CacheQuery query = searchManager.getQuery(luceneQuery, Rule.class);
+            // TODO refactor JSON stuff into sinkit-rest project. This is evil and error prone.
+            return new GsonBuilder().create().toJson(query.list());
         } catch (Exception e) {
             log.log(Level.SEVERE, "getRules client address troubles", e);
             return new GsonBuilder().create().toJson(ERR_MSG);
         }
-        log.info("getting key [" + clientIPAddress + "] which actually translates to BigIntegerTransformable [" + cidrUtils.getStartIp() + "]");
-        if (cidrUtils != null) {
-
-
-
-            cidrUtils.getStartIp().toString()
-
-
-                SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
-            org.apache.lucene.search.Query pageQueryRange = NumericRangeQuery.
-
-
-
-
-            QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(Rule.class).get();
-                org.apache.lucene.search.Query luceneQuery = queryBuilder.phrase()
-                        .onField("queryTerms")
-                        .andField("content")
-                        .andField("source")
-                        .andField("social")
-                        .sentence(querySentence)
-                        .createQuery();
-                CacheQuery query = searchManager.getQuery(luceneQuery, Rule.class);
-                log.log(Level.INFO, "Searching for terms [" + querySentence + "], max_results [" + maxResults + "]");
-                List<Object> list = query.maxResults(maxResults).list();
-                // TODO Is it wise to jet Gson processLists?
-                return new GsonBuilder().create().toJson(list);
-
-
-
-
-            info.put("API added users to process", searchManager.getQuery(pageQueryRange, UserNode.class).getResultSize());
-
-
-            return new GsonBuilder().create().toJson(ruleCache.get(cidrUtils.getStartIp()));
-        }
-        cidrUtils = null;
-        return new GsonBuilder().create().toJson(ERR_MSG);
     }
 
     public String getRuleKeys() {
@@ -206,28 +198,26 @@ public class ServiceEJB {
     }
 
     public String deleteRule(String clientIPAddress) {
-        CIDRUtils cidrUtils;
         try {
             //TODO: It is very wasteful to calculate the whole thing for just the one /32 or /128 masked client IP.
-            cidrUtils = new CIDRUtils(clientIPAddress);
-        } catch (UnknownHostException e) {
-            log.log(Level.SEVERE, "getRules client address troubles", e);
-            return new GsonBuilder().create().toJson(ERR_MSG);
-        }
-        try {
+            CIDRUtils cidrUtils = new CIDRUtils(clientIPAddress);
+            String clientIPAddressPaddedBigInt = cidrUtils.getStartIPBigIntegerString();
+            cidrUtils = null;
+            log.finest("Deleting key [" + clientIPAddress + "] which actually translates to BigInteger zero padded representation " +
+                    "[" + clientIPAddressPaddedBigInt + "]");
             utx.begin();
             String response;
-            if (ruleCache.containsKey(cidrUtils.getStartIp())) {
-                ruleCache.remove(cidrUtils.getStartIp());
-                response = cidrUtils.getStartIp() + " DELETED";
+            if (ruleCache.containsKey(clientIPAddressPaddedBigInt)) {
+                ruleCache.remove(clientIPAddressPaddedBigInt);
+                response = clientIPAddressPaddedBigInt + " DELETED";
             } else {
-                response = cidrUtils.getStartIp() + " DOES NOT EXIST";
+                response = clientIPAddressPaddedBigInt + " DOES NOT EXIST";
             }
             utx.commit();
             return new GsonBuilder().create().toJson(response);
         } catch (Exception e) {
             e.printStackTrace();
-            log.log(Level.SEVERE, "deleteBlacklistedRecord", e);
+            log.log(Level.SEVERE, "deleteRule", e);
             try {
                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                     utx.rollback();
