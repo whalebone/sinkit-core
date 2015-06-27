@@ -1,7 +1,6 @@
 package biz.karms.sinkit.ejb;
 
 import biz.karms.sinkit.ejb.util.CIDRUtils;
-import com.google.gson.GsonBuilder;
 import org.apache.lucene.search.Query;
 import org.hibernate.search.query.dsl.QueryBuilder;
 import org.infinispan.Cache;
@@ -14,8 +13,7 @@ import javax.ejb.Stateless;
 import javax.ejb.TransactionManagement;
 import javax.ejb.TransactionManagementType;
 import javax.inject.Inject;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -46,30 +44,30 @@ public class ServiceEJB {
         ruleCache = m.getCache("RULES_CACHE");
     }
 
-    public static final String ERR_MSG = "Error, please, check your input.";
-
     // Testing purposes
-    public String sayHello(String queryString) {
-        return new GsonBuilder().create().toJson("Hello there." + queryString);
+    public String sayHello(final String queryString) {
+        return "Hello there." + queryString;
     }
 
-    public String getStats() {
+    public Map<String, Integer> getStats() {
         Map<String, Integer> info = new HashMap<String, Integer>();
         info.put("Total documents", blacklistCache.size());
-        return new GsonBuilder().create().toJson(info);
+        return info;
     }
 
-    public String putBlacklistedRecord(String json) {
+    public BlacklistedRecord putBlacklistedRecord(final BlacklistedRecord blacklistedRecord) {
+        if (blacklistedRecord == null || blacklistedRecord.getBlackListedDomainOrIP() == null) {
+            log.log(Level.SEVERE, "putBlacklistedRecord: Got null record or IoC. Can't process this.");
+            return null;
+        }
         try {
-            log.info("Received JSON [" + json + "]");
-            BlacklistedRecord blacklistedRecord = new GsonBuilder().create().fromJson(json, BlacklistedRecord.class);
             utx.begin();
-            log.info("Putting key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
+            log.log(Level.FINEST, "Putting key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
             blacklistCache.put(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
             utx.commit();
-            return new GsonBuilder().create().toJson(blacklistedRecord);
+            // TODO: Is this O.K.? Maybe we should just return the same instance.
+            return blacklistCache.get(blacklistedRecord.getBlackListedDomainOrIP());
         } catch (Exception e) {
-            e.printStackTrace();
             log.log(Level.SEVERE, "putBlacklistedRecord", e);
             try {
                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
@@ -79,21 +77,20 @@ public class ServiceEJB {
                 // TODO Hmm, make it better :-(
                 e1.printStackTrace();
             }
-            return new GsonBuilder().create().toJson(ERR_MSG);
+            return null;
         }
     }
 
-    public String getBlacklistedRecord(String key) {
-        log.info("getting key [" + key + "]");
-        BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
-        return new GsonBuilder().create().toJson(blacklistedRecord);
+    public BlacklistedRecord getBlacklistedRecord(final String key) {
+        log.log(Level.FINEST, "getting key [" + key + "]");
+        return blacklistCache.get(key);
     }
 
-    public String getBlacklistedRecordKeys() {
-        return new GsonBuilder().create().toJson(blacklistCache.keySet());
+    public Set<String> getBlacklistedRecordKeys() {
+        return blacklistCache.keySet();
     }
 
-    public String deleteBlacklistedRecord(String key) {
+    public String deleteBlacklistedRecord(final String key) {
         try {
             utx.begin();
             String response;
@@ -104,9 +101,8 @@ public class ServiceEJB {
                 response = key + " DOES NOT EXIST";
             }
             utx.commit();
-            return new GsonBuilder().create().toJson(response);
+            return response;
         } catch (Exception e) {
-            e.printStackTrace();
             log.log(Level.SEVERE, "deleteBlacklistedRecord", e);
             try {
                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
@@ -116,35 +112,36 @@ public class ServiceEJB {
                 // TODO Hmm, make it better :-(
                 e1.printStackTrace();
             }
-            return new GsonBuilder().create().toJson(ERR_MSG);
+            return null;
         }
     }
 
-    public String putRule(String json) {
+    public Rule putRule(Rule rule) {
         try {
-            log.info("Received JSON [" + json + "]");
-            Rule rule = new GsonBuilder().create().fromJson(json, Rule.class);
-            // TODO: Move to factory or transformer
-            if (rule == null) {
-                throw new IllegalArgumentException("We have failed to construct class Rule from JSON: " + json);
+            if (rule == null || rule.getCidrAddress() == null || rule.getCidrAddress().length() < 7) {
+                log.log(Level.SEVERE, "putRule: Got invalid or null 'rule' record. Can't process this.");
+                return null;
             }
-
+            if (rule.getStartAddress() != null || rule.getEndAddress() != null) {
+                log.log(Level.SEVERE, "putRule: getStartAddress or getEndAddress ain't null. This is weird, we should be setting these exclusively here.");
+                return null;
+            }
             //TODO: It is very wasteful to calculate the whole thing for just the one /32 or /128 masked client IP.
             CIDRUtils cidrUtils = new CIDRUtils(rule.getCidrAddress());
             if (cidrUtils == null) {
-                throw new IllegalArgumentException("We have failed to construct CIDRUtils instance.");
+                log.log(Level.SEVERE, "putRule: We have failed to construct CIDRUtils instance.");
+                return null;
             }
             rule.setStartAddress(cidrUtils.getStartIPBigIntegerString());
             rule.setEndAddress(cidrUtils.getEndIPBigIntegerString());
             cidrUtils = null;
-
             utx.begin();
-            log.finest("Putting key [" + rule.getStartAddress() + "]");
+            log.log(Level.FINEST, "Putting key [" + rule.getStartAddress() + "]");
             ruleCache.put(rule.getStartAddress(), rule);
             utx.commit();
-            return new GsonBuilder().create().toJson(rule);
+            // TODO: Is this O.K.? Maybe we should just return the same instance.
+            return ruleCache.get(rule.getStartAddress());
         } catch (Exception e) {
-            e.printStackTrace();
             log.log(Level.SEVERE, "putRule", e);
             try {
                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
@@ -154,24 +151,25 @@ public class ServiceEJB {
                 // TODO Hmm, make it better :-(
                 e1.printStackTrace();
             }
-            return new GsonBuilder().create().toJson(ERR_MSG);
+            return null;
         }
     }
 
-    public String getRules(String clientIPAddress) {
+    // TODO: List? Array? Map with additional data? Let's think this over.
+    public List<Object> getRules(final String clientIPAddress) {
         try {
             //TODO: It is very wasteful to calculate the whole thing for just the one /32 or /128 masked client IP.
             CIDRUtils cidrUtils = new CIDRUtils(clientIPAddress);
-            String clientIPAddressPaddedBigInt = cidrUtils.getStartIPBigIntegerString();
+            final String clientIPAddressPaddedBigInt = cidrUtils.getStartIPBigIntegerString();
             cidrUtils = null;
-            log.finest("Getting key [" + clientIPAddress + "] which actually translates to BigInteger zero padded representation " +
+            log.log(Level.FINEST, "Getting key [" + clientIPAddress + "] which actually translates to BigInteger zero padded representation " +
                     "[" + clientIPAddressPaddedBigInt + "]");
-
             // Let's try to hit it
             Rule rule = ruleCache.get(clientIPAddressPaddedBigInt);
             if (rule != null) {
-                // TODO refactor JSON stuff into sinkit-rest project. This is evil and error prone.
-                return new GsonBuilder().create().toJson(new Rule[]{rule});
+                List wrapit = new ArrayList<>();
+                wrapit.add(rule);
+                return wrapit;
             }
 
             // Let's search subnets
@@ -185,25 +183,24 @@ public class ServiceEJB {
                     .createQuery();
 
             CacheQuery query = searchManager.getQuery(luceneQuery, Rule.class);
-            // TODO refactor JSON stuff into sinkit-rest project. This is evil and error prone.
-            return new GsonBuilder().create().toJson(query.list());
+            return query.list();
         } catch (Exception e) {
             log.log(Level.SEVERE, "getRules client address troubles", e);
-            return new GsonBuilder().create().toJson(ERR_MSG);
+            return null;
         }
     }
 
-    public String getRuleKeys() {
-        return new GsonBuilder().create().toJson(ruleCache.keySet());
+    public Set<String> getRuleKeys() {
+        return ruleCache.keySet();
     }
 
-    public String deleteRule(String clientIPAddress) {
+    public String deleteRule(final String cidrAddress) {
         try {
             //TODO: It is very wasteful to calculate the whole thing for just the one /32 or /128 masked client IP.
-            CIDRUtils cidrUtils = new CIDRUtils(clientIPAddress);
+            CIDRUtils cidrUtils = new CIDRUtils(cidrAddress);
             String clientIPAddressPaddedBigInt = cidrUtils.getStartIPBigIntegerString();
             cidrUtils = null;
-            log.finest("Deleting key [" + clientIPAddress + "] which actually translates to BigInteger zero padded representation " +
+            log.log(Level.FINEST, "Deleting key [" + cidrAddress + "] which actually translates to BigInteger zero padded representation " +
                     "[" + clientIPAddressPaddedBigInt + "]");
             utx.begin();
             String response;
@@ -214,9 +211,8 @@ public class ServiceEJB {
                 response = clientIPAddressPaddedBigInt + " DOES NOT EXIST";
             }
             utx.commit();
-            return new GsonBuilder().create().toJson(response);
+            return response;
         } catch (Exception e) {
-            e.printStackTrace();
             log.log(Level.SEVERE, "deleteRule", e);
             try {
                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
@@ -226,7 +222,7 @@ public class ServiceEJB {
                 // TODO Hmm, make it better :-(
                 e1.printStackTrace();
             }
-            return new GsonBuilder().create().toJson(ERR_MSG);
+            return null;
         }
     }
 }
