@@ -3,11 +3,16 @@ package biz.karms.sinkit.rest;
 import biz.karms.sinkit.ejb.BlacklistedRecord;
 import biz.karms.sinkit.ejb.Rule;
 import biz.karms.sinkit.ejb.ServiceEJB;
+import biz.karms.sinkit.ejb.ArchiveServiceEJB;
+import biz.karms.sinkit.ejb.CoreServiceEJB;
+import biz.karms.sinkit.ioc.IoCRecord;
+
 import com.google.gson.GsonBuilder;
 
 import javax.ejb.EJB;
 import javax.enterprise.context.SessionScoped;
 import javax.inject.Inject;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -24,6 +29,9 @@ public class SinkitService implements Serializable {
 
     @EJB
     private ServiceEJB serviceEJB;
+
+    @EJB
+    private CoreServiceEJB coreService;
 
     @Inject
     private Logger log;
@@ -98,4 +106,19 @@ public class SinkitService implements Serializable {
         return new GsonBuilder().create().toJson(message);
     }
 
+    String processIoCRecord(String jsonIoCRecord)  {
+
+        String response;
+        try {
+            IoCRecord ioc = new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().fromJson(jsonIoCRecord, IoCRecord.class);
+
+            ioc = coreService.processIoCRecord(ioc);
+
+            response = new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().toJson(ioc);
+        } catch (Exception e) {
+            e.printStackTrace();
+            response = new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().toJson(e.getMessage());
+        }
+        return response;
+    }
 }
