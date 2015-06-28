@@ -1,5 +1,7 @@
 package biz.karms.sinkit.rest;
 
+import biz.karms.sinkit.ioc.*;
+import com.google.gson.GsonBuilder;
 import javax.inject.Inject;
 import javax.ws.rs.*;
 
@@ -87,10 +89,20 @@ public class SinkitREST {
         }
     }
 
+    @POST
+    @Path("/blacklist/ioc/")
+    @Produces({"application/json;charset=UTF-8"})
+    public String putIoCRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @FormParam("record") String record) {
+        if (stupidAuthenticator.isAuthenticated(token)) {
+	        return sinkitService.processIoCRecord(record);
+        } else {
+            return AUTH_FAIL;
+        }
+    }
+
     /**
      * Rules
      */
-
     @POST
     @Path("/rules/rule/")
     @Produces({"application/json;charset=UTF-8"})

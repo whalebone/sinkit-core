@@ -1,5 +1,6 @@
 package biz.karms.sinkit.ejb;
 
+import io.searchbox.client.JestClient;
 import org.infinispan.manager.DefaultCacheManager;
 
 import javax.enterprise.context.Dependent;
@@ -18,6 +19,9 @@ public class Resources {
     @Inject
     MyCacheManagerProvider cacheManagerProvider;
 
+    @Inject
+    JestClientProvider jestClientProvider;
+
     @Produces
     @Default
     Logger getLogger(InjectionPoint ip) {
@@ -30,5 +34,9 @@ public class Resources {
     DefaultCacheManager getDefaultCacheManager() {
         return cacheManagerProvider.getCacheManager();
     }
+
+    @Produces
+    @Default
+    JestClient getJestClient() { return this.jestClientProvider.getJestClient(); }
 
 }
