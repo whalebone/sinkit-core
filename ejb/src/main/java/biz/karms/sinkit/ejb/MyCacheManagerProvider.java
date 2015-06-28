@@ -8,6 +8,8 @@ import org.infinispan.configuration.global.GlobalConfiguration;
 import org.infinispan.configuration.global.GlobalConfigurationBuilder;
 import org.infinispan.eviction.EvictionStrategy;
 import org.infinispan.manager.DefaultCacheManager;
+import org.infinispan.persistence.jdbc.binary.JdbcBinaryStore;
+import org.infinispan.persistence.jdbc.configuration.JdbcBinaryStoreConfigurationBuilder;
 import org.infinispan.persistence.jdbc.configuration.JdbcStringBasedStoreConfigurationBuilder;
 import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
 import org.infinispan.transaction.LockingMode;
@@ -56,7 +58,9 @@ public class MyCacheManagerProvider {
                     .transaction().transactionMode(TransactionMode.TRANSACTIONAL).lockingMode(LockingMode.OPTIMISTIC)
                             // TODO: Really? Autocommit? -- Yes, autocommit is true by default.
                     .transactionManagerLookup(new GenericTransactionManagerLookup()).autoCommit(true)
+
                     .persistence().addStore(JdbcStringBasedStoreConfigurationBuilder.class)
+                    //.persistence().addStore(JdbcBinaryStoreConfigurationBuilder.class)
                     .fetchPersistentState(true)
                     .ignoreModifications(false)
                     .purgeOnStartup(false)
@@ -75,6 +79,7 @@ public class MyCacheManagerProvider {
                     .build();
             manager = new DefaultCacheManager(glob, loc, true);
             manager.getCache("BLACKLIST_CACHE").start();
+            manager.getCache("RULES_CACHE").start();
             log.log(Level.INFO, "I'm returning DefaultCacheManager instance " + manager + ".");
         }
         return manager;

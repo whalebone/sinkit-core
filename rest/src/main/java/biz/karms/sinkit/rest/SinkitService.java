@@ -39,4 +39,12 @@ public class SinkitService implements Serializable {
     String putBlacklistedRecord(String record) {
         return serviceEJB.putBlacklistedRecord(record);
     }
+
+    String putRule(String rule) {
+        return serviceEJB.putRule(rule);
+    }
+
+    String getRules(String ip) {
+        return serviceEJB.getRules(ip);
+    }
 }

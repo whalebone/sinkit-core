@@ -6,3 +6,5 @@ biz.karms.sinkit.ejb.BlacklistedRecord/
 sinkit-ear.ear.redeploy
 .idea/
 *.iml
+biz.karms.sinkit.ejb.Rule
+log.log
