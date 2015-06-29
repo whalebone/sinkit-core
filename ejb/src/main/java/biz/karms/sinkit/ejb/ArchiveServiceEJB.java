@@ -9,6 +9,7 @@ import io.searchbox.core.Index;
 import io.searchbox.core.Search;
 import io.searchbox.core.SearchResult;
 import io.searchbox.core.Update;
+import io.searchbox.params.Parameters;
 
 import javax.ejb.Stateless;
 import javax.ejb.TransactionManagement;
@@ -28,8 +29,6 @@ import java.util.logging.Logger;
 @TransactionManagement(TransactionManagementType.BEAN)
 public class ArchiveServiceEJB {
 
-    public static final String elasticDateFormat = "yyyy-MM-dd'T'HH:mm:ssZ";
-
     @Inject
     private Logger log;
 
@@ -43,7 +42,7 @@ public class ArchiveServiceEJB {
 
     public IoCRecord findActiveIoCRecordByIp(String ip, String type, String feed) throws ArchiveException {
 
-        log.info("searching elastic [ ip : " + ip + ", type : " + type + ", feed : " + feed + "]");
+        //log.info("searching elastic [ ip : " + ip + ", type : " + type + ", feed : " + feed + "]");
 
         String query = "{\n" +
                 "   \"query\" : {\n" +
@@ -62,7 +61,7 @@ public class ArchiveServiceEJB {
 
     public IoCRecord findActiveIoCRecordByDomainName(String domainName, String type, String feed) throws ArchiveException {
 
-        log.info("searching elastic [ domainName : " + domainName + ", type : " + type + ", feed : " + feed + "]");
+        //log.info("searching elastic [ domainName : " + domainName + ", type : " + type + ", feed : " + feed + "]");
 
         String query = "{\n" +
                 "   \"query\" : {\n" +
@@ -81,7 +80,7 @@ public class ArchiveServiceEJB {
 
     public List<IoCRecord> findIoCsForDeactivation(int hours) throws ArchiveException {
 
-        log.info("Searching archive for active IoCs with seen.last older than " + hours + " hours.");
+        //log.info("Searching archive for active IoCs with seen.last older than " + hours + " hours.");
 
         String query = "{\n" +
                 "   \"query\": {\n" +
@@ -111,17 +110,24 @@ public class ArchiveServiceEJB {
         List<IoCRecord> hits = this.searchArchive(query);
 
         if (hits.isEmpty()) return null;
-        else if (hits.size() > 1);
-            //throw new ArchiveException("Search returned " + result.getTotal() + " hits. Expecting max one -> panic!");
+        else if (hits.size() > 1) {
+            log.severe("Query returned more than single result: " + query);
+            throw new ArchiveException("Search returned " + hits.size() + " hits. Expecting max one -> panic!");
+        }
+
 
         return hits.get(0);
     }
 
     private List<IoCRecord> searchArchive(String query) throws ArchiveException {
 
-        Search search = new Search.Builder(query).addIndex(ELASTIC_IOC_INDEX).addType(ELASTIC_IOC_TYPE).build();
+        Search search = new Search.Builder(query)
+                            .addIndex(ELASTIC_IOC_INDEX)
+                            .addType(ELASTIC_IOC_TYPE)
+                            .setParameter(Parameters.SIZE,1000)
+                            .build();
 
-        log.info("Searching archive with query: \n" + query);
+        //log.info("Searching archive with query: \n" + query);
 
         SearchResult result;
         try {
@@ -134,7 +140,7 @@ public class ArchiveServiceEJB {
             throw new ArchiveException(result.getErrorMessage());
         }
 
-        log.info("Found " + result.getTotal() + " hits");
+        //log.info("Found " + result.getTotal() + " hits");
 
         //log.info(result.getJsonString());
         if (result.getTotal() < 1) return new ArrayList<IoCRecord>();
@@ -145,7 +151,7 @@ public class ArchiveServiceEJB {
     public IoCRecord archiveIoCRecord(IoCRecord ioc) throws ArchiveException {
 
         Index index = new Index.Builder(ioc).index(ELASTIC_IOC_INDEX).type(ELASTIC_IOC_TYPE).build();
-        log.info("Indexing ioc [" + ioc.toString() + "]");
+        //log.info("Indexing ioc [" + ioc.toString() + "]");
 
         JestResult result;
         try {
@@ -157,7 +163,7 @@ public class ArchiveServiceEJB {
         if (result.isSucceeded()) {
             String docId = result.getJsonObject().getAsJsonPrimitive("_id").getAsString();
             ioc.setDocumentId(docId);
-            log.info("Indexed ioc: [" + ioc.toString() + "]");
+            //log.info("Indexed ioc: [" + ioc.toString() + "]");
         } else {
             log.severe("Archive returned error: " + result.getErrorMessage());
             throw new ArchiveException(result.getErrorMessage());
@@ -175,10 +181,10 @@ public class ArchiveServiceEJB {
                 "   }\n" +
                 "}\n";
 
-        log.info(query);
+        //log.info(query);
 
         JestResult result = null;
-        log.info("Deactivating ioc [" + ioc.toString() + "]");
+        //log.info("Deactivating ioc [" + ioc.toString() + "]");
         try {
             result =
                     elasticClient.execute(
@@ -194,7 +200,7 @@ public class ArchiveServiceEJB {
 
         if (!result.isSucceeded()) {
             log.severe("IoC deactovation wasn't successful: " + result.getErrorMessage());
-            log.info(result.getJsonString());
+            //log.info(result.getJsonString());
             throw new ArchiveException(result.getErrorMessage());
         }
 
