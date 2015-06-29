@@ -98,7 +98,7 @@ public class SinkitService implements Serializable {
         return new GsonBuilder().create().toJson(serviceEJB.getRuleKeys());
     }
 
-    public String deleteRule(final String cidrAddress) {
+    String deleteRule(final String cidrAddress) {
         String message = serviceEJB.deleteRule(cidrAddress);
         if (message == null) {
             return new GsonBuilder().create().toJson(ERR_MSG);

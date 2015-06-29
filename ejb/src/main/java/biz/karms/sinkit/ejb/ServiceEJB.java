@@ -122,6 +122,7 @@ public class ServiceEJB {
                 log.log(Level.SEVERE, "putRule: Got invalid or null 'rule' record. Can't process this.");
                 return null;
             }
+            // TODO: If we had something like RuleDTO without *Address attributes, we wouldn't need this check.
             if (rule.getStartAddress() != null || rule.getEndAddress() != null) {
                 log.log(Level.SEVERE, "putRule: getStartAddress or getEndAddress ain't null. This is weird, we should be setting these exclusively here.");
                 return null;
@@ -225,4 +226,6 @@ public class ServiceEJB {
             return null;
         }
     }
+
+
 }
