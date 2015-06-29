@@ -29,8 +29,16 @@ public class CoreServiceEJB {
 
     public IoCRecord processIoCRecord(IoCRecord recievedIoc) throws ArchiveException {
 
+        if (recievedIoc.getTime().getSource() != null) {
+            Date sourceTime = recievedIoc.getTime().getSource();
+            if (this.addWindow(sourceTime).before(new Date())) {
+                //log.info("Not processing too old IoC [" + recievedIoc + "]");
+                return recievedIoc;
+            }
+        }
+
         IoCRecord ioc = null;
-        if ( recievedIoc.getSource().getDomainName() != null ) {
+        if (recievedIoc.getSource().getDomainName() != null) {
             ioc = archiveService.findActiveIoCRecordByIp(
                     recievedIoc.getSource().getDomainName(),
                     recievedIoc.getClassification().getType(),
@@ -76,33 +84,6 @@ public class CoreServiceEJB {
             //nothing to do in cache
         }
         return ioc;
-    }
-
-    @Schedules({
-        @Schedule(hour = "*", minute = "*", second = "0"),
-        @Schedule(hour = "*", minute = "*", second = "10"),
-        @Schedule(hour = "*", minute = "*", second = "20"),
-        @Schedule(hour = "*", minute = "*", second = "30"),
-        @Schedule(hour = "*", minute = "*", second = "40"),
-        @Schedule(hour = "*", minute = "*", second = "50")
-    })
-    //@Schedule (hour = "*")
-    public int deactivateIocs() throws ArchiveException {
-
-        log.info("Deactivation job started");
-        List<IoCRecord> iocs = archiveService.findIoCsForDeactivation(IOC_ACTIVE_HOURS);
-
-        if (iocs.isEmpty()) {
-            log.info("No IoC for deactivation found. Ending job...");
-            return 0;
-        }
-
-        for (IoCRecord ioc : iocs) {
-            archiveService.deactivateRecord(ioc);
-            //remove ioc from cache
-        }
-
-        return iocs.size();
     }
 
     private Date addWindow(Date date) {
