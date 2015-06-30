@@ -72,7 +72,7 @@ public class MyCacheManagerProvider {
                     .dataColumnName("DATA_COLUMN").dataColumnType("BYTEA")
                     .timestampColumnName("TIMESTAMP_COLUMN").timestampColumnType("BIGINT")
                     .connectionPool()
-                    .connectionUrl("jdbc:postgresql://" + System.getenv("SINKIT_POSTGRESQL_DB_HOST") + ":" + System.getenv("SINKIT_POSTGRESQL_DB_PORT") + "/sinkit3")
+                    .connectionUrl("jdbc:postgresql://" + System.getenv("SINKIT_POSTGRESQL_DB_HOST") + ":" + System.getenv("SINKIT_POSTGRESQL_DB_PORT") + "/" + System.getenv("SINKIT_POSTGRESQL_DB_NAME"))
                     .driverClass("org.postgresql.Driver")
                     .password(System.getenv("SINKIT_POSTGRESQL_PASS"))
                     .username(System.getenv("SINKIT_POSTGRESQL_USER"))
