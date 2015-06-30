@@ -150,7 +150,11 @@ public class ArchiveServiceEJB {
 
     public IoCRecord archiveIoCRecord(IoCRecord ioc) throws ArchiveException {
 
-        Index index = new Index.Builder(ioc).index(ELASTIC_IOC_INDEX).type(ELASTIC_IOC_TYPE).build();
+        Index index = new Index.Builder(ioc)
+                .index(ELASTIC_IOC_INDEX)
+                .type(ELASTIC_IOC_TYPE)
+                .setParameter(Parameters.REFRESH, true)
+                .build();
         //log.info("Indexing ioc [" + ioc.toString() + "]");
 
         JestResult result;
@@ -188,11 +192,12 @@ public class ArchiveServiceEJB {
         try {
             result =
                     elasticClient.execute(
-                        new Update.Builder(query)
-                        .index(ELASTIC_IOC_INDEX)
-                        .type(ELASTIC_IOC_TYPE)
-                        .id(ioc.getDocumentId())
-                        .build()
+                            new Update.Builder(query)
+                                    .index(ELASTIC_IOC_INDEX)
+                                    .type(ELASTIC_IOC_TYPE)
+                                    .id(ioc.getDocumentId())
+                                    .setParameter(Parameters.REFRESH, true)
+                                    .build()
                     );
         } catch (IOException e) {
             throw new ArchiveException("IoC deactivation went wrong.", e);
@@ -206,50 +211,4 @@ public class ArchiveServiceEJB {
 
         return ioc;
     }
-
-//    public IoCRecord updateIoCSeen(IoCRecord ioc) throws ArchiveException {
-//
-//        if (ioc.getDocumentId() == null) {
-//            throw new ArchiveException("IoC doesn't have id, can't update.");
-//        }
-//
-//        //DateFormat df = new SimpleDateFormat(IoCRecord.DATE_FORMAT);
-//        //String firstSeen = df.format(ioc.getSeen().getFirst());
-//        //String lastSeen = df.format(ioc.getSeen().getLast());
-//
-//
-//        String query = "{\n" +
-//                "   \"doc\" : {\n" +
-//                "       \"seen\" : " + new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ssZ").create().toJson(ioc.getSeen()) +
-////                "           \"first\" : " + new GsonBuilder().create().toJson(ioc.getSeen()) + ",\n" +
-////                "           \"last\" : " + ioc.getSeen().getLast() + "\n" +
-////                "       }\n" +
-//                "   }\n" +
-//                "}\n";
-//
-//        log.info(query);
-//        JestResult result = null;
-//
-//        log.info("Updating ioc.seen [" + ioc.toString() + "]");
-//        try {
-//            result =
-//                    elasticClient.execute(
-//                        new Update.Builder(query)
-//                        .index(ELASTIC_IOC_INDEX)
-//                        .type(ELASTIC_IOC_TYPE)
-//                        .id(ioc.getDocumentId())
-//                        .build()
-//                    );
-//        } catch (IOException e) {
-//            throw new ArchiveException("IoC.seen update went wrong.", e);
-//        }
-//
-//        if (!result.isSucceeded()) {
-//            log.severe("IoC.seen update wasn't successful: " + result.getErrorMessage());
-//            log.info(result.getJsonString());
-//            throw new ArchiveException(result.getErrorMessage());
-//        }
-//
-//        return ioc;
-//    }
 }

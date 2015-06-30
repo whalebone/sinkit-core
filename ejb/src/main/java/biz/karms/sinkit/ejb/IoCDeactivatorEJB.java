@@ -21,6 +21,9 @@ public class IoCDeactivatorEJB {
     private ArchiveServiceEJB archiveService;
 
     @Inject
+    private ServiceEJB cacheService;
+
+    @Inject
     private Logger log;
 
     @Lock(LockType.READ)
@@ -55,8 +58,7 @@ public class IoCDeactivatorEJB {
 
                 for (IoCRecord ioc : iocs) {
                     archiveService.deactivateRecord(ioc);
-
-                    //remove ioc from cache
+                    cacheService.removeFromCache(ioc);
                 }
                 deactivated += iocs.size();
             }
