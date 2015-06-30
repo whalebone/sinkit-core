@@ -1,6 +1,7 @@
 package biz.karms.sinkit.ejb;
 
 import biz.karms.sinkit.ejb.util.CIDRUtils;
+import biz.karms.sinkit.ioc.IoCRecord;
 import org.apache.lucene.search.Query;
 import org.hibernate.search.query.dsl.QueryBuilder;
 import org.infinispan.Cache;
@@ -122,6 +123,7 @@ public class ServiceEJB {
                 log.log(Level.SEVERE, "putRule: Got invalid or null 'rule' record. Can't process this.");
                 return null;
             }
+            // TODO: If we had something like RuleDTO without *Address attributes, we wouldn't need this check.
             if (rule.getStartAddress() != null || rule.getEndAddress() != null) {
                 log.log(Level.SEVERE, "putRule: getStartAddress or getEndAddress ain't null. This is weird, we should be setting these exclusively here.");
                 return null;
@@ -224,5 +226,112 @@ public class ServiceEJB {
             }
             return null;
         }
+    }
+
+    //TODO: Batch mode. It is wasteful to operate for 1 single update like this for thousand times.
+    public boolean addToCache(final IoCRecord ioCRecord) {
+        if (ioCRecord == null || ioCRecord.getSource() == null || ioCRecord.getClassification() == null || ioCRecord.getFeed() == null) {
+            log.log(Level.SEVERE, "addToCache: ioCRecord itself or its source, classification or feed were null. Can't process that.");
+            return false;
+        }
+        if (ioCRecord.getSource().getIp() == null && ioCRecord.getSource().getDomainName() == null) {
+            log.log(Level.SEVERE, "addToCache: ioCRecord can't have both IP and Domain null.");
+            return false;
+        }
+        final String[] keys = new String[]{ioCRecord.getSource().getIp(), ioCRecord.getSource().getDomainName()};
+        for (String key : keys) {
+            if (key != null) {
+                try {
+                    utx.begin();
+                    if (key != null) {
+                        if (blacklistCache.containsKey(key)) {
+                            BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
+                            Map<String, String> feedToTypeUpdate = blacklistedRecord.getSources();
+                            if (ioCRecord.getFeed().getName() != null && ioCRecord.getClassification().getType() != null) {
+                                feedToTypeUpdate.putIfAbsent(ioCRecord.getFeed().getName(), ioCRecord.getClassification().getType());
+                            } else {
+                                log.log(Level.FINEST, "addToCache: ioCRecord's feed or classification type were null");
+                            }
+                            blacklistedRecord.setSources(feedToTypeUpdate);
+                            blacklistedRecord.setListed(Calendar.getInstance());
+                            blacklistCache.replace(key, blacklistedRecord);
+                            utx.commit();
+                        } else {
+                            Map<String, String> feedToType = new HashMap<>();
+                            if (ioCRecord.getFeed().getName() != null && ioCRecord.getClassification().getType() != null) {
+                                feedToType.put(ioCRecord.getFeed().getName(), ioCRecord.getClassification().getType());
+                            } else {
+                                log.log(Level.FINEST, "addToCache: ioCRecord's feed or classification type were null");
+                            }
+                            BlacklistedRecord blacklistedRecord = new BlacklistedRecord(key, Calendar.getInstance(), feedToType);
+                            log.log(Level.FINEST, "Putting new key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
+                            blacklistCache.put(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
+                            utx.commit();
+                        }
+                    }
+                } catch (Exception e) {
+                    log.log(Level.SEVERE, "addToCache", e);
+                    try {
+                        if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
+                            utx.rollback();
+                        }
+                    } catch (Exception e1) {
+                        log.log(Level.SEVERE, "Rolling back", e1);
+                    }
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    public boolean removeFromCache(final IoCRecord ioCRecord) {
+        if (ioCRecord == null || ioCRecord.getSource() == null || ioCRecord.getFeed() == null) {
+            log.log(Level.SEVERE, "removeFromCache: ioCRecord itself or its source or its feed were null. Can't process that.");
+            return false;
+        }
+        if (ioCRecord.getSource().getIp() == null && ioCRecord.getSource().getDomainName() == null) {
+            log.log(Level.SEVERE, "removeFromCache: ioCRecord can't have both IP and Domain null.");
+            return false;
+        }
+        final String[] keys = new String[]{ioCRecord.getSource().getIp(), ioCRecord.getSource().getDomainName()};
+        for (String key : keys) {
+            if (key != null) {
+                try {
+                    utx.begin();
+                    if (key != null) {
+                        if (blacklistCache.containsKey(key)) {
+                            BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
+                            Map<String, String> feedToTypeUpdate = blacklistedRecord.getSources();
+                            if (ioCRecord.getFeed().getName() != null) {
+                                feedToTypeUpdate.remove(ioCRecord.getFeed().getName());
+                            } else {
+                                log.log(Level.FINEST, "removeFromCache: ioCRecord's feed was null.");
+                            }
+                            if (feedToTypeUpdate.isEmpty()) {
+                                blacklistCache.remove(key);
+                                utx.commit();
+                            } else {
+                                blacklistedRecord.setSources(feedToTypeUpdate);
+                                blacklistedRecord.setListed(Calendar.getInstance());
+                                blacklistCache.replace(key, blacklistedRecord);
+                                utx.commit();
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    log.log(Level.SEVERE, "removeFromCache", e);
+                    try {
+                        if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
+                            utx.rollback();
+                        }
+                    } catch (Exception e1) {
+                        log.log(Level.SEVERE, "removeFromCache: Rolling back.", e1);
+                    }
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 }

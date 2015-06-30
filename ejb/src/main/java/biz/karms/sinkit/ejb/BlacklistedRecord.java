@@ -4,6 +4,7 @@ import org.hibernate.search.annotations.*;
 
 import java.io.Serializable;
 import java.util.Calendar;
+import java.util.Map;
 
 /**
  * @author Michal Karm Babacek
@@ -13,46 +14,33 @@ public class BlacklistedRecord implements Serializable {
 
     private static final long serialVersionUID = 2184815523047755691L;
 
-    @Field
-    private String source;
+    @Field(analyze = Analyze.YES)
+    private String blackListedDomainOrIP;
 
     @Field
     @CalendarBridge(resolution = Resolution.HOUR)
     private Calendar listed;
 
-    @Field(analyze = Analyze.YES)
-    private String blackListedDomainOrIP;
+    @IndexedEmbedded
+    private Map<String, String> sources;
 
-    @Field
-    @NumericField
-    private int taxonomy;
-
-    @Field
-    @NumericField
-    private int score;
-
-    public BlacklistedRecord(String source, Calendar listed, String blackListedDomainOrIP, int taxonomy, int score) {
-        this.source = source;
-        this.listed = listed;
+    public BlacklistedRecord(String blackListedDomainOrIP, Calendar listed, Map<String, String> sources) {
         this.blackListedDomainOrIP = blackListedDomainOrIP;
-        this.taxonomy = taxonomy;
-        this.score = score;
-    }
-
-    public String getSource() {
-        return source;
-    }
-
-    public void setSource(String source) {
-        this.source = source;
-    }
-
-    public Calendar getListed() {
-        return listed;
-    }
-
-    public void setListed(Calendar listed) {
         this.listed = listed;
+        this.sources = sources;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof BlacklistedRecord)) return false;
+        BlacklistedRecord that = (BlacklistedRecord) o;
+        return blackListedDomainOrIP.equals(that.blackListedDomainOrIP);
+    }
+
+    @Override
+    public int hashCode() {
+        return blackListedDomainOrIP.hashCode();
     }
 
     public String getBlackListedDomainOrIP() {
@@ -63,30 +51,19 @@ public class BlacklistedRecord implements Serializable {
         this.blackListedDomainOrIP = blackListedDomainOrIP;
     }
 
-    public int getTaxonomy() {
-        return taxonomy;
+    public Calendar getListed() {
+        return listed;
     }
 
-    public void setTaxonomy(int taxonomy) {
-        this.taxonomy = taxonomy;
+    public void setListed(Calendar listed) {
+        this.listed = listed;
     }
 
-    public int getScore() {
-        return score;
+    public Map<String, String> getSources() {
+        return sources;
     }
 
-    public void setScore(int score) {
-        this.score = score;
-    }
-
-    @Override
-    public String toString() {
-        return "BlacklistedRecord{" +
-                "source='" + source + '\'' +
-                ", listed=" + listed +
-                ", blackListedDomainOrIP='" + blackListedDomainOrIP + '\'' +
-                ", taxonomy=" + taxonomy +
-                ", score=" + score +
-                '}';
+    public void setSources(Map<String, String> sources) {
+        this.sources = sources;
     }
 }
