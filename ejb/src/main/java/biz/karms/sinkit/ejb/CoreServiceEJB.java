@@ -27,6 +27,9 @@ public class CoreServiceEJB {
     @Inject
     private ArchiveServiceEJB archiveService;
 
+    @Inject
+    private ServiceEJB cacheService;
+
     public IoCRecord processIoCRecord(IoCRecord recievedIoc) throws ArchiveException {
 
         if (recievedIoc.getTime().getSource() != null) {
@@ -68,7 +71,8 @@ public class CoreServiceEJB {
             ioc.setSeen(seen);
             ioc = archiveService.archiveIoCRecord(ioc);
 
-            //put IoC to Cache as active
+            cacheService.addToCache(ioc);
+
         } else {
 
             if (recievedIoc.getTime().getSource() == null) {

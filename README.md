@@ -9,4 +9,5 @@ A prototype of a toy project featuring Infinispan dist cache
     export SINKIT_POSTGRESQL_DB_PORT=
     export SINKIT_POSTGRESQL_PASS=
     export SINKIT_POSTGRESQL_USER=
+    export SINKIT_POSTGRESQL_DB_NAME=
     export SINKIT_JGROUPS_NETWORKING=jgroups-udp.xml

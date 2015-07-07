@@ -19,7 +19,7 @@ public class TimerEJB {
 //        @Schedule(hour = "*", minute = "*", second = "30", persistent = false)
 //    })
     @Schedule(hour = "*", minute = "0", second = "0", persistent = false)
-    public void fireIoCDeactiovation() {
+    public void fireIoCDeactivation() {
         try {
             iocDeactivator.run();
         } catch (Exception e) {
