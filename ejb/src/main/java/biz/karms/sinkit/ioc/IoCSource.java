@@ -31,7 +31,7 @@ public class IoCSource implements Serializable {
 
     @Field
     @NumericField
-    private int asn;
+    private Integer asn;
 
     @Field
     @SerializedName("asn_prefix")
@@ -76,11 +76,11 @@ public class IoCSource implements Serializable {
         this.reverseDomainName = reverseDomainName;
     }
 
-    public int getAsn() {
+    public Integer getAsn() {
         return asn;
     }
 
-    public void setAsn(int asn) {
+    public void setAsn(Integer asn) {
         this.asn = asn;
     }
 
