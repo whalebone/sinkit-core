@@ -30,32 +30,32 @@ public class CoreServiceEJB {
     @Inject
     private ServiceEJB cacheService;
 
-    public IoCRecord processIoCRecord(IoCRecord recievedIoc) throws ArchiveException {
+    public IoCRecord processIoCRecord(IoCRecord receivedIoc) throws ArchiveException {
 
-        if (recievedIoc.getTime().getSource() != null) {
-            Date sourceTime = recievedIoc.getTime().getSource();
+        if (receivedIoc.getTime().getSource() != null) {
+            Date sourceTime = receivedIoc.getTime().getSource();
             if (this.addWindow(sourceTime).before(new Date())) {
                 //log.info("Not processing too old IoC [" + recievedIoc + "]");
-                return recievedIoc;
+                return receivedIoc;
             }
         }
 
         IoCRecord ioc = null;
-        if (recievedIoc.getSource().getDomainName() != null) {
+        if (receivedIoc.getSource().getFQDN() != null) {
             ioc = archiveService.findActiveIoCRecordByIp(
-                    recievedIoc.getSource().getDomainName(),
-                    recievedIoc.getClassification().getType(),
-                    recievedIoc.getFeed().getName());
+                    receivedIoc.getSource().getFQDN(),
+                    receivedIoc.getClassification().getType(),
+                    receivedIoc.getFeed().getName());
         } else {
             ioc = archiveService.findActiveIoCRecordByIp(
-                    recievedIoc.getSource().getIp(),
-                    recievedIoc.getClassification().getType(),
-                    recievedIoc.getFeed().getName());
+                    receivedIoc.getSource().getIp(),
+                    receivedIoc.getClassification().getType(),
+                    receivedIoc.getFeed().getName());
         }
 
         //not found in archive
         if (ioc == null) {
-            ioc = recievedIoc;
+            ioc = receivedIoc;
             ioc.setActive(true);
 
             IoCSeen seen = new IoCSeen();
@@ -75,10 +75,10 @@ public class CoreServiceEJB {
 
         } else {
 
-            if (recievedIoc.getTime().getSource() == null) {
-                ioc.getSeen().setLast(recievedIoc.getTime().getObservation());
+            if (receivedIoc.getTime().getSource() == null) {
+                ioc.getSeen().setLast(receivedIoc.getTime().getObservation());
             } else {
-                Date lastSource = this.addWindow(recievedIoc.getTime().getSource());
+                Date lastSource = this.addWindow(receivedIoc.getTime().getSource());
                 if (ioc.getSeen().getLast().before(lastSource) ) {
                     ioc.getSeen().setLast(lastSource);
                 }

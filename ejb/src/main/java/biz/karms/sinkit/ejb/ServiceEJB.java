@@ -234,11 +234,11 @@ public class ServiceEJB {
             log.log(Level.SEVERE, "addToCache: ioCRecord itself or its source, classification or feed were null. Can't process that.");
             return false;
         }
-        if (ioCRecord.getSource().getIp() == null && ioCRecord.getSource().getDomainName() == null) {
+        if (ioCRecord.getSource().getIp() == null && ioCRecord.getSource().getFQDN() == null) {
             log.log(Level.SEVERE, "addToCache: ioCRecord can't have both IP and Domain null.");
             return false;
         }
-        final String[] keys = new String[]{ioCRecord.getSource().getIp(), ioCRecord.getSource().getDomainName()};
+        final String[] keys = new String[]{ioCRecord.getSource().getIp(), ioCRecord.getSource().getFQDN()};
         for (String key : keys) {
             if (key != null) {
                 try {
@@ -290,11 +290,11 @@ public class ServiceEJB {
             log.log(Level.SEVERE, "removeFromCache: ioCRecord itself or its source or its feed were null. Can't process that.");
             return false;
         }
-        if (ioCRecord.getSource().getIp() == null && ioCRecord.getSource().getDomainName() == null) {
+        if (ioCRecord.getSource().getIp() == null && ioCRecord.getSource().getFQDN() == null) {
             log.log(Level.SEVERE, "removeFromCache: ioCRecord can't have both IP and Domain null.");
             return false;
         }
-        final String[] keys = new String[]{ioCRecord.getSource().getIp(), ioCRecord.getSource().getDomainName()};
+        final String[] keys = new String[]{ioCRecord.getSource().getIp(), ioCRecord.getSource().getFQDN()};
         for (String key : keys) {
             if (key != null) {
                 try {
