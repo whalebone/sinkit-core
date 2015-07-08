@@ -22,8 +22,7 @@ public class IoCSource implements Serializable {
     private String ip;
 
     @Field
-    @SerializedName("domain_name")
-    private String domainName;
+    private String fqdn;
 
     @Field
     @SerializedName("reverse_domain_name")
@@ -34,7 +33,7 @@ public class IoCSource implements Serializable {
     private Integer asn;
 
     @Field
-    @SerializedName("asn_prefix")
+    @SerializedName("asn_name")
     private String asnName;
 
     @Field
@@ -60,12 +59,12 @@ public class IoCSource implements Serializable {
         this.ip = ip;
     }
 
-    public String getDomainName() {
-        return domainName;
+    public String getFQDN() {
+        return fqdn;
     }
 
-    public void setDomainName(String domainName) {
-        this.domainName = domainName;
+    public void setFQDN(String fqdn) {
+        this.fqdn = fqdn;
     }
 
     public String getReverseDomainName() {
@@ -113,7 +112,7 @@ public class IoCSource implements Serializable {
         return "IoCSource{" +
                 "url='" + url + '\'' +
                 ", ip='" + ip + '\'' +
-                ", domainName='" + domainName + '\'' +
+                ", fqdn='" + fqdn + '\'' +
                 ", reverseDomainName='" + reverseDomainName + '\'' +
                 ", asn=" + asn +
                 ", asnName='" + asnName + '\'' +
