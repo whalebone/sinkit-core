@@ -43,6 +43,9 @@ public class ServiceEJB {
     public void setup() {
         blacklistCache = m.getCache("BLACKLIST_CACHE");
         ruleCache = m.getCache("RULES_CACHE");
+        if(blacklistCache == null || ruleCache == null) {
+            throw new IllegalStateException("Both BLACKLIST_CACHE and RULES_CACHE must not be null.");
+        }
     }
 
     // Testing purposes
@@ -232,10 +235,24 @@ public class ServiceEJB {
     public boolean addToCache(final IoCRecord ioCRecord) {
         if (ioCRecord == null || ioCRecord.getSource() == null || ioCRecord.getClassification() == null || ioCRecord.getFeed() == null) {
             log.log(Level.SEVERE, "addToCache: ioCRecord itself or its source, classification or feed were null. Can't process that.");
+            try {
+                if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
+                    utx.rollback();
+                }
+            } catch (Exception e1) {
+                log.log(Level.SEVERE, "addToCache: Rolling back.", e1);
+            }
             return false;
         }
         if (ioCRecord.getSource().getIp() == null && ioCRecord.getSource().getFQDN() == null) {
             log.log(Level.SEVERE, "addToCache: ioCRecord can't have both IP and Domain null.");
+            try {
+                if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
+                    utx.rollback();
+                }
+            } catch (Exception e1) {
+                log.log(Level.SEVERE, "addToCache: Rolling back.", e1);
+            }
             return false;
         }
         final String[] keys = new String[]{ioCRecord.getSource().getIp(), ioCRecord.getSource().getFQDN()};
@@ -288,10 +305,24 @@ public class ServiceEJB {
     public boolean removeFromCache(final IoCRecord ioCRecord) {
         if (ioCRecord == null || ioCRecord.getSource() == null || ioCRecord.getFeed() == null) {
             log.log(Level.SEVERE, "removeFromCache: ioCRecord itself or its source or its feed were null. Can't process that.");
+            try {
+                if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
+                    utx.rollback();
+                }
+            } catch (Exception e1) {
+                log.log(Level.SEVERE, "removeFromCache: Rolling back.", e1);
+            }
             return false;
         }
         if (ioCRecord.getSource().getIp() == null && ioCRecord.getSource().getFQDN() == null) {
             log.log(Level.SEVERE, "removeFromCache: ioCRecord can't have both IP and Domain null.");
+            try {
+                if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
+                    utx.rollback();
+                }
+            } catch (Exception e1) {
+                log.log(Level.SEVERE, "removeFromCache: Rolling back.", e1);
+            }
             return false;
         }
         final String[] keys = new String[]{ioCRecord.getSource().getIp(), ioCRecord.getSource().getFQDN()};

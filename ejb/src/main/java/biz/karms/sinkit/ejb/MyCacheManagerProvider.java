@@ -8,8 +8,6 @@ import org.infinispan.configuration.global.GlobalConfiguration;
 import org.infinispan.configuration.global.GlobalConfigurationBuilder;
 import org.infinispan.eviction.EvictionStrategy;
 import org.infinispan.manager.DefaultCacheManager;
-import org.infinispan.persistence.jdbc.binary.JdbcBinaryStore;
-import org.infinispan.persistence.jdbc.configuration.JdbcBinaryStoreConfigurationBuilder;
 import org.infinispan.persistence.jdbc.configuration.JdbcStringBasedStoreConfigurationBuilder;
 import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
 import org.infinispan.transaction.LockingMode;
@@ -29,7 +27,8 @@ import java.util.logging.Logger;
 public class MyCacheManagerProvider {
 
     private static final long ENTRY_LIFESPAN = 3 * 24 * 60 * 60 * 1000; //ms
-    private static final int MAX_ENTRIES = 50000;
+    private static final long ENTRY_LIFESPAN_NEVER = -1;
+    private static final long MAX_ENTRIES = 50000;
     @Inject
     private Logger log;
 
@@ -42,7 +41,7 @@ public class MyCacheManagerProvider {
             GlobalConfiguration glob = new GlobalConfigurationBuilder().clusteredDefault() // Builds a default clustered
                     // configuration
                     .transport().addProperty(JGroupsTransport.CONFIGURATION_FILE, System.getenv("SINKIT_JGROUPS_NETWORKING")) // provide a specific JGroups configuration
-                            //.transport().addProperty("configurationFile", "jgroups-udp.xml") // provide a specific JGroups configuration
+                            // .transport().addProperty("configurationFile", "jgroups-udp.xml") // provide a specific JGroups configuration
                     .globalJmxStatistics().allowDuplicateDomains(true).enable() // This method enables the jmx statistics of
                             // the global configuration and allows for duplicate JMX domains
                     .build(); // Builds the GlobalConfiguration object
@@ -58,9 +57,8 @@ public class MyCacheManagerProvider {
                     .transaction().transactionMode(TransactionMode.TRANSACTIONAL).lockingMode(LockingMode.OPTIMISTIC)
                             // TODO: Really? Autocommit? -- Yes, autocommit is true by default.
                     .transactionManagerLookup(new GenericTransactionManagerLookup()).autoCommit(true)
-
                     .persistence().addStore(JdbcStringBasedStoreConfigurationBuilder.class)
-                    //.persistence().addStore(JdbcBinaryStoreConfigurationBuilder.class)
+                            //.persistence().addStore(JdbcBinaryStoreConfigurationBuilder.class)
                     .fetchPersistentState(true)
                     .ignoreModifications(false)
                     .purgeOnStartup(false)
@@ -78,6 +76,11 @@ public class MyCacheManagerProvider {
                     .username(System.getenv("SINKIT_POSTGRESQL_USER"))
                     .build();
             manager = new DefaultCacheManager(glob, loc, true);
+            manager.defineConfiguration("RULES_CACHE", new ConfigurationBuilder()
+                    // Rules cannot be evicted ever.
+                    .expiration().disableReaper()
+                    .expiration().lifespan(ENTRY_LIFESPAN_NEVER)
+                    .build());
             manager.getCache("BLACKLIST_CACHE").start();
             manager.getCache("RULES_CACHE").start();
             log.log(Level.INFO, "I'm returning DefaultCacheManager instance " + manager + ".");
