@@ -29,8 +29,6 @@ public class ArchiveServiceEJB {
     @Inject
     private JestClient elasticClient;
 
-    public static final String ERR_MSG = "Error, please, check your input.";
-
     public static final String ELASTIC_IOC_INDEX = "iocs";
     public static final String ELASTIC_IOC_TYPE = "intelmq";
 
@@ -53,16 +51,16 @@ public class ArchiveServiceEJB {
         return this.searchArchiveForSingleHit(query);
     }
 
-    public IoCRecord findActiveIoCRecordByDomainName(String domainName, String type, String feed) throws ArchiveException {
+    public IoCRecord findActiveIoCRecordByFQDN(String fqdn, String type, String feed) throws ArchiveException {
 
-        //log.info("searching elastic [ domainName : " + domainName + ", type : " + type + ", feed : " + feed + "]");
+        //log.info("searching elastic [ fqdn : " + fqdn + ", type : " + type + ", feed : " + feed + "]");
 
         String query = "{\n" +
                 "   \"query\" : {\n" +
                 "       \"filtered\" : {\n"+
                 "           \"query\" : {\n" +
                 "               \"query_string\" : {\n" +
-                "                   \"query\": \"active : true AND source.domain_name : " + domainName + " AND classification.type: " + type + " AND feed.name : " + feed +"\"\n" +
+                "                   \"query\": \"active : true AND source.fqdn : " + fqdn + " AND classification.type: " + type + " AND feed.name : " + feed +"\"\n" +
                 "               }\n" +
                 "           }\n" +
                 "       }\n" +

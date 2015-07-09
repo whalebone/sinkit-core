@@ -91,15 +91,12 @@ public class SinkitREST {
     @POST
     @Path("/blacklist/ioc/")
     @Produces({"application/json;charset=UTF-8"})
-    public String putIoCRecord(/*@HeaderParam(AUTH_HEADER_PARAM) String token, @FormParam("record") */String ioc) {
-
-        // TODO uncomment authentication when IntelMQ is able to post token as method param
-
-        //if (stupidAuthenticator.isAuthenticated(token)) {
-        return sinkitService.processIoCRecord(ioc);
-        //} else {
-        //    return AUTH_FAIL;
-        //}
+    public String putIoCRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, String ioc) {
+        if (stupidAuthenticator.isAuthenticated(token)) {
+            return sinkitService.processIoCRecord(ioc);
+        } else {
+            return AUTH_FAIL;
+        }
     }
 
     /**

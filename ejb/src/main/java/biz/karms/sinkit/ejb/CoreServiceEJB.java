@@ -42,7 +42,7 @@ public class CoreServiceEJB {
 
         IoCRecord ioc = null;
         if (receivedIoc.getSource().getFQDN() != null) {
-            ioc = archiveService.findActiveIoCRecordByIp(
+            ioc = archiveService.findActiveIoCRecordByFQDN(
                     receivedIoc.getSource().getFQDN(),
                     receivedIoc.getClassification().getType(),
                     receivedIoc.getFeed().getName());
