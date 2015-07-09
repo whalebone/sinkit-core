@@ -4,7 +4,6 @@ package biz.karms.sinkit.ioc;
  * Created by tkozel on 24.6.15.
  */
 
-import org.apache.solr.schema.FieldType;
 import org.hibernate.search.annotations.Field;
 import org.hibernate.search.annotations.Indexed;
 

@@ -2,7 +2,6 @@ package biz.karms.sinkit.ejb;
 
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.ioc.IoCRecord;
-import com.google.gson.GsonBuilder;
 import io.searchbox.client.JestClient;
 import io.searchbox.client.JestResult;
 import io.searchbox.core.Index;
@@ -12,12 +11,8 @@ import io.searchbox.core.Update;
 import io.searchbox.params.Parameters;
 
 import javax.ejb.Stateless;
-import javax.ejb.TransactionManagement;
-import javax.ejb.TransactionManagementType;
 import javax.inject.Inject;
 import java.io.IOException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -26,7 +21,6 @@ import java.util.logging.Logger;
  * Created by tkozel on 24.6.15.
  */
 @Stateless
-@TransactionManagement(TransactionManagementType.BEAN)
 public class ArchiveServiceEJB {
 
     @Inject

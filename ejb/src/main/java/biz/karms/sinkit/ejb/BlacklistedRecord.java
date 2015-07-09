@@ -21,6 +21,9 @@ public class BlacklistedRecord implements Serializable {
     @CalendarBridge(resolution = Resolution.HOUR)
     private Calendar listed;
 
+    /**
+     * Feed : Type
+     */
     @IndexedEmbedded
     private Map<String, String> sources;
 
