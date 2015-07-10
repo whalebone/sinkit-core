@@ -1,8 +1,12 @@
 package biz.karms.sinkit.ejb;
 
 import biz.karms.sinkit.exception.ArchiveException;
+import biz.karms.sinkit.exception.IoCSourceIdException;
 import biz.karms.sinkit.ioc.IoCRecord;
 import biz.karms.sinkit.ioc.IoCSeen;
+import biz.karms.sinkit.ioc.IoCSourceId;
+import biz.karms.sinkit.ioc.IoCSourceIdType;
+import biz.karms.sinkit.ioc.util.IoCSourceIdBuilder;
 
 import javax.ejb.Schedule;
 import javax.ejb.Schedules;
@@ -30,7 +34,7 @@ public class CoreServiceEJB {
     @Inject
     private ServiceEJB cacheService;
 
-    public IoCRecord processIoCRecord(IoCRecord receivedIoc) throws ArchiveException {
+    public IoCRecord processIoCRecord(IoCRecord receivedIoc) throws ArchiveException, IoCSourceIdException {
 
         if (receivedIoc.getTime().getSource() != null) {
             Date sourceTime = receivedIoc.getTime().getSource();
@@ -40,18 +44,13 @@ public class CoreServiceEJB {
             }
         }
 
-        IoCRecord ioc = null;
-        if (receivedIoc.getSource().getFQDN() != null) {
-            ioc = archiveService.findActiveIoCRecordByFQDN(
-                    receivedIoc.getSource().getFQDN(),
-                    receivedIoc.getClassification().getType(),
-                    receivedIoc.getFeed().getName());
-        } else {
-            ioc = archiveService.findActiveIoCRecordByIp(
-                    receivedIoc.getSource().getIp(),
-                    receivedIoc.getClassification().getType(),
-                    receivedIoc.getFeed().getName());
-        }
+        IoCSourceId sid = IoCSourceIdBuilder.build(receivedIoc);
+        receivedIoc.getSource().setId(sid);
+
+        IoCRecord ioc = archiveService.findActiveIoCRecordBySourceId(
+                receivedIoc.getSource().getId().getValue(),
+                receivedIoc.getClassification().getType(),
+                receivedIoc.getFeed().getName());
 
         //not found in archive
         if (ioc == null) {
@@ -71,7 +70,8 @@ public class CoreServiceEJB {
             ioc.setSeen(seen);
             ioc = archiveService.archiveIoCRecord(ioc);
 
-            cacheService.addToCache(ioc);
+            if (ioc.getSource().getId().getType() == IoCSourceIdType.FQDN || ioc.getSource().getId().getType() == IoCSourceIdType.IP)
+                cacheService.addToCache(ioc);
 
         } else {
 

@@ -244,8 +244,9 @@ public class ServiceEJB {
             }
             return false;
         }
-        if (ioCRecord.getSource().getIp() == null && ioCRecord.getSource().getFQDN() == null) {
-            log.log(Level.SEVERE, "addToCache: ioCRecord can't have both IP and Domain null.");
+
+        if (ioCRecord.getSource().getId() == null && ioCRecord.getSource().getId().getValue() == null) {
+            log.log(Level.SEVERE, "addToCache: ioCRecord can't have source id null.");
             try {
                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                     utx.rollback();
@@ -253,52 +254,53 @@ public class ServiceEJB {
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "addToCache: Rolling back.", e1);
             }
+
             return false;
         }
-        final String[] keys = new String[]{ioCRecord.getSource().getIp(), ioCRecord.getSource().getFQDN()};
-        for (String key : keys) {
-            if (key != null) {
-                try {
-                    utx.begin();
-                    if (key != null) {
-                        if (blacklistCache.containsKey(key)) {
-                            BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
-                            Map<String, String> feedToTypeUpdate = blacklistedRecord.getSources();
-                            if (ioCRecord.getFeed().getName() != null && ioCRecord.getClassification().getType() != null) {
-                                feedToTypeUpdate.putIfAbsent(ioCRecord.getFeed().getName(), ioCRecord.getClassification().getType());
-                            } else {
-                                log.log(Level.FINEST, "addToCache: ioCRecord's feed or classification type were null");
-                            }
-                            blacklistedRecord.setSources(feedToTypeUpdate);
-                            blacklistedRecord.setListed(Calendar.getInstance());
-                            blacklistCache.replace(key, blacklistedRecord);
-                            utx.commit();
+
+        final String key = ioCRecord.getSource().getId().getValue();
+        if (key != null) {
+            try {
+                utx.begin();
+                if (key != null) {
+                    if (blacklistCache.containsKey(key)) {
+                        BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
+                        Map<String, String> feedToTypeUpdate = blacklistedRecord.getSources();
+                        if (ioCRecord.getFeed().getName() != null && ioCRecord.getClassification().getType() != null) {
+                            feedToTypeUpdate.putIfAbsent(ioCRecord.getFeed().getName(), ioCRecord.getClassification().getType());
                         } else {
-                            Map<String, String> feedToType = new HashMap<>();
-                            if (ioCRecord.getFeed().getName() != null && ioCRecord.getClassification().getType() != null) {
-                                feedToType.put(ioCRecord.getFeed().getName(), ioCRecord.getClassification().getType());
-                            } else {
-                                log.log(Level.FINEST, "addToCache: ioCRecord's feed or classification type were null");
-                            }
-                            BlacklistedRecord blacklistedRecord = new BlacklistedRecord(key, Calendar.getInstance(), feedToType);
-                            log.log(Level.FINEST, "Putting new key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
-                            blacklistCache.put(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
-                            utx.commit();
+                            log.log(Level.FINEST, "addToCache: ioCRecord's feed or classification type were null");
                         }
-                    }
-                } catch (Exception e) {
-                    log.log(Level.SEVERE, "addToCache", e);
-                    try {
-                        if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
-                            utx.rollback();
+                        blacklistedRecord.setSources(feedToTypeUpdate);
+                        blacklistedRecord.setListed(Calendar.getInstance());
+                        blacklistCache.replace(key, blacklistedRecord);
+                        utx.commit();
+                    } else {
+                        Map<String, String> feedToType = new HashMap<>();
+                        if (ioCRecord.getFeed().getName() != null && ioCRecord.getClassification().getType() != null) {
+                            feedToType.put(ioCRecord.getFeed().getName(), ioCRecord.getClassification().getType());
+                        } else {
+                            log.log(Level.FINEST, "addToCache: ioCRecord's feed or classification type were null");
                         }
-                    } catch (Exception e1) {
-                        log.log(Level.SEVERE, "Rolling back", e1);
+                        BlacklistedRecord blacklistedRecord = new BlacklistedRecord(key, Calendar.getInstance(), feedToType);
+                        log.log(Level.FINEST, "Putting new key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
+                        blacklistCache.put(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
+                        utx.commit();
                     }
-                    return false;
                 }
+            } catch (Exception e) {
+                log.log(Level.SEVERE, "addToCache", e);
+                try {
+                    if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
+                        utx.rollback();
+                    }
+                } catch (Exception e1) {
+                    log.log(Level.SEVERE, "Rolling back", e1);
+                }
+                return false;
             }
         }
+
         return true;
     }
 
@@ -314,8 +316,9 @@ public class ServiceEJB {
             }
             return false;
         }
-        if (ioCRecord.getSource().getIp() == null && ioCRecord.getSource().getFQDN() == null) {
-            log.log(Level.SEVERE, "removeFromCache: ioCRecord can't have both IP and Domain null.");
+
+        if (ioCRecord.getSource().getId() == null && ioCRecord.getSource().getId().getValue() == null) {
+            log.log(Level.SEVERE, "removeFromCache: ioCRecord can't have source id null.");
             try {
                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                     utx.rollback();
@@ -325,44 +328,44 @@ public class ServiceEJB {
             }
             return false;
         }
-        final String[] keys = new String[]{ioCRecord.getSource().getIp(), ioCRecord.getSource().getFQDN()};
-        for (String key : keys) {
-            if (key != null) {
-                try {
-                    utx.begin();
-                    if (key != null) {
-                        if (blacklistCache.containsKey(key)) {
-                            BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
-                            Map<String, String> feedToTypeUpdate = blacklistedRecord.getSources();
-                            if (ioCRecord.getFeed().getName() != null) {
-                                feedToTypeUpdate.remove(ioCRecord.getFeed().getName());
-                            } else {
-                                log.log(Level.FINEST, "removeFromCache: ioCRecord's feed was null.");
-                            }
-                            if (feedToTypeUpdate.isEmpty()) {
-                                blacklistCache.remove(key);
-                                utx.commit();
-                            } else {
-                                blacklistedRecord.setSources(feedToTypeUpdate);
-                                blacklistedRecord.setListed(Calendar.getInstance());
-                                blacklistCache.replace(key, blacklistedRecord);
-                                utx.commit();
-                            }
+
+        final String key = ioCRecord.getSource().getId().getValue();
+        if (key != null) {
+            try {
+                utx.begin();
+                if (key != null) {
+                    if (blacklistCache.containsKey(key)) {
+                        BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
+                        Map<String, String> feedToTypeUpdate = blacklistedRecord.getSources();
+                        if (ioCRecord.getFeed().getName() != null) {
+                            feedToTypeUpdate.remove(ioCRecord.getFeed().getName());
+                        } else {
+                            log.log(Level.FINEST, "removeFromCache: ioCRecord's feed was null.");
+                        }
+                        if (feedToTypeUpdate.isEmpty()) {
+                            blacklistCache.remove(key);
+                            utx.commit();
+                        } else {
+                            blacklistedRecord.setSources(feedToTypeUpdate);
+                            blacklistedRecord.setListed(Calendar.getInstance());
+                            blacklistCache.replace(key, blacklistedRecord);
+                            utx.commit();
                         }
                     }
-                } catch (Exception e) {
-                    log.log(Level.SEVERE, "removeFromCache", e);
-                    try {
-                        if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
-                            utx.rollback();
-                        }
-                    } catch (Exception e1) {
-                        log.log(Level.SEVERE, "removeFromCache: Rolling back.", e1);
-                    }
-                    return false;
                 }
+            } catch (Exception e) {
+                log.log(Level.SEVERE, "removeFromCache", e);
+                try {
+                    if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
+                        utx.rollback();
+                    }
+                } catch (Exception e1) {
+                    log.log(Level.SEVERE, "removeFromCache: Rolling back.", e1);
+                }
+                return false;
             }
         }
+
         return true;
     }
 }
