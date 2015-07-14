@@ -115,7 +115,9 @@ public class SinkitService implements Serializable {
             if (ioc.getFeed() == null || ioc.getFeed().getName() == null) {
                 throw new Exception("IoC record doesn't have mandatory field 'feed.name'");
             }
-            if (ioc.getSource() == null || (ioc.getSource().getFQDN() == null && ioc.getSource().getIp() == null)) {
+            if (ioc.getSource() == null || (
+                    ioc.getSource().getFQDN() == null && ioc.getSource().getIp() == null && ioc.getSource().getUrl() == null
+                    )) {
                 throw new Exception("IoC can't have both IP and Domain set as null");
             }
             if (ioc.getClassification() == null || ioc.getClassification().getType() == null) {

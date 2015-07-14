@@ -2,6 +2,7 @@ package biz.karms.sinkit.ejb;
 
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.ioc.IoCRecord;
+
 import io.searchbox.client.JestClient;
 import io.searchbox.client.JestResult;
 import io.searchbox.core.Index;
@@ -32,7 +33,8 @@ public class ArchiveServiceEJB {
     public static final String ELASTIC_IOC_INDEX = "iocs";
     public static final String ELASTIC_IOC_TYPE = "intelmq";
 
-    public IoCRecord findActiveIoCRecordByIp(String ip, String type, String feed) throws ArchiveException {
+    public IoCRecord findActiveIoCRecordBySourceId(
+            String sourceId, String classificationType, String feedName) throws ArchiveException {
 
         //log.info("searching elastic [ ip : " + ip + ", type : " + type + ", feed : " + feed + "]");
 
@@ -41,7 +43,9 @@ public class ArchiveServiceEJB {
                 "       \"filtered\" : {\n"+
                 "           \"query\" : {\n" +
                 "               \"query_string\" : {\n" +
-                "                   \"query\": \"active : true AND source.ip : " + ip + " AND classification.type: " + type + " AND feed.name : " + feed +"\"\n" +
+                "                   \"query\": \"active : true AND source.id.value : \\\"" + sourceId + "\\\" AND " +
+                                                "classification.type: \\\"" + classificationType + "\\\" AND " +
+                                                "feed.name : \\\"" + feedName +"\\\"\"\n" +
                 "               }\n" +
                 "           }\n" +
                 "       }\n" +
@@ -51,24 +55,43 @@ public class ArchiveServiceEJB {
         return this.searchArchiveForSingleHit(query);
     }
 
-    public IoCRecord findActiveIoCRecordByFQDN(String fqdn, String type, String feed) throws ArchiveException {
-
-        //log.info("searching elastic [ fqdn : " + fqdn + ", type : " + type + ", feed : " + feed + "]");
-
-        String query = "{\n" +
-                "   \"query\" : {\n" +
-                "       \"filtered\" : {\n"+
-                "           \"query\" : {\n" +
-                "               \"query_string\" : {\n" +
-                "                   \"query\": \"active : true AND source.fqdn : " + fqdn + " AND classification.type: " + type + " AND feed.name : " + feed +"\"\n" +
-                "               }\n" +
-                "           }\n" +
-                "       }\n" +
-                "   }\n" +
-                "}\n";
-
-       return this.searchArchiveForSingleHit(query);
-    }
+//    public IoCRecord findActiveIoCRecordByIp(String ip, String type, String feed) throws ArchiveException {
+//
+//        //log.info("searching elastic [ ip : " + ip + ", type : " + type + ", feed : " + feed + "]");
+//
+//        String query = "{\n" +
+//                "   \"query\" : {\n" +
+//                "       \"filtered\" : {\n"+
+//                "           \"query\" : {\n" +
+//                "               \"query_string\" : {\n" +
+//                "                   \"query\": \"active : true AND source.ip : \\\"" + ip + "\\\" AND classification.type: \\\"" + type + "\\\" AND feed.name : \\\"" + feed +"\\\"\"\n" +
+//                "               }\n" +
+//                "           }\n" +
+//                "       }\n" +
+//                "   }\n" +
+//                "}\n";
+//
+//        return this.searchArchiveForSingleHit(query);
+//    }
+//
+//    public IoCRecord findActiveIoCRecordByFQDN(String fqdn, String type, String feed) throws ArchiveException {
+//
+//        //log.info("searching elastic [ fqdn : " + fqdn + ", type : " + type + ", feed : " + feed + "]");
+//
+//        String query = "{\n" +
+//                "   \"query\" : {\n" +
+//                "       \"filtered\" : {\n"+
+//                "           \"query\" : {\n" +
+//                "               \"query_string\" : {\n" +
+//                "                   \"query\": \"active : true AND source.fqdn : \\\"" + fqdn + "\\\" AND classification.type: \\\"" + type + "\\\" AND feed.name : \\\"" + feed +"\\\"\"\n" +
+//                "               }\n" +
+//                "           }\n" +
+//                "       }\n" +
+//                "   }\n" +
+//                "}\n";
+//
+//       return this.searchArchiveForSingleHit(query);
+//    }
 
     public List<IoCRecord> findIoCsForDeactivation(int hours) throws ArchiveException {
 

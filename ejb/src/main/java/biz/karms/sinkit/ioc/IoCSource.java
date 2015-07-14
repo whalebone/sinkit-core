@@ -16,6 +16,9 @@ public class IoCSource implements Serializable {
     private static final long serialVersionUID = 2184815523047755695L;
 
     @Field
+    private IoCSourceId id;
+
+    @Field
     private String url;
 
     @Field
@@ -42,6 +45,14 @@ public class IoCSource implements Serializable {
     @Field
     @SerializedName("bgp_prefix")
     private String bgpPrefix;
+
+    public IoCSourceId getId() {
+        return id;
+    }
+
+    public void setId(IoCSourceId id) {
+        this.id = id;
+    }
 
     public String getUrl() {
         return url;
@@ -110,7 +121,8 @@ public class IoCSource implements Serializable {
     @Override
     public String toString() {
         return "IoCSource{" +
-                "url='" + url + '\'' +
+                "id=" + id +
+                ", url='" + url + '\'' +
                 ", ip='" + ip + '\'' +
                 ", fqdn='" + fqdn + '\'' +
                 ", reverseDomainName='" + reverseDomainName + '\'' +
