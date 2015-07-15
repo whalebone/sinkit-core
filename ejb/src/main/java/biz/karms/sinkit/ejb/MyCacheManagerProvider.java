@@ -15,6 +15,7 @@ import org.infinispan.transaction.TransactionMode;
 import org.infinispan.transaction.lookup.GenericTransactionManagerLookup;
 
 import javax.annotation.PreDestroy;
+import javax.ejb.Singleton;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import java.util.logging.Level;
@@ -24,17 +25,20 @@ import java.util.logging.Logger;
  * @author Michal Karm Babacek
  */
 @ApplicationScoped
+@Singleton
 public class MyCacheManagerProvider {
 
-    private static final long ENTRY_LIFESPAN = 3 * 24 * 60 * 60 * 1000; //ms
+    private static final long ENTRY_LIFESPAN = 4 * 24 * 60 * 60 * 1000; //ms
     private static final long ENTRY_LIFESPAN_NEVER = -1;
-    private static final long MAX_ENTRIES = 50000;
+    private static final long MAX_ENTRIES_IOC = 5000000;
+    private static final long MAX_ENTRIES_RULES = 5000;
+
     @Inject
     private Logger log;
 
     private DefaultCacheManager manager;
 
-    public DefaultCacheManager getCacheManager() {
+    public synchronized DefaultCacheManager getCacheManager() {
         if (manager == null) {
             log.info("\n\n DefaultCacheManager does not exist - constructing a new one\n\n");
 
@@ -52,7 +56,7 @@ public class MyCacheManagerProvider {
                             // the lifespan parameter) and are removed from the cache (cluster-wide).
                     .indexing().index(Index.ALL)
                     .eviction().strategy(EvictionStrategy.LRU)
-                    .maxEntries(MAX_ENTRIES)
+                    .maxEntries(MAX_ENTRIES_IOC)
                             // .transaction().lockingMode(LockingMode.OPTIMISTIC).transactionManagerLookup(tml)
                     .transaction().transactionMode(TransactionMode.TRANSACTIONAL).lockingMode(LockingMode.OPTIMISTIC)
                             // TODO: Really? Autocommit? -- Yes, autocommit is true by default.
@@ -77,7 +81,9 @@ public class MyCacheManagerProvider {
                     .build();
             manager = new DefaultCacheManager(glob, loc, true);
             manager.defineConfiguration("RULES_CACHE", new ConfigurationBuilder()
-                    // Rules cannot be evicted ever.
+                    .eviction()
+                    .maxEntries(MAX_ENTRIES_RULES)
+                            // Rules cannot be evicted ever.
                     .expiration().disableReaper()
                     .expiration().lifespan(ENTRY_LIFESPAN_NEVER)
                     .build());

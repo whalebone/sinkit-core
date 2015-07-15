@@ -6,13 +6,16 @@ import biz.karms.sinkit.ioc.IoCRecord;
 import javax.ejb.*;
 import javax.inject.Inject;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 /**
  * Created by tkozel on 29.6.15.
  */
+@Startup
 @Singleton
+@TransactionManagement(TransactionManagementType.BEAN)
 public class IoCDeactivatorEJB {
 
     private AtomicBoolean busy = new AtomicBoolean(false);
@@ -26,7 +29,9 @@ public class IoCDeactivatorEJB {
     @Inject
     private Logger log;
 
-    @Lock(LockType.READ)
+    @Lock(LockType.WRITE)
+    @Schedule(hour = "*", minute = "0", second = "0", persistent = false)
+    @AccessTimeout(value = 40, unit = TimeUnit.MINUTES)
     public void run() throws InterruptedException, ArchiveException {
 
         if (!busy.compareAndSet(false, true)) {
@@ -42,20 +47,15 @@ public class IoCDeactivatorEJB {
     }
 
     private int deactivateIocs() throws ArchiveException {
-
         log.info("Deactivation job started");
-
         int deactivated = 0;
         List<IoCRecord> iocs;
 
         // due to archiveService.findIoCsForDeactivation has limit for single search (i.e. max 1000 records)
         // this has to be done in multiple runs until search returns 0 results
         do {
-
             iocs = archiveService.findIoCsForDeactivation(CoreServiceEJB.IOC_ACTIVE_HOURS);
-
             if (!iocs.isEmpty()) {
-
                 for (IoCRecord ioc : iocs) {
                     archiveService.deactivateRecord(ioc);
                     cacheService.removeFromCache(ioc);
@@ -64,11 +64,11 @@ public class IoCDeactivatorEJB {
             }
         } while (iocs.size() > 0);
 
-        if (deactivated == 0)
+        if (deactivated == 0) {
             log.info("No IoCs for deactivation found. Ending job...");
-        else
+        } else {
             log.info("IoCs deactivated: " + deactivated);
-
+        }
         return iocs.size();
     }
 
