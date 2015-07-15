@@ -57,7 +57,7 @@ public class ServiceEJB {
             return false;
         }
 
-        if (ioCRecord.getSource().getId() == null && ioCRecord.getSource().getId().getValue() == null) {
+        if (ioCRecord.getSource().getId() == null || ioCRecord.getSource().getId().getValue() == null) {
             log.log(Level.SEVERE, "addToCache: ioCRecord can't have source id null.");
             try {
                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
@@ -145,25 +145,23 @@ public class ServiceEJB {
         final String key = ioCRecord.getSource().getId().getValue();
         if (key != null) {
             try {
-                utx.begin();
-                if (key != null) {
-                    if (blacklistCache.containsKey(key)) {
-                        BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
-                        Map<String, String> feedToTypeUpdate = blacklistedRecord.getSources();
-                        if (ioCRecord.getFeed().getName() != null) {
-                            feedToTypeUpdate.remove(ioCRecord.getFeed().getName());
-                        } else {
-                            log.log(Level.FINEST, "removeFromCache: ioCRecord's feed was null.");
-                        }
-                        if (feedToTypeUpdate.isEmpty()) {
-                            blacklistCache.remove(key);
-                            utx.commit();
-                        } else {
-                            blacklistedRecord.setSources(feedToTypeUpdate);
-                            blacklistedRecord.setListed(Calendar.getInstance());
-                            blacklistCache.replace(key, blacklistedRecord);
-                            utx.commit();
-                        }
+                if (blacklistCache.containsKey(key)) {
+                    utx.begin();
+                    BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
+                    Map<String, String> feedToTypeUpdate = blacklistedRecord.getSources();
+                    if (ioCRecord.getFeed().getName() != null) {
+                        feedToTypeUpdate.remove(ioCRecord.getFeed().getName());
+                    } else {
+                        log.log(Level.FINEST, "removeFromCache: ioCRecord's feed was null.");
+                    }
+                    if (feedToTypeUpdate.isEmpty()) {
+                        blacklistCache.remove(key);
+                        utx.commit();
+                    } else {
+                        blacklistedRecord.setSources(feedToTypeUpdate);
+                        blacklistedRecord.setListed(Calendar.getInstance());
+                        blacklistCache.replace(key, blacklistedRecord);
+                        utx.commit();
                     }
                 }
             } catch (Exception e) {
@@ -178,7 +176,6 @@ public class ServiceEJB {
                 return false;
             }
         }
-
         return true;
     }
 }
