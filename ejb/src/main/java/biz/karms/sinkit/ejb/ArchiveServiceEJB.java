@@ -11,6 +11,7 @@ import io.searchbox.core.SearchResult;
 import io.searchbox.core.Update;
 import io.searchbox.params.Parameters;
 
+import javax.ejb.DependsOn;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
 import java.io.IOException;
@@ -22,6 +23,7 @@ import java.util.logging.Logger;
  * Created by tkozel on 24.6.15.
  */
 @Stateless
+//TODO: Note that you will end up with many instances, each for a caller. No Lock? No TX?
 public class ArchiveServiceEJB {
 
     @Inject

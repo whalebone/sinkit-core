@@ -12,7 +12,7 @@ import java.util.List;
 @Indexed
 public class Rule implements Serializable {
 
-    private static final long serialVersionUID = 2112325523047755691L;
+    private static final long serialVersionUID = 2112324523047755691L;
 
     @Field
     private String startAddress;
@@ -41,7 +41,7 @@ public class Rule implements Serializable {
     private String ruleName;
 
     /**
-     * S for Sink / L for Log
+     * S for Sink / L for Log / D for Disable
      */
     @Field
     private char action;

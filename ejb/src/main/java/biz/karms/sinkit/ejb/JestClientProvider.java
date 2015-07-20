@@ -13,6 +13,7 @@ import java.util.logging.Logger;
  * Created by tkozel on 24.6.15.
  */
 @ApplicationScoped
+@Singleton
 public class JestClientProvider {
 
     @Inject
@@ -27,6 +28,7 @@ public class JestClientProvider {
 
             JestClientFactory factory = new JestClientFactory();
             factory.setHttpClientConfig(new HttpClientConfig
+                    //TODO: move into env var
                     .Builder("http://46.101.181.215:9200")
                     .multiThreaded(true)
                     .build()) ;

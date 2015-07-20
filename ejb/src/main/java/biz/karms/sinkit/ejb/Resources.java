@@ -37,6 +37,8 @@ public class Resources {
 
     @Produces
     @Default
-    JestClient getJestClient() { return this.jestClientProvider.getJestClient(); }
+    JestClient getJestClient() {
+        return jestClientProvider.getJestClient();
+    }
 
 }
