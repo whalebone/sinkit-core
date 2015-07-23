@@ -1,5 +1,9 @@
 package biz.karms.sinkit.ejb;
 
+import biz.karms.sinkit.eventlog.EventDNSRequest;
+import biz.karms.sinkit.eventlog.EventLogAction;
+import biz.karms.sinkit.eventlog.EventLogRecord;
+import biz.karms.sinkit.eventlog.EventReason;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCSourceIdException;
 import biz.karms.sinkit.ioc.IoCRecord;
@@ -89,6 +93,38 @@ public class CoreServiceEJB {
         }
         return ioc;
     }
+
+    public EventLogRecord logEvent(
+            EventLogAction action,
+            String clientUid,
+            String requestIp,
+            String requestRaw,
+            String reasonFqdn,
+            String reasonIp,
+            String[] matchedIoCs
+    ) {
+        EventLogRecord logRecord = new EventLogRecord();
+
+        EventDNSRequest request = new EventDNSRequest();
+        request.setIp(requestIp);
+        request.setRaw(requestRaw);
+        logRecord.setRequest(request);
+
+        EventReason reason = new EventReason();
+        reason.setIp(reasonIp);
+        reason.setFqdn(reasonFqdn);
+        logRecord.setReason(reason);
+
+        logRecord.setAction(action);
+        logRecord.setClient(clientUid);
+        logRecord.setLogged(new Date());
+        logRecord.setMatchedIocs(matchedIoCs);
+
+        archiveService.archiveEventLogRecord(logRecord);
+
+        return logRecord;
+    }
+
 
     private Date addWindow(Date date) {
         Calendar c = Calendar.getInstance();

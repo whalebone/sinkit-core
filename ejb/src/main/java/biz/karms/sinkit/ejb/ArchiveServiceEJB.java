@@ -1,10 +1,12 @@
 package biz.karms.sinkit.ejb;
 
+import biz.karms.sinkit.eventlog.EventLogRecord;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.ioc.IoCRecord;
 
 import io.searchbox.client.JestClient;
 import io.searchbox.client.JestResult;
+import io.searchbox.client.JestResultHandler;
 import io.searchbox.core.Index;
 import io.searchbox.core.Search;
 import io.searchbox.core.SearchResult;
@@ -15,6 +17,7 @@ import javax.ejb.DependsOn;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -34,6 +37,8 @@ public class ArchiveServiceEJB {
 
     public static final String ELASTIC_IOC_INDEX = "iocs";
     public static final String ELASTIC_IOC_TYPE = "intelmq";
+    public static final String ELASTIC_LOG_INDEX = "logs";
+    public static final String ELASTIC_LOG_TYPE = "match";
 
     public IoCRecord findActiveIoCRecordBySourceId(
             String sourceId, String classificationType, String feedName) throws ArchiveException {
@@ -141,7 +146,7 @@ public class ArchiveServiceEJB {
         Search search = new Search.Builder(query)
                             .addIndex(ELASTIC_IOC_INDEX)
                             .addType(ELASTIC_IOC_TYPE)
-                            .setParameter(Parameters.SIZE,1000)
+                            .setParameter(Parameters.SIZE, 1000)
                             .build();
 
         //log.info("Searching archive with query: \n" + query);
@@ -150,7 +155,7 @@ public class ArchiveServiceEJB {
         try {
             result = elasticClient.execute(search);
         } catch (IOException e) {
-            throw new ArchiveException("IoC search went wrong.",e);
+            throw new ArchiveException("IoC search went wrong.", e);
         }
 
         if (!result.isSucceeded()) {
@@ -227,5 +232,32 @@ public class ArchiveServiceEJB {
         }
 
         return ioc;
+    }
+
+    public void archiveEventLogRecord(EventLogRecord logRecord) {
+
+        String indexName = ELASTIC_LOG_INDEX + "-" + new SimpleDateFormat("yyyy.MM.dd").format(logRecord.getLogged());
+
+        Index index = new Index.Builder(logRecord)
+                .index(indexName)
+                .type(ELASTIC_LOG_TYPE)
+                .setParameter(Parameters.REFRESH, true)
+                .build();
+        //log.finest("Indexing logRecord [" + logRecord.toString() + "]");
+
+        elasticClient.executeAsync(index, new JestResultHandler<JestResult>() {
+
+            @Override
+            public void completed(JestResult result) {
+                if (!result.isSucceeded()) {
+                    log.severe("Archive returned error: " + result.getErrorMessage());
+                }
+            }
+
+            @Override
+            public void failed(Exception ex) {
+                log.severe("Indexing eventLog went wrong: " + ex.getMessage());
+            }
+        });
     }
 }
