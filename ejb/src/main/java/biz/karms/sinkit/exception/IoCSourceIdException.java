@@ -3,7 +3,7 @@ package biz.karms.sinkit.exception;
 /**
  * Created by tkozel on 10.7.15.
  */
-public class IoCSourceIdException extends Exception {
+public class IoCSourceIdException extends IoCValidationException {
 
     public IoCSourceIdException() {
         super();

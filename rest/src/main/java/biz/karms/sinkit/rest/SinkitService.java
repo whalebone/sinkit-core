@@ -1,6 +1,9 @@
 package biz.karms.sinkit.rest;
 
 import biz.karms.sinkit.ejb.*;
+import biz.karms.sinkit.exception.ArchiveException;
+import biz.karms.sinkit.exception.IoCSourceIdException;
+import biz.karms.sinkit.exception.IoCValidationException;
 import biz.karms.sinkit.ioc.IoCRecord;
 import com.google.gson.GsonBuilder;
 
@@ -108,35 +111,10 @@ public class SinkitService implements Serializable {
         return new GsonBuilder().create().toJson(message);
     }
 
-    String processIoCRecord(String jsonIoCRecord) {
+    String processIoCRecord(String jsonIoCRecord) throws IoCValidationException, ArchiveException {
 
-        String response;
-        try {
-            IoCRecord ioc = new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().fromJson(jsonIoCRecord, IoCRecord.class);
-
-            if (ioc.getFeed() == null || ioc.getFeed().getName() == null) {
-                throw new Exception("IoC record doesn't have mandatory field 'feed.name'");
-            }
-            if (ioc.getSource() == null || (
-                    ioc.getSource().getFQDN() == null && ioc.getSource().getIp() == null && ioc.getSource().getUrl() == null
-            )) {
-                throw new Exception("IoC can't have both IP and Domain set as null");
-            }
-            if (ioc.getClassification() == null || ioc.getClassification().getType() == null) {
-                throw new Exception("IoC record doesn't have mandatory field 'classification.type'");
-            }
-            if (ioc.getTime() == null || ioc.getTime().getObservation() == null) {
-                throw new Exception("IoC record doesn't have mandatory field 'time.observation'");
-            }
-
-            ioc = coreService.processIoCRecord(ioc);
-
-            response = new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().toJson(ioc);
-        } catch (Exception e) {
-            e.printStackTrace();
-            log.log(Level.SEVERE, "IoC: " + jsonIoCRecord);
-            response = new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().toJson(e.getMessage());
-        }
-        return response;
+        IoCRecord ioc = new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().fromJson(jsonIoCRecord, IoCRecord.class);
+        ioc = coreService.processIoCRecord(ioc);
+        return new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().toJson(ioc);
     }
 }

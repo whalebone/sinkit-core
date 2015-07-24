@@ -6,6 +6,7 @@ import biz.karms.sinkit.eventlog.EventLogRecord;
 import biz.karms.sinkit.eventlog.EventReason;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCSourceIdException;
+import biz.karms.sinkit.exception.IoCValidationException;
 import biz.karms.sinkit.ioc.IoCRecord;
 import biz.karms.sinkit.ioc.IoCSeen;
 import biz.karms.sinkit.ioc.IoCSourceId;
@@ -39,7 +40,15 @@ public class CoreServiceEJB {
     @Inject
     private ServiceEJB cacheService;
 
-    public synchronized IoCRecord processIoCRecord(IoCRecord receivedIoc) throws ArchiveException, IoCSourceIdException {
+    public synchronized IoCRecord processIoCRecord(IoCRecord receivedIoc)
+            throws ArchiveException, IoCValidationException {
+
+        // validate ioc
+        this.validateIoCRecord(receivedIoc);
+
+        // try to construct source ID
+        IoCSourceId sid = IoCSourceIdBuilder.build(receivedIoc);
+        receivedIoc.getSource().setId(sid);
 
         if (receivedIoc.getTime().getSource() != null) {
             Date sourceTime = receivedIoc.getTime().getSource();
@@ -48,9 +57,6 @@ public class CoreServiceEJB {
                 return receivedIoc;
             }
         }
-
-        IoCSourceId sid = IoCSourceIdBuilder.build(receivedIoc);
-        receivedIoc.getSource().setId(sid);
 
         IoCRecord ioc = archiveService.findActiveIoCRecordBySourceId(
                 receivedIoc.getSource().getId().getValue(),
@@ -124,6 +130,26 @@ public class CoreServiceEJB {
         archiveService.archiveEventLogRecord(logRecord);
 
         return logRecord;
+    }
+
+    private IoCRecord validateIoCRecord(IoCRecord ioc) throws IoCValidationException {
+
+        if (ioc.getFeed() == null || ioc.getFeed().getName() == null) {
+            throw new IoCValidationException("IoC record doesn't have mandatory field 'feed.name'");
+        }
+        if (ioc.getSource() == null || (
+                ioc.getSource().getFQDN() == null && ioc.getSource().getIp() == null && ioc.getSource().getUrl() == null
+        )) {
+            throw new IoCValidationException("IoC can't have all IP and Domain and URL set as null");
+        }
+        if (ioc.getClassification() == null || ioc.getClassification().getType() == null) {
+            throw new IoCValidationException("IoC record doesn't have mandatory field 'classification.type'");
+        }
+        if (ioc.getTime() == null || ioc.getTime().getObservation() == null) {
+            throw new IoCValidationException("IoC record doesn't have mandatory field 'time.observation'");
+        }
+
+        return ioc;
     }
 
 
