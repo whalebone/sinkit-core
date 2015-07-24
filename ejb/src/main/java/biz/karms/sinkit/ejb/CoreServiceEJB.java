@@ -14,6 +14,7 @@ import biz.karms.sinkit.ioc.util.IoCSourceIdBuilder;
 
 import javax.ejb.Schedule;
 import javax.ejb.Schedules;
+import javax.ejb.Singleton;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
 import java.util.Calendar;
@@ -24,7 +25,7 @@ import java.util.logging.Logger;
 /**
  * Created by tkozel on 25.6.15.
  */
-@Stateless
+@Singleton
 public class CoreServiceEJB {
 
     public static final int IOC_ACTIVE_HOURS = 72;
@@ -38,7 +39,7 @@ public class CoreServiceEJB {
     @Inject
     private ServiceEJB cacheService;
 
-    public IoCRecord processIoCRecord(IoCRecord receivedIoc) throws ArchiveException, IoCSourceIdException {
+    public synchronized IoCRecord processIoCRecord(IoCRecord receivedIoc) throws ArchiveException, IoCSourceIdException {
 
         if (receivedIoc.getTime().getSource() != null) {
             Date sourceTime = receivedIoc.getTime().getSource();
