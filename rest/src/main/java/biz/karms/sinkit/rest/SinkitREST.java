@@ -1,9 +1,15 @@
 package biz.karms.sinkit.rest;
 
+import biz.karms.sinkit.exception.IoCValidationException;
 import biz.karms.sinkit.ioc.*;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
+
 import javax.inject.Inject;
 import javax.ws.rs.*;
+import javax.ws.rs.core.Response;
+import java.util.logging.Logger;
+
 /**
  * @author Michal Karm Babacek
  *         <p/>
@@ -15,6 +21,9 @@ public class SinkitREST {
 
     @Inject
     SinkitService sinkitService;
+
+    @Inject
+    private Logger log;
 
     @Inject
     StupidAuthenticator stupidAuthenticator;
@@ -102,11 +111,22 @@ public class SinkitREST {
     @POST
     @Path("/blacklist/ioc/")
     @Produces({"application/json;charset=UTF-8"})
-    public String putIoCRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, String ioc) {
-        if (stupidAuthenticator.isAuthenticated(token)) {
-            return sinkitService.processIoCRecord(ioc);
-        } else {
-            return AUTH_FAIL;
+    public Response putIoCRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, String ioc) {
+
+        if (!stupidAuthenticator.isAuthenticated(token)) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity(AUTH_FAIL).build();
+        }
+
+        try {
+            String response = sinkitService.processIoCRecord(ioc);
+            return Response.status(Response.Status.OK).entity(response).build();
+        } catch (IoCValidationException | JsonSyntaxException ex) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(ex.getMessage()).build();
+        } catch (Exception ex) {
+            log.severe("Processiong IoC went wrong: " + ex.getMessage());
+            log.severe("IoC: " + ioc);
+            ex.printStackTrace();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex.getMessage()).build();
         }
     }
 
