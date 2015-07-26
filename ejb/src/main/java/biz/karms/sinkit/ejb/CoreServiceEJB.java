@@ -5,22 +5,16 @@ import biz.karms.sinkit.eventlog.EventLogAction;
 import biz.karms.sinkit.eventlog.EventLogRecord;
 import biz.karms.sinkit.eventlog.EventReason;
 import biz.karms.sinkit.exception.ArchiveException;
-import biz.karms.sinkit.exception.IoCSourceIdException;
 import biz.karms.sinkit.exception.IoCValidationException;
 import biz.karms.sinkit.ioc.IoCRecord;
 import biz.karms.sinkit.ioc.IoCSeen;
 import biz.karms.sinkit.ioc.IoCSourceId;
 import biz.karms.sinkit.ioc.IoCSourceIdType;
 import biz.karms.sinkit.ioc.util.IoCSourceIdBuilder;
-
-import javax.ejb.Schedule;
-import javax.ejb.Schedules;
-import javax.ejb.Singleton;
-import javax.ejb.Stateless;
+import javax.ejb.*;
 import javax.inject.Inject;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
 import java.util.logging.Logger;
 
 /**
@@ -39,6 +33,9 @@ public class CoreServiceEJB {
 
     @Inject
     private ServiceEJB cacheService;
+
+    @Inject
+    private CacheBuilderEJB cacheBuilder;
 
     public synchronized IoCRecord processIoCRecord(IoCRecord receivedIoc)
             throws ArchiveException, IoCValidationException {
@@ -152,6 +149,16 @@ public class CoreServiceEJB {
         return ioc;
     }
 
+    public synchronized boolean runCacheRebuilding() {
+
+        if (cacheBuilder.isCacheRebuildRunning()) {
+            log.info("Cache rebuilding still in process -> skipping");
+            return false;
+        }
+
+        cacheBuilder.runCacheRebuilding();
+        return true;
+    }
 
     private Date addWindow(Date date) {
         Calendar c = Calendar.getInstance();

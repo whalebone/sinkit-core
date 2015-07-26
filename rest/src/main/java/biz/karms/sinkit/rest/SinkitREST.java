@@ -130,6 +130,19 @@ public class SinkitREST {
         }
     }
 
+    @POST
+    @Path("/rebuildCache/")
+    @Produces({"application/json;charset=UTF-8"})
+    public Response rebuildCache(@HeaderParam(AUTH_HEADER_PARAM) String token) {
+
+        if (!stupidAuthenticator.isAuthenticated(token)) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity(AUTH_FAIL).build();
+        }
+
+        String response = sinkitService.runCacheRebuilding();
+        return Response.status(Response.Status.OK).entity(response).build();
+    }
+
     /**
      * Rules
      */

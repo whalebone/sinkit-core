@@ -13,8 +13,7 @@ import io.searchbox.core.SearchResult;
 import io.searchbox.core.Update;
 import io.searchbox.params.Parameters;
 
-import javax.ejb.DependsOn;
-import javax.ejb.Stateless;
+import javax.ejb.Singleton;
 import javax.inject.Inject;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -25,7 +24,7 @@ import java.util.logging.Logger;
 /**
  * Created by tkozel on 24.6.15.
  */
-@Stateless
+@Singleton
 //TODO: Note that you will end up with many instances, each for a caller. No Lock? No TX?
 public class ArchiveServiceEJB {
 
@@ -35,10 +34,12 @@ public class ArchiveServiceEJB {
     @Inject
     private JestClient elasticClient;
 
-    public static final String ELASTIC_IOC_INDEX = "iocs";
-    public static final String ELASTIC_IOC_TYPE = "intelmq";
-    public static final String ELASTIC_LOG_INDEX = "logs";
-    public static final String ELASTIC_LOG_TYPE = "match";
+    private static final String ELASTIC_IOC_INDEX = "iocs";
+    private static final String ELASTIC_IOC_TYPE = "intelmq";
+    private static final String ELASTIC_LOG_INDEX = "logs";
+    private static final String ELASTIC_LOG_TYPE = "match";
+
+    private static final String PARAMETER_FROM = "from";
 
     public IoCRecord findActiveIoCRecordBySourceId(
             String sourceId, String classificationType, String feedName) throws ArchiveException {
@@ -143,10 +144,16 @@ public class ArchiveServiceEJB {
 
     private List<IoCRecord> searchArchive(String query) throws ArchiveException {
 
+        return searchArchive(query, 0, 1000);
+    }
+
+    private List<IoCRecord> searchArchive(String query, int from, int size) throws ArchiveException {
+
         Search search = new Search.Builder(query)
                             .addIndex(ELASTIC_IOC_INDEX)
                             .addType(ELASTIC_IOC_TYPE)
-                            .setParameter(Parameters.SIZE, 1000)
+                            .setParameter(PARAMETER_FROM, from)
+                            .setParameter(Parameters.SIZE, size)
                             .build();
 
         //log.info("Searching archive with query: \n" + query);
@@ -165,7 +172,7 @@ public class ArchiveServiceEJB {
         //log.info("Found " + result.getTotal() + " hits");
 
         //log.info(result.getJsonString());
-        if (result.getTotal() < 1) return new ArrayList<IoCRecord>();
+        if (result.getTotal() < 1) return new ArrayList<>();
 
         return result.getSourceAsObjectList(IoCRecord.class);
     }
@@ -209,7 +216,7 @@ public class ArchiveServiceEJB {
 
         //log.info(query);
 
-        JestResult result = null;
+        JestResult result;
         //log.info("Deactivating ioc [" + ioc.toString() + "]");
         try {
             result =
@@ -259,5 +266,20 @@ public class ArchiveServiceEJB {
                 log.severe("Indexing eventLog went wrong: " + ex.getMessage());
             }
         });
+    }
+
+    public List<IoCRecord> getActiveIoCs(int from, int size) throws ArchiveException {
+
+        //log.info("Searching archive for active IoCs with seen.last older than " + hours + " hours.");
+
+        String query = "{\n" +
+                "   \"query\": {\n" +
+                "               \"term\": {\n" +
+                "                   \"active\": true\n" +
+                "               }\n" +
+                "   }\n" +
+                "}\n";
+
+        return this.searchArchive(query, from, size);
     }
 }
