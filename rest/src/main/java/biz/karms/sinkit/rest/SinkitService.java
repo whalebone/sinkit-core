@@ -117,4 +117,16 @@ public class SinkitService implements Serializable {
         ioc = coreService.processIoCRecord(ioc);
         return new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().toJson(ioc);
     }
+
+    String runCacheRebuilding() {
+
+        String response;
+        if (coreService.runCacheRebuilding()) {
+            response = "Cache rebuilding started";
+        } else {
+            response = "Cache rebuilding already started";
+        }
+        return new GsonBuilder().create().toJson(response);
+
+    }
 }
