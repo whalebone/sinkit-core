@@ -1,10 +1,11 @@
 package biz.karms.sinkit.ejb;
 
-import org.hibernate.search.annotations.*;
+import org.hibernate.search.annotations.Field;
+import org.hibernate.search.annotations.Indexed;
+import org.hibernate.search.annotations.IndexedEmbedded;
 
 import java.io.Serializable;
-import java.util.Calendar;
-import java.util.List;
+import java.util.HashMap;
 
 /**
  * @author Michal Karm Babacek
@@ -12,7 +13,7 @@ import java.util.List;
 @Indexed
 public class Rule implements Serializable {
 
-    private static final long serialVersionUID = 2112324523047755691L;
+    private static final long serialVersionUID = 9212324523047755691L;
 
     @Field
     private String startAddress;
@@ -23,40 +24,14 @@ public class Rule implements Serializable {
     @Field
     private String cidrAddress;
 
-    @IndexedEmbedded
-    private List<String> sources;
-
     @Field
-    @CalendarBridge(resolution = Resolution.HOUR)
-    private Calendar created;
-
-    @Field
-    @CalendarBridge(resolution = Resolution.HOUR)
-    private Calendar updated;
-
-    @Field
-    private String organization;
-
-    @Field
-    private String ruleName;
+    private int customerId;
 
     /**
-     * S for Sink / L for Log / D for Disable
+     * Feed UID : Mode as in
      */
-    @Field
-    private char action;
-
-    public Rule(String startAddress, String endAddress, String cidrAddress, List<String> sources, Calendar created, Calendar updated, String organization, String ruleName, char action) {
-        this.startAddress = startAddress;
-        this.endAddress = endAddress;
-        this.cidrAddress = cidrAddress;
-        this.sources = sources;
-        this.created = created;
-        this.updated = updated;
-        this.organization = organization;
-        this.ruleName = ruleName;
-        this.action = action;
-    }
+    @IndexedEmbedded
+    private HashMap<String, String> sources;
 
     public String getStartAddress() {
         return startAddress;
@@ -82,52 +57,45 @@ public class Rule implements Serializable {
         this.cidrAddress = cidrAddress;
     }
 
-    public List<String> getSources() {
+    public int getCustomerId() {
+        return customerId;
+    }
+
+    public void setCustomerId(int customerId) {
+        this.customerId = customerId;
+    }
+
+    public HashMap<String, String> getSources() {
         return sources;
     }
 
-    public void setSources(List<String> sources) {
+    public void setSources(HashMap<String, String> sources) {
         this.sources = sources;
     }
 
-    public Calendar getCreated() {
-        return created;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Rule)) return false;
+
+        Rule rule = (Rule) o;
+
+        if (customerId != rule.customerId) return false;
+        if (startAddress != null ? !startAddress.equals(rule.startAddress) : rule.startAddress != null) return false;
+        if (endAddress != null ? !endAddress.equals(rule.endAddress) : rule.endAddress != null) return false;
+        if (!cidrAddress.equals(rule.cidrAddress)) return false;
+        return sources.equals(rule.sources);
+
     }
 
-    public void setCreated(Calendar created) {
-        this.created = created;
-    }
-
-    public Calendar getUpdated() {
-        return updated;
-    }
-
-    public void setUpdated(Calendar updated) {
-        this.updated = updated;
-    }
-
-    public String getOrganization() {
-        return organization;
-    }
-
-    public void setOrganization(String organization) {
-        this.organization = organization;
-    }
-
-    public String getRuleName() {
-        return ruleName;
-    }
-
-    public void setRuleName(String ruleName) {
-        this.ruleName = ruleName;
-    }
-
-    public char getAction() {
-        return action;
-    }
-
-    public void setAction(char action) {
-        this.action = action;
+    @Override
+    public int hashCode() {
+        int result = startAddress != null ? startAddress.hashCode() : 0;
+        result = 31 * result + (endAddress != null ? endAddress.hashCode() : 0);
+        result = 31 * result + cidrAddress.hashCode();
+        result = 31 * result + customerId;
+        result = 31 * result + sources.hashCode();
+        return result;
     }
 
     @Override
@@ -136,12 +104,8 @@ public class Rule implements Serializable {
                 "startAddress='" + startAddress + '\'' +
                 ", endAddress='" + endAddress + '\'' +
                 ", cidrAddress='" + cidrAddress + '\'' +
+                ", customerId=" + customerId +
                 ", sources=" + sources +
-                ", created=" + created +
-                ", updated=" + updated +
-                ", organization='" + organization + '\'' +
-                ", ruleName='" + ruleName + '\'' +
-                ", action=" + action +
                 '}';
     }
 }

@@ -1,17 +1,24 @@
 package biz.karms.sinkit.rest;
 
-import biz.karms.sinkit.ejb.*;
+import biz.karms.sinkit.ejb.BlacklistedRecord;
+import biz.karms.sinkit.ejb.CoreServiceEJB;
+import biz.karms.sinkit.ejb.DNSApiEJB;
+import biz.karms.sinkit.ejb.WebApiEJB;
+import biz.karms.sinkit.ejb.dto.AllDNSSettingDTO;
+import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
+import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
+import biz.karms.sinkit.ejb.dto.FeedSettingDTO;
 import biz.karms.sinkit.exception.ArchiveException;
-import biz.karms.sinkit.exception.IoCSourceIdException;
 import biz.karms.sinkit.exception.IoCValidationException;
 import biz.karms.sinkit.ioc.IoCRecord;
 import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 
-import javax.ejb.DependsOn;
 import javax.ejb.EJB;
 import javax.enterprise.context.SessionScoped;
 import javax.inject.Inject;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -81,20 +88,6 @@ public class SinkitService implements Serializable {
         return new GsonBuilder().create().toJson(message);
     }
 
-    String putRule(final String json) {
-        try {
-            log.log(Level.FINEST, "Received JSON [" + json + "]");
-            Rule rule = new GsonBuilder().create().fromJson(json, Rule.class);
-            if (rule == null) {
-                return new GsonBuilder().create().toJson(ERR_MSG);
-            }
-            return new GsonBuilder().create().toJson(webapiEJB.putRule(rule));
-        } catch (Exception e) {
-            log.log(Level.SEVERE, "putRule", e);
-            return new GsonBuilder().create().toJson(ERR_MSG);
-        }
-    }
-
     String getRules(final String clientIPAddress) {
         return new GsonBuilder().create().toJson(webapiEJB.getRules(clientIPAddress));
     }
@@ -128,5 +121,76 @@ public class SinkitService implements Serializable {
         }
         return new GsonBuilder().create().toJson(response);
 
+    }
+
+    String putDNSClientSettings(int customerId, String json) {
+        try {
+            log.log(Level.FINEST, "Received JSON [" + json + "]");
+            HashMap<String, HashMap<String, String>> customerDNSSetting = new GsonBuilder().create().fromJson(json, new TypeToken<HashMap<String, HashMap<String, String>>>() {
+            }.getType());
+            if (customerDNSSetting == null) {
+                return new GsonBuilder().create().toJson(ERR_MSG);
+            }
+            return new GsonBuilder().create().toJson(webapiEJB.putDNSClientSettings(customerId, customerDNSSetting));
+        } catch (Exception e) {
+            log.log(Level.SEVERE, "putDNSClientSettings", e);
+            return new GsonBuilder().create().toJson(ERR_MSG);
+        }
+    }
+
+    String postAllDNSClientSettings(String json) {
+        try {
+            log.log(Level.FINEST, "Received JSON [" + json + "]");
+            AllDNSSettingDTO[] allDNSSetting = new GsonBuilder().create().fromJson(json, AllDNSSettingDTO[].class);
+            if (allDNSSetting == null) {
+                return new GsonBuilder().create().toJson(ERR_MSG);
+            }
+            return new GsonBuilder().create().toJson(webapiEJB.postAllDNSClientSettings(allDNSSetting));
+        } catch (Exception e) {
+            log.log(Level.SEVERE, "postAllDNSClientSettings", e);
+            return new GsonBuilder().create().toJson(ERR_MSG);
+        }
+    }
+
+    String putCustomLists(int customerId, String json) {
+        try {
+            log.log(Level.FINEST, "Received JSON [" + json + "]");
+            CustomerCustomListDTO[] customerCustomLists = new GsonBuilder().create().fromJson(json, CustomerCustomListDTO[].class);
+            if (customerCustomLists == null) {
+                return new GsonBuilder().create().toJson(ERR_MSG);
+            }
+            return new GsonBuilder().create().toJson(webapiEJB.putCustomLists(customerId, customerCustomLists));
+        } catch (Exception e) {
+            log.log(Level.SEVERE, "putCustomLists", e);
+            return new GsonBuilder().create().toJson(ERR_MSG);
+        }
+    }
+
+    String putFeedSettings(String feedUid, String json) {
+        try {
+            log.log(Level.FINEST, "Received JSON [" + json + "]");
+            FeedSettingDTO[] feedSettings = new GsonBuilder().create().fromJson(json, FeedSettingDTO[].class);
+            if (feedSettings == null) {
+                return new GsonBuilder().create().toJson(ERR_MSG);
+            }
+            return new GsonBuilder().create().toJson(webapiEJB.putFeedSettings(feedUid, feedSettings));
+        } catch (Exception e) {
+            log.log(Level.SEVERE, "putCustomLists", e);
+            return new GsonBuilder().create().toJson(ERR_MSG);
+        }
+    }
+
+    String postCreateFeedSettings(String json) {
+        try {
+            log.log(Level.FINEST, "Received JSON [" + json + "]");
+            FeedSettingCreateDTO feedSettingCreate = new GsonBuilder().create().fromJson(json, FeedSettingCreateDTO.class);
+            if (feedSettingCreate == null) {
+                return new GsonBuilder().create().toJson(ERR_MSG);
+            }
+            return new GsonBuilder().create().toJson(webapiEJB.postCreateFeedSettings(feedSettingCreate));
+        } catch (Exception e) {
+            log.log(Level.SEVERE, "putCustomLists", e);
+            return new GsonBuilder().create().toJson(ERR_MSG);
+        }
     }
 }

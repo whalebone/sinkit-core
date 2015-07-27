@@ -52,7 +52,7 @@ public class MyCacheManagerProvider {
             Configuration loc = new ConfigurationBuilder().jmxStatistics().enable() // Enable JMX statistics
                     .clustering().cacheMode(CacheMode.DIST_ASYNC) // Set Cache mode to DISTRIBUTED with SYNCHRONOUS replication
                     .hash().numOwners(2) // Keeps two copies of each key/value pair
-                    .expiration().lifespan(ENTRY_LIFESPAN) // Set expiration - cache entries expire after some time (given by
+                    .expiration().lifespan(ENTRY_LIFESPAN_NEVER) // Set expiration - cache entries expire after some time (given by
                             // the lifespan parameter) and are removed from the cache (cluster-wide).
                     .indexing().index(Index.ALL)
                     .eviction().strategy(EvictionStrategy.LRU)

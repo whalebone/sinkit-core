@@ -1,5 +1,9 @@
 package biz.karms.sinkit.ejb;
 
+import biz.karms.sinkit.ejb.dto.AllDNSSettingDTO;
+import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
+import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
+import biz.karms.sinkit.ejb.dto.FeedSettingDTO;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
 import org.apache.lucene.search.Query;
 import org.hibernate.search.query.dsl.QueryBuilder;
@@ -7,9 +11,9 @@ import org.infinispan.Cache;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.query.CacheQuery;
 import org.infinispan.query.SearchManager;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.annotation.PostConstruct;
-import javax.ejb.DependsOn;
 import javax.ejb.Stateless;
 import javax.ejb.TransactionManagement;
 import javax.ejb.TransactionManagementType;
@@ -77,8 +81,7 @@ public class WebApiEJB {
                     utx.rollback();
                 }
             } catch (Exception e1) {
-                // TODO Hmm, make it better :-(
-                e1.printStackTrace();
+                log.log(Level.SEVERE, "putBlacklistedRecord", e1);
             }
             return null;
         }
@@ -112,48 +115,7 @@ public class WebApiEJB {
                     utx.rollback();
                 }
             } catch (Exception e1) {
-                // TODO Hmm, make it better :-(
-                e1.printStackTrace();
-            }
-            return null;
-        }
-    }
-
-    public Rule putRule(Rule rule) {
-        try {
-            if (rule == null || rule.getCidrAddress() == null || rule.getCidrAddress().length() < 7) {
-                log.log(Level.SEVERE, "putRule: Got invalid or null 'rule' record. Can't process this.");
-                return null;
-            }
-            // TODO: If we had something like RuleDTO without *Address attributes, we wouldn't need this check.
-            if (rule.getStartAddress() != null || rule.getEndAddress() != null) {
-                log.log(Level.SEVERE, "putRule: getStartAddress or getEndAddress ain't null. This is weird, we should be setting these exclusively here.");
-                return null;
-            }
-            //TODO: It is very wasteful to calculate the whole thing for just the one /32 or /128 masked client IP.
-            CIDRUtils cidrUtils = new CIDRUtils(rule.getCidrAddress());
-            if (cidrUtils == null) {
-                log.log(Level.SEVERE, "putRule: We have failed to construct CIDRUtils instance.");
-                return null;
-            }
-            rule.setStartAddress(cidrUtils.getStartIPBigIntegerString());
-            rule.setEndAddress(cidrUtils.getEndIPBigIntegerString());
-            cidrUtils = null;
-            utx.begin();
-            log.log(Level.FINEST, "Putting key [" + rule.getStartAddress() + "]");
-            ruleCache.put(rule.getStartAddress(), rule);
-            utx.commit();
-            // TODO: Is this O.K.? Maybe we should just return the same instance.
-            return ruleCache.get(rule.getStartAddress());
-        } catch (Exception e) {
-            log.log(Level.SEVERE, "putRule", e);
-            try {
-                if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
-                    utx.rollback();
-                }
-            } catch (Exception e1) {
-                // TODO Hmm, make it better :-(
-                e1.printStackTrace();
+                log.log(Level.SEVERE, "deleteBlacklistedRecord", e1);
             }
             return null;
         }
@@ -223,10 +185,113 @@ public class WebApiEJB {
                     utx.rollback();
                 }
             } catch (Exception e1) {
-                // TODO Hmm, make it better :-(
-                e1.printStackTrace();
+                log.log(Level.SEVERE, "deleteRule", e1);
             }
             return null;
         }
+    }
+
+    /**
+     * - lookup all Rule instances with particular customerId
+     * - in those results, find those with dnsClient matching dnsClient in customerDNSSetting
+     * - in these matching instances, replace current FeedModeDTO settings with the new one
+     *
+     * @param customerId
+     * @param customerDNSSetting Map K(dnsClient in CIDR) : V(HashMap<String, String>), where HashMap<String, String> stands for: "feedUID" : "<L|S|D>"
+     * @return
+     */
+    public String putDNSClientSettings(int customerId, HashMap<String, HashMap<String, String>> customerDNSSetting) {
+        try {
+            SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
+            QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(Rule.class).get();
+            Query luceneQuery = queryBuilder.keyword().onField("customerId").matching(customerId).createQuery();
+            CacheQuery query = searchManager.getQuery(luceneQuery, Rule.class);
+            if (query != null && query.list().size() > 0) {
+                Iterator itr = query.iterator();
+                while (itr.hasNext()) {
+                    Rule rule = (Rule) itr.next();
+                    if (customerDNSSetting.containsKey(rule.getCidrAddress())) {
+                        rule.setSources(customerDNSSetting.get(rule.getCidrAddress()));
+                        try {
+                            utx.begin();
+                            ruleCache.replace(rule.getStartAddress(), rule);
+                            utx.commit();
+                        } catch (Exception e) {
+                            log.log(Level.SEVERE, "putDNSClientSettings", e);
+                            try {
+                                if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
+                                    utx.rollback();
+                                }
+                            } catch (Exception e1) {
+                                log.log(Level.SEVERE, "putDNSClientSettings", e1);
+                            }
+                            return null;
+                        }
+                    }
+                }
+            } else {
+                log.log(Level.SEVERE, "putDNSClientSettings: customerId " + customerId + " does not exist, query result is either null or empty.");
+                return customerId + " DOES NOT EXIST";
+            }
+        } catch (Exception e) {
+            log.log(Level.SEVERE, "putDNSClientSettings troubles", e);
+            return null;
+        }
+        return customerId + " SETTINGS UPDATED";
+    }
+
+    public String postAllDNSClientSettings(AllDNSSettingDTO[] allDNSSetting) {
+        //TODO: Perhaps invert the flow: create 1 utx.begin();-utx.commit(); block and loop inside...
+        for (AllDNSSettingDTO allDNSSettingDTO : allDNSSetting) {
+            try {
+                if (allDNSSettingDTO == null || allDNSSettingDTO.getDnsClient() == null || allDNSSettingDTO.getDnsClient().length() < 7) {
+                    log.log(Level.SEVERE, "postAllDNSClientSettings: Got an invalid or null record. Can't process this.");
+                    return null;
+                }
+                //TODO: It is very wasteful to calculate the whole thing for just the one /32 or /128 masked client IP.
+                CIDRUtils cidrUtils = new CIDRUtils(allDNSSettingDTO.getDnsClient());
+                if (cidrUtils == null) {
+                    log.log(Level.SEVERE, "postAllDNSClientSettings: We have failed to construct CIDRUtils instance.");
+                    return null;
+                }
+                Rule rule = new Rule();
+                rule.setCidrAddress(allDNSSettingDTO.getDnsClient());
+                rule.setCustomerId(allDNSSettingDTO.getCustomerId());
+                rule.setSources(allDNSSettingDTO.getSettings());
+                rule.setStartAddress(cidrUtils.getStartIPBigIntegerString());
+                rule.setEndAddress(cidrUtils.getEndIPBigIntegerString());
+                cidrUtils = null;
+                utx.begin();
+                log.log(Level.FINEST, "Putting key [" + rule.getStartAddress() + "]");
+                ruleCache.put(rule.getStartAddress(), rule);
+                utx.commit();
+            } catch (Exception e) {
+                log.log(Level.SEVERE, "postAllDNSClientSettings", e);
+                try {
+                    if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
+                        utx.rollback();
+                    }
+                } catch (Exception e1) {
+                    log.log(Level.SEVERE, "postAllDNSClientSettings", e1);
+                }
+                return null;
+            }
+        }
+        return allDNSSetting.length + " RULES PROCESSED";
+    }
+
+    public String putCustomLists(int customerId, CustomerCustomListDTO[] customerCustomLists) {
+        //TODO
+        throw new NotImplementedException();
+    }
+
+    public String putFeedSettings(String feedUid, FeedSettingDTO[] feedSettings) {
+        //TODO
+        throw new NotImplementedException();
+    }
+
+    public String postCreateFeedSettings(FeedSettingCreateDTO feedSettingCreate) {
+        //TODO
+        throw new NotImplementedException();
     }
 }
