@@ -1,6 +1,7 @@
 package biz.karms.sinkit.ejb;
 
 import biz.karms.sinkit.ioc.IoCRecord;
+
 import javax.ejb.*;
 import javax.inject.Inject;
 import java.util.List;
@@ -21,6 +22,9 @@ public class CacheBuilderEJB {
 
     @Inject
     private ArchiveServiceEJB archiveService;
+
+    @Inject
+    private ServiceEJB serviceEJB;
 
     @Lock(LockType.READ)
     public boolean isCacheRebuildRunning() {
@@ -47,7 +51,8 @@ public class CacheBuilderEJB {
 
         log.info("Rebuilding Cache started");
 
-        // TODO clearCache HERE
+        // TODO: Is it O.K. that this could _take time_ ?
+        serviceEJB.dropTheWholeCache();
 
         int recordsCount = 0;
         int from = 0;
@@ -59,7 +64,7 @@ public class CacheBuilderEJB {
             do {
                 iocs = archiveService.getActiveIoCs(from, size);
                 for (IoCRecord ioc : iocs) {
-                    //TODO cacheService.addToCache(ioc);
+                    serviceEJB.addToCache(ioc);
                 }
                 recordsCount += iocs.size();
                 from += size;
@@ -67,13 +72,13 @@ public class CacheBuilderEJB {
 
             } while (iocs.size() >= size);
 
-        } catch (Exception ex)  {
+        } catch (Exception ex) {
             log.severe("Cache rebuilding failed: " + ex.getMessage());
             ex.printStackTrace();
         }
 
         log.info("Cache rebuilding: rebuilding finished -  " + recordsCount + " iocs processed.");
 
-        return  recordsCount;
+        return recordsCount;
     }
 }

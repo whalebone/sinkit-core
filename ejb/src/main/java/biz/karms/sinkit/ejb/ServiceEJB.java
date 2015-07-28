@@ -53,6 +53,7 @@ public class ServiceEJB {
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "addToCache: Rolling back.", e1);
+                return false;
             }
             return false;
         }
@@ -65,8 +66,8 @@ public class ServiceEJB {
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "addToCache: Rolling back.", e1);
+                return false;
             }
-
             return false;
         }
 
@@ -108,11 +109,11 @@ public class ServiceEJB {
                     }
                 } catch (Exception e1) {
                     log.log(Level.SEVERE, "Rolling back", e1);
+                    return false;
                 }
                 return false;
             }
         }
-
         return true;
     }
 
@@ -126,6 +127,7 @@ public class ServiceEJB {
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "removeFromCache: Rolling back.", e1);
+                return false;
             }
             return false;
         }
@@ -138,6 +140,7 @@ public class ServiceEJB {
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "removeFromCache: Rolling back.", e1);
+                return false;
             }
             return false;
         }
@@ -172,9 +175,39 @@ public class ServiceEJB {
                     }
                 } catch (Exception e1) {
                     log.log(Level.SEVERE, "removeFromCache: Rolling back.", e1);
+                    return false;
                 }
                 return false;
             }
+        }
+        return true;
+    }
+
+    /**
+     * This is very evil.
+     *
+     * @return true if everything went well.
+     */
+    public boolean dropTheWholeCache() {
+        log.log(Level.SEVERE, "dropTheWholeCache: We are dropping the cache. This has severe operational implications.");
+        try {
+            utx.begin();
+            // TODO: Clear is faster, but apparently quite ugly. Investigate clearAsync().
+            //blacklistCache.clear();
+            // TODO: Could this handle millions of records in a dozen node cluster? :)
+            blacklistCache.keySet().forEach(key -> blacklistCache.remove(key));
+            utx.commit();
+        } catch (Exception e) {
+            log.log(Level.SEVERE, "dropTheWholeCache", e);
+            try {
+                if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
+                    utx.rollback();
+                }
+            } catch (Exception e1) {
+                log.log(Level.SEVERE, "dropTheWholeCache: Rolling back.", e1);
+                return false;
+            }
+            return false;
         }
         return true;
     }
