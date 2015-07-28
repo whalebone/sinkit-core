@@ -82,7 +82,7 @@ public class ServiceEJB {
                         if (ioCRecord.getFeed().getName() != null && ioCRecord.getClassification().getType() != null) {
                             feedToTypeUpdate.putIfAbsent(ioCRecord.getFeed().getName(), ioCRecord.getClassification().getType());
                         } else {
-                            log.log(Level.FINEST, "addToCache: ioCRecord's feed or classification type were null");
+                            log.log(Level.FINE, "addToCache: ioCRecord's feed or classification type were null");
                         }
                         blacklistedRecord.setSources(feedToTypeUpdate);
                         blacklistedRecord.setListed(Calendar.getInstance());
@@ -93,10 +93,10 @@ public class ServiceEJB {
                         if (ioCRecord.getFeed().getName() != null && ioCRecord.getClassification().getType() != null) {
                             feedToType.put(ioCRecord.getFeed().getName(), ioCRecord.getClassification().getType());
                         } else {
-                            log.log(Level.FINEST, "addToCache: ioCRecord's feed or classification type were null");
+                            log.log(Level.FINE, "addToCache: ioCRecord's feed or classification type were null");
                         }
                         BlacklistedRecord blacklistedRecord = new BlacklistedRecord(key, Calendar.getInstance(), feedToType);
-                        log.log(Level.FINEST, "Putting new key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
+                        log.log(Level.FINE, "Putting new key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
                         blacklistCache.put(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
                         utx.commit();
                     }
@@ -155,7 +155,7 @@ public class ServiceEJB {
                     if (ioCRecord.getFeed().getName() != null) {
                         feedToTypeUpdate.remove(ioCRecord.getFeed().getName());
                     } else {
-                        log.log(Level.FINEST, "removeFromCache: ioCRecord's feed was null.");
+                        log.log(Level.FINE, "removeFromCache: ioCRecord's feed was null.");
                     }
                     if (feedToTypeUpdate.isEmpty()) {
                         blacklistCache.remove(key);

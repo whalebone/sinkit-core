@@ -3,7 +3,6 @@ package biz.karms.sinkit.ejb;
 import biz.karms.sinkit.ejb.dto.AllDNSSettingDTO;
 import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
 import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
-import biz.karms.sinkit.ejb.dto.FeedSettingDTO;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
 import org.apache.lucene.search.Query;
 import org.hibernate.search.query.dsl.QueryBuilder;
@@ -58,7 +57,8 @@ public class WebApiEJB {
 
     public Map<String, Integer> getStats() {
         Map<String, Integer> info = new HashMap<String, Integer>();
-        info.put("Total documents", blacklistCache.size());
+        info.put("ioc", blacklistCache.size());
+        info.put("rule", ruleCache.size());
         return info;
     }
 
@@ -69,7 +69,7 @@ public class WebApiEJB {
         }
         try {
             utx.begin();
-            log.log(Level.FINEST, "Putting key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
+            log.log(Level.FINE, "Putting key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
             blacklistCache.put(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
             utx.commit();
             // TODO: Is this O.K.? Maybe we should just return the same instance.
@@ -88,7 +88,7 @@ public class WebApiEJB {
     }
 
     public BlacklistedRecord getBlacklistedRecord(final String key) {
-        log.log(Level.FINEST, "getting key [" + key + "]");
+        log.log(Level.FINE, "getting key [" + key + "]");
         return blacklistCache.get(key);
     }
 
@@ -128,7 +128,7 @@ public class WebApiEJB {
             CIDRUtils cidrUtils = new CIDRUtils(clientIPAddress);
             final String clientIPAddressPaddedBigInt = cidrUtils.getStartIPBigIntegerString();
             cidrUtils = null;
-            log.log(Level.FINEST, "Getting key [" + clientIPAddress + "] which actually translates to BigInteger zero padded representation " +
+            log.log(Level.FINE, "Getting key [" + clientIPAddress + "] which actually translates to BigInteger zero padded representation " +
                     "[" + clientIPAddressPaddedBigInt + "]");
             // Let's try to hit it
             Rule rule = ruleCache.get(clientIPAddressPaddedBigInt);
@@ -166,7 +166,7 @@ public class WebApiEJB {
             CIDRUtils cidrUtils = new CIDRUtils(cidrAddress);
             String clientIPAddressPaddedBigInt = cidrUtils.getStartIPBigIntegerString();
             cidrUtils = null;
-            log.log(Level.FINEST, "Deleting key [" + cidrAddress + "] which actually translates to BigInteger zero padded representation " +
+            log.log(Level.FINE, "Deleting key [" + cidrAddress + "] which actually translates to BigInteger zero padded representation " +
                     "[" + clientIPAddressPaddedBigInt + "]");
             utx.begin();
             String response;
@@ -200,7 +200,7 @@ public class WebApiEJB {
      * @param customerDNSSetting Map K(dnsClient in CIDR) : V(HashMap<String, String>), where HashMap<String, String> stands for: "feedUID" : "<L|S|D>"
      * @return
      */
-    public String putDNSClientSettings(int customerId, HashMap<String, HashMap<String, String>> customerDNSSetting) {
+    public String putDNSClientSettings(final Integer customerId, final HashMap<String, HashMap<String, String>> customerDNSSetting) {
         try {
             SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
             QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(Rule.class).get();
@@ -224,6 +224,7 @@ public class WebApiEJB {
                                 }
                             } catch (Exception e1) {
                                 log.log(Level.SEVERE, "putDNSClientSettings", e1);
+                                return null;
                             }
                             return null;
                         }
@@ -240,7 +241,7 @@ public class WebApiEJB {
         return customerId + " SETTINGS UPDATED";
     }
 
-    public String postAllDNSClientSettings(AllDNSSettingDTO[] allDNSSetting) {
+    public String postAllDNSClientSettings(final AllDNSSettingDTO[] allDNSSetting) {
         //TODO: Perhaps invert the flow: create 1 utx.begin();-utx.commit(); block and loop inside...
         for (AllDNSSettingDTO allDNSSettingDTO : allDNSSetting) {
             try {
@@ -262,7 +263,7 @@ public class WebApiEJB {
                 rule.setEndAddress(cidrUtils.getEndIPBigIntegerString());
                 cidrUtils = null;
                 utx.begin();
-                log.log(Level.FINEST, "Putting key [" + rule.getStartAddress() + "]");
+                log.log(Level.FINE, "Putting key [" + rule.getStartAddress() + "]");
                 ruleCache.put(rule.getStartAddress(), rule);
                 utx.commit();
             } catch (Exception e) {
@@ -277,17 +278,75 @@ public class WebApiEJB {
                 return null;
             }
         }
-        return allDNSSetting.length + " RULES PROCESSED";
+        return allDNSSetting.length + " RULES PROCESSED " + ruleCache.size() + " PRESENT";
     }
 
-    public String putCustomLists(int customerId, CustomerCustomListDTO[] customerCustomLists) {
+    public String putCustomLists(final Integer customerId, final CustomerCustomListDTO[] customerCustomLists) {
         //TODO
         throw new NotImplementedException();
     }
 
-    public String putFeedSettings(String feedUid, FeedSettingDTO[] feedSettings) {
-        //TODO
+    /**
+     * TODO: This is most likely wrong, let's talk to Rattus.
+     *
+     * @param feedUid
+     * @param feedSettings
+     * @return
+     */
+    public String putFeedSettings(final String feedUid, final HashMap<Integer, HashMap<String, String>> feedSettings) {
+        //TODO: Indexing troubles:  putFeedSettings troubles: java.lang.IllegalArgumentException: Indexing was not enabled on this cache. interface org.hibernate.search.spi.SearchIntegrator not found in registry
+        // Most likely due to Rule sources...
+
         throw new NotImplementedException();
+        /*
+        CacheQuery query;
+        int updated = 0;
+        try {
+            SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
+            QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(Rule.class).get();
+            Query luceneQuery = queryBuilder
+                    .phrase()
+                    .onField("sources")
+                    .sentence(feedUid)
+                    .createQuery();
+            query = searchManager.getQuery(luceneQuery, Rule.class);
+            if (query != null && query.list().size() > 0) {
+                Iterator itr = query.iterator();
+                while (itr.hasNext()) {
+                    Rule rule = (Rule) itr.next();
+                    HashMap<String, String> cidrMode = feedSettings.get(rule.getCustomerId());
+                    if (cidrMode.containsKey(rule.getCidrAddress())) {
+                        //TODO This is certainly wrong and overengineered... Let's talk to Rattus.
+                        rule.getSources().replace(feedUid, cidrMode.get(rule.getCidrAddress()));
+                        try {
+                            utx.begin();
+                            ruleCache.replace(rule.getStartAddress(), rule);
+                            utx.commit();
+                            updated++;
+                        } catch (Exception e) {
+                            log.log(Level.SEVERE, "putFeedSettings", e);
+                            try {
+                                if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
+                                    utx.rollback();
+                                }
+                            } catch (Exception e1) {
+                                log.log(Level.SEVERE, "putFeedSettings", e1);
+                                return null;
+                            }
+                            return null;
+                        }
+                    }
+                }
+            } else {
+                log.log(Level.SEVERE, "putFeedSettings: feedUid " + feedUid + " did not return any results from Rules cache.");
+                return feedUid + " HAS NO RESULTS";
+            }
+        } catch (Exception e) {
+            log.log(Level.SEVERE, "putFeedSettings troubles", e);
+            return null;
+        }
+        return query.list().size() + " RULES FOUND " + updated + "UPDATED";
+        */
     }
 
     public String postCreateFeedSettings(FeedSettingCreateDTO feedSettingCreate) {

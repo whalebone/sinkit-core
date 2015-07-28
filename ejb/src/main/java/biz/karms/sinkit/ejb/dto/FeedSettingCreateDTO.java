@@ -1,6 +1,7 @@
 package biz.karms.sinkit.ejb.dto;
 
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -32,26 +33,21 @@ import java.util.List;
  */
 public class FeedSettingCreateDTO implements Serializable {
 
-    private static final long serialVersionUID = 1012324324325691L;
+    private static final long serialVersionUID = 1012324324335691L;
     /**
      * "CIDR"
      */
     private String feedUid;
-    private List<FeedSettingDTO> settings;
+    /**
+     * {"customerId" : {"dns_client <cidr>" : "mode <L|S|D>", ...}}
+     */
+    private HashMap<Integer, HashMap<String, String>> settings;
 
     public String getFeedUid() {
         return feedUid;
     }
 
-    public void setFeedUid(String feedUid) {
-        this.feedUid = feedUid;
-    }
-
-    public List<FeedSettingDTO> getSettings() {
+    public HashMap<Integer, HashMap<String, String>> getSettings() {
         return settings;
-    }
-
-    public void setSettings(List<FeedSettingDTO> settings) {
-        this.settings = settings;
     }
 }

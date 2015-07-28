@@ -6,6 +6,7 @@ import org.hibernate.search.annotations.IndexedEmbedded;
 
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author Michal Karm Babacek
@@ -13,7 +14,7 @@ import java.util.HashMap;
 @Indexed
 public class Rule implements Serializable {
 
-    private static final long serialVersionUID = 9212324523047755691L;
+    private static final long serialVersionUID = 821232233347791L;
 
     @Field
     private String startAddress;
@@ -28,9 +29,9 @@ public class Rule implements Serializable {
     private int customerId;
 
     /**
-     * Feed UID : Mode as in
+     * Feed UID : Mode <L|S|D>
      */
-    @IndexedEmbedded
+    @IndexedEmbedded(targetElement = HashMap.class)
     private HashMap<String, String> sources;
 
     public String getStartAddress() {

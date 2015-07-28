@@ -98,6 +98,7 @@ public class SinkitREST {
     @POST
     @Path("/blacklist/record/")
     @Produces({"application/json;charset=UTF-8"})
+    @Consumes({"application/json;charset=UTF-8"})
     public String putBlacklistedRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @FormParam("record") String record) {
         if (stupidAuthenticator.isAuthenticated(token)) {
             return sinkitService.putBlacklistedRecord(record);
@@ -109,6 +110,7 @@ public class SinkitREST {
     @POST
     @Path("/blacklist/ioc/")
     @Produces({"application/json;charset=UTF-8"})
+    @Consumes({"application/json;charset=UTF-8"})
     public Response putIoCRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, String ioc) {
 
         if (!stupidAuthenticator.isAuthenticated(token)) {
@@ -158,7 +160,8 @@ public class SinkitREST {
     @PUT
     @Path("/rules/customer/{customerId}")
     @Produces({"application/json;charset=UTF-8"})
-    public String putDNSClientSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("customerId") int customerId, @QueryParam("settings") String settings) {
+    @Consumes({"application/json;charset=UTF-8"})
+    public String putDNSClientSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("customerId") Integer customerId, String settings) {
         if (stupidAuthenticator.isAuthenticated(token)) {
             return sinkitService.putDNSClientSettings(customerId, settings);
         } else {
@@ -169,7 +172,8 @@ public class SinkitREST {
     @POST
     @Path("/rules/all")
     @Produces({"application/json;charset=UTF-8"})
-    public String postAllDNSClientSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, @FormParam("rules") String rules) {
+    @Consumes({"application/json;charset=UTF-8"})
+    public String postAllDNSClientSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, String rules) {
         if (stupidAuthenticator.isAuthenticated(token)) {
             return sinkitService.postAllDNSClientSettings(rules);
         } else {
@@ -181,7 +185,8 @@ public class SinkitREST {
     @PUT
     @Path("/lists/{customerId}")
     @Produces({"application/json;charset=UTF-8"})
-    public String putCustomLists(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("customerId") int customerId, @QueryParam("lists") String lists) {
+    @Consumes({"application/json;charset=UTF-8"})
+    public String putCustomLists(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("customerId") Integer customerId, String lists) {
         if (stupidAuthenticator.isAuthenticated(token)) {
             return sinkitService.putCustomLists(customerId, lists);
         } else {
@@ -192,7 +197,8 @@ public class SinkitREST {
     @PUT
     @Path("/feed/{feedUid}")
     @Produces({"application/json;charset=UTF-8"})
-    public String putFeedSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("feedUid") String feedUid, @QueryParam("settings") String settings) {
+    @Consumes({"application/json;charset=UTF-8"})
+    public String putFeedSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("feedUid") String feedUid, String settings) {
         if (stupidAuthenticator.isAuthenticated(token)) {
             return sinkitService.putFeedSettings(feedUid, settings);
         } else {
@@ -203,7 +209,8 @@ public class SinkitREST {
     @POST
     @Path("/feed/create")
     @Produces({"application/json;charset=UTF-8"})
-    public String postCreateFeedSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, @FormParam("feed") String feed) {
+    @Consumes({"application/json;charset=UTF-8"})
+    public String postCreateFeedSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, String feed) {
         if (stupidAuthenticator.isAuthenticated(token)) {
             return sinkitService.postCreateFeedSettings(feed);
         } else {
