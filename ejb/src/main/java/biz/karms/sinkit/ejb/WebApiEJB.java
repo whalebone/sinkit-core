@@ -289,16 +289,38 @@ public class WebApiEJB {
     /**
      * TODO: This is most likely wrong, let's talk to Rattus.
      *
+     * # Example
+     * ## Add some rules
+     * ```
+     * curl -H "Content-Type: application/json" -H "X-sinkit-token: ${SINKIT_ACCESS_TOKEN}" -X POST -d '[{"dns_client":"10.10.10.10/32","settings":{"feed-3":"D","feed2":"S","test-feed1":"L"},"customer_id":2,"customer_name":"yadayada-2"},{"dns_client":"10.10.10.11/32","settings":{"feed-3":"D","feed2":"S","test-feed1":"L"},"customer_id":2,"customer_name":"yadayada-2"},{"dns_client":"10.11.12.0/24","settings":{"test-feed1":"L","feed2":"S","feed-3":"D"},"customer_id":1,"customer_name":"test-yadayada"},{"dns_client":"10.11.30.30/32","settings":{"test-feed1":"L","feed2":"S","feed-3":"D"},"customer_id":1,"customer_name":"test-yadayada"}]' http://localhost:8080/sinkit/rest/rules/all
+     * "4 RULES PROCESSED 4 PRESENT"
+     * ```
+     * ## Take a look at one of them, note: ```"feed-3":"D"```
+     * ```
+     * curl -H "Accept: application/json"  -H "X-sinkit-token: ${SINKIT_ACCESS_TOKEN}" -X GET http://localhost:8080/sinkit/rest/rules/10.10.10.10
+     * [{"start_address":"0000000000000000000000000000000168430090","end_address":"0000000000000000000000000000000168430090","cidr_address":"10.10.10.10/32","customer_id":2,"sources":{"feed-3":"D","feed2":"S","test-feed1":"L"}}]
+     * ```
+     * ## Set ```"feed-3":"S"``` for a particular customer (customer_id 2) for his CIDR:
+     * ```
+     * curl -H "Content-Type: application/json" -H "X-sinkit-token: ${SINKIT_ACCESS_TOKEN}" -X PUT -d '{"2":{"10.10.10.10/32":"S"}}' http://localhost:8080/sinkit/rest/feed/feed-3
+     * "4 RULES FOUND 1 UPDATED"
+     * ```
+     * ## Note ```"feed-3":"S"```
+     * ```
+     * curl -H "Accept: application/json"  -H "X-sinkit-token: ${SINKIT_ACCESS_TOKEN}" -X GET http://localhost:8080/sinkit/rest/rules/10.10.10.10
+     * [{"start_address":"0000000000000000000000000000000168430090","end_address":"0000000000000000000000000000000168430090","cidr_address":"10.10.10.10/32","customer_id":2,"sources":{"feed-3":"S","feed2":"S","test-feed1":"L"}}]
+     * ```
+     * ## Note other ```feed-3``` settings remained intact:
+     * ```
+     * curl -H "Accept: application/json"  -H "X-sinkit-token: ${SINKIT_ACCESS_TOKEN}" -X GET http://localhost:8080/sinkit/rest/rules/10.11.12.22
+     * [{"start_address":"0000000000000000000000000000000168496128","end_address":"0000000000000000000000000000000168496383","cidr_address":"10.11.12.0/24","customer_id":1,"sources":{"feed2":"S","feed-3":"D","test-feed1":"L"}}]
+     * ```
+     *
      * @param feedUid
      * @param feedSettings
-     * @return
+     * @return null or result message
      */
     public String putFeedSettings(final String feedUid, final HashMap<Integer, HashMap<String, String>> feedSettings) {
-        //TODO: Indexing troubles:  putFeedSettings troubles: java.lang.IllegalArgumentException: Indexing was not enabled on this cache. interface org.hibernate.search.spi.SearchIntegrator not found in registry
-        // Most likely due to Rule sources...
-
-        throw new NotImplementedException();
-        /*
         CacheQuery query;
         int updated = 0;
         try {
@@ -309,13 +331,17 @@ public class WebApiEJB {
                     .onField("sources")
                     .sentence(feedUid)
                     .createQuery();
+            //.keyword() //TODO: This would need a new SettingsMapBridge and might not be faster anyway...
+            //.onField("sources")
+            //.matching(feedUid)
+            //.createQuery();
             query = searchManager.getQuery(luceneQuery, Rule.class);
             if (query != null && query.list().size() > 0) {
                 Iterator itr = query.iterator();
                 while (itr.hasNext()) {
                     Rule rule = (Rule) itr.next();
                     HashMap<String, String> cidrMode = feedSettings.get(rule.getCustomerId());
-                    if (cidrMode.containsKey(rule.getCidrAddress())) {
+                    if (cidrMode != null && cidrMode.containsKey(rule.getCidrAddress())) {
                         //TODO This is certainly wrong and overengineered... Let's talk to Rattus.
                         rule.getSources().replace(feedUid, cidrMode.get(rule.getCidrAddress()));
                         try {
@@ -345,8 +371,8 @@ public class WebApiEJB {
             log.log(Level.SEVERE, "putFeedSettings troubles", e);
             return null;
         }
-        return query.list().size() + " RULES FOUND " + updated + "UPDATED";
-        */
+        return query.list().size() + " RULES FOUND " + updated + " UPDATED";
+
     }
 
     public String postCreateFeedSettings(FeedSettingCreateDTO feedSettingCreate) {
