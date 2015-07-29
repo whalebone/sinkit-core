@@ -38,7 +38,7 @@ public class DNSApiEJB {
     }
 
     public BlacklistedRecord getSinkHole(final String client, final String key) {
-        log.log(Level.FINEST, "getting key [" + key + "]");
+        log.log(Level.FINE, "getting key [" + key + "]");
         return blacklistCache.get(key);
     }
 }

@@ -76,8 +76,15 @@
                 <artifactId>wildfly-maven-plugin</artifactId>
                 <version>${version.wildfly.maven.plugin}</version>
                 <configuration>
+     <execute-commands>
+         <batch>true</batch>
+         <commands>
+             <command>/subsystem=logging/console-handler=CONSOLE:write-attribute(name=level,value=DEBUG)</command>
+             <command>/subsystem=logging/root-logger=ROOT:write-attribute(name=level,value=DEBUG)</command>
+         </commands>
+     </execute-commands>
                     <filename>${project.artifactId}.ear</filename>
-                    <skip>false</skip>
+                <skip>false</skip>
                 </configuration>
             </plugin>
         </plugins>

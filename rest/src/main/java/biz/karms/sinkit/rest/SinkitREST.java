@@ -1,8 +1,6 @@
 package biz.karms.sinkit.rest;
 
 import biz.karms.sinkit.exception.IoCValidationException;
-import biz.karms.sinkit.ioc.*;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 
 import javax.inject.Inject;
@@ -27,7 +25,7 @@ public class SinkitREST {
 
     @Inject
     StupidAuthenticator stupidAuthenticator;
-    
+
     public static final String AUTH_HEADER_PARAM = "X-sinkit-token";
     public static final String AUTH_FAIL = "❤ AUTH ERROR ❤";
 
@@ -100,6 +98,7 @@ public class SinkitREST {
     @POST
     @Path("/blacklist/record/")
     @Produces({"application/json;charset=UTF-8"})
+    @Consumes({"application/json;charset=UTF-8"})
     public String putBlacklistedRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @FormParam("record") String record) {
         if (stupidAuthenticator.isAuthenticated(token)) {
             return sinkitService.putBlacklistedRecord(record);
@@ -111,6 +110,7 @@ public class SinkitREST {
     @POST
     @Path("/blacklist/ioc/")
     @Produces({"application/json;charset=UTF-8"})
+    @Consumes({"application/json;charset=UTF-8"})
     public Response putIoCRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, String ioc) {
 
         if (!stupidAuthenticator.isAuthenticated(token)) {
@@ -143,20 +143,6 @@ public class SinkitREST {
         return Response.status(Response.Status.OK).entity(response).build();
     }
 
-    /**
-     * Rules
-     */
-    @POST
-    @Path("/rules/rule/")
-    @Produces({"application/json;charset=UTF-8"})
-    public String putRule(@HeaderParam(AUTH_HEADER_PARAM) String token, @FormParam("rule") String rule) {
-        if (stupidAuthenticator.isAuthenticated(token)) {
-            return sinkitService.putRule(rule);
-        } else {
-            return AUTH_FAIL;
-        }
-    }
-
     @GET
     @Path("/rules/{ip}")
     @Produces({"application/json;charset=UTF-8"})
@@ -167,4 +153,69 @@ public class SinkitREST {
             return AUTH_FAIL;
         }
     }
+
+    /**
+     * Rattus - PORTAL --> CORE
+     */
+    @PUT
+    @Path("/rules/customer/{customerId}")
+    @Produces({"application/json;charset=UTF-8"})
+    @Consumes({"application/json;charset=UTF-8"})
+    public String putDNSClientSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("customerId") Integer customerId, String settings) {
+        if (stupidAuthenticator.isAuthenticated(token)) {
+            return sinkitService.putDNSClientSettings(customerId, settings);
+        } else {
+            return AUTH_FAIL;
+        }
+    }
+
+    @POST
+    @Path("/rules/all")
+    @Produces({"application/json;charset=UTF-8"})
+    @Consumes({"application/json;charset=UTF-8"})
+    public String postAllDNSClientSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, String rules) {
+        if (stupidAuthenticator.isAuthenticated(token)) {
+            return sinkitService.postAllDNSClientSettings(rules);
+        } else {
+            return AUTH_FAIL;
+        }
+    }
+
+
+    @PUT
+    @Path("/lists/{customerId}")
+    @Produces({"application/json;charset=UTF-8"})
+    @Consumes({"application/json;charset=UTF-8"})
+    public String putCustomLists(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("customerId") Integer customerId, String lists) {
+        if (stupidAuthenticator.isAuthenticated(token)) {
+            return sinkitService.putCustomLists(customerId, lists);
+        } else {
+            return AUTH_FAIL;
+        }
+    }
+
+    @PUT
+    @Path("/feed/{feedUid}")
+    @Produces({"application/json;charset=UTF-8"})
+    @Consumes({"application/json;charset=UTF-8"})
+    public String putFeedSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("feedUid") String feedUid, String settings) {
+        if (stupidAuthenticator.isAuthenticated(token)) {
+            return sinkitService.putFeedSettings(feedUid, settings);
+        } else {
+            return AUTH_FAIL;
+        }
+    }
+
+    @POST
+    @Path("/feed/create")
+    @Produces({"application/json;charset=UTF-8"})
+    @Consumes({"application/json;charset=UTF-8"})
+    public String postCreateFeedSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, String feed) {
+        if (stupidAuthenticator.isAuthenticated(token)) {
+            return sinkitService.postCreateFeedSettings(feed);
+        } else {
+            return AUTH_FAIL;
+        }
+    }
+
 }

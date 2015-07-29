@@ -53,6 +53,7 @@ public class ServiceEJB {
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "addToCache: Rolling back.", e1);
+                return false;
             }
             return false;
         }
@@ -65,8 +66,8 @@ public class ServiceEJB {
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "addToCache: Rolling back.", e1);
+                return false;
             }
-
             return false;
         }
 
@@ -81,7 +82,7 @@ public class ServiceEJB {
                         if (ioCRecord.getFeed().getName() != null && ioCRecord.getClassification().getType() != null) {
                             feedToTypeUpdate.putIfAbsent(ioCRecord.getFeed().getName(), ioCRecord.getClassification().getType());
                         } else {
-                            log.log(Level.FINEST, "addToCache: ioCRecord's feed or classification type were null");
+                            log.log(Level.FINE, "addToCache: ioCRecord's feed or classification type were null");
                         }
                         blacklistedRecord.setSources(feedToTypeUpdate);
                         blacklistedRecord.setListed(Calendar.getInstance());
@@ -92,10 +93,10 @@ public class ServiceEJB {
                         if (ioCRecord.getFeed().getName() != null && ioCRecord.getClassification().getType() != null) {
                             feedToType.put(ioCRecord.getFeed().getName(), ioCRecord.getClassification().getType());
                         } else {
-                            log.log(Level.FINEST, "addToCache: ioCRecord's feed or classification type were null");
+                            log.log(Level.FINE, "addToCache: ioCRecord's feed or classification type were null");
                         }
                         BlacklistedRecord blacklistedRecord = new BlacklistedRecord(key, Calendar.getInstance(), feedToType);
-                        log.log(Level.FINEST, "Putting new key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
+                        log.log(Level.FINE, "Putting new key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
                         blacklistCache.put(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
                         utx.commit();
                     }
@@ -108,11 +109,11 @@ public class ServiceEJB {
                     }
                 } catch (Exception e1) {
                     log.log(Level.SEVERE, "Rolling back", e1);
+                    return false;
                 }
                 return false;
             }
         }
-
         return true;
     }
 
@@ -126,6 +127,7 @@ public class ServiceEJB {
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "removeFromCache: Rolling back.", e1);
+                return false;
             }
             return false;
         }
@@ -138,6 +140,7 @@ public class ServiceEJB {
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "removeFromCache: Rolling back.", e1);
+                return false;
             }
             return false;
         }
@@ -152,7 +155,7 @@ public class ServiceEJB {
                     if (ioCRecord.getFeed().getName() != null) {
                         feedToTypeUpdate.remove(ioCRecord.getFeed().getName());
                     } else {
-                        log.log(Level.FINEST, "removeFromCache: ioCRecord's feed was null.");
+                        log.log(Level.FINE, "removeFromCache: ioCRecord's feed was null.");
                     }
                     if (feedToTypeUpdate.isEmpty()) {
                         blacklistCache.remove(key);
@@ -172,9 +175,39 @@ public class ServiceEJB {
                     }
                 } catch (Exception e1) {
                     log.log(Level.SEVERE, "removeFromCache: Rolling back.", e1);
+                    return false;
                 }
                 return false;
             }
+        }
+        return true;
+    }
+
+    /**
+     * This is very evil.
+     *
+     * @return true if everything went well.
+     */
+    public boolean dropTheWholeCache() {
+        log.log(Level.SEVERE, "dropTheWholeCache: We are dropping the cache. This has severe operational implications.");
+        try {
+            utx.begin();
+            // TODO: Clear is faster, but apparently quite ugly. Investigate clearAsync().
+            //blacklistCache.clear();
+            // TODO: Could this handle millions of records in a dozen node cluster? :)
+            blacklistCache.keySet().forEach(key -> blacklistCache.remove(key));
+            utx.commit();
+        } catch (Exception e) {
+            log.log(Level.SEVERE, "dropTheWholeCache", e);
+            try {
+                if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
+                    utx.rollback();
+                }
+            } catch (Exception e1) {
+                log.log(Level.SEVERE, "dropTheWholeCache: Rolling back.", e1);
+                return false;
+            }
+            return false;
         }
         return true;
     }
