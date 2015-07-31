@@ -1,12 +1,10 @@
 package biz.karms.sinkit.ejb;
 
-import org.hibernate.search.annotations.Field;
-import org.hibernate.search.annotations.Indexed;
-import org.hibernate.search.annotations.IndexedEmbedded;
+import biz.karms.sinkit.ejb.util.SettingsMapBridge;
+import org.hibernate.search.annotations.*;
 
 import java.io.Serializable;
 import java.util.HashMap;
-import java.util.Map;
 
 /**
  * @author Michal Karm Babacek
@@ -31,7 +29,8 @@ public class Rule implements Serializable {
     /**
      * Feed UID : Mode <L|S|D>
      */
-    @IndexedEmbedded(targetElement = HashMap.class)
+    @FieldBridge(impl = SettingsMapBridge.class)
+    @Field(analyze = Analyze.YES, index = Index.YES)
     private HashMap<String, String> sources;
 
     public String getStartAddress() {

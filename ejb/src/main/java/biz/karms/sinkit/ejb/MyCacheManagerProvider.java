@@ -86,6 +86,9 @@ public class MyCacheManagerProvider {
                             // Rules cannot be evicted ever.
                     .expiration().disableReaper()
                     .expiration().lifespan(ENTRY_LIFESPAN_NEVER)
+                    .clustering().cacheMode(CacheMode.DIST_ASYNC)
+                    .hash().numOwners(2)
+                    .indexing().index(Index.ALL)
                     .build());
             manager.getCache("BLACKLIST_CACHE").start();
             manager.getCache("RULES_CACHE").start();
