@@ -14,6 +14,7 @@ import io.searchbox.core.Update;
 import io.searchbox.params.Parameters;
 
 import javax.ejb.Singleton;
+import javax.ejb.Startup;
 import javax.inject.Inject;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -44,16 +45,18 @@ public class ArchiveServiceEJB {
     public IoCRecord findActiveIoCRecordBySourceId(
             String sourceId, String classificationType, String feedName) throws ArchiveException {
 
-        //log.info("searching elastic [ ip : " + ip + ", type : " + type + ", feed : " + feed + "]");
+//        log.info("searching elastic [ source.id : " + sourceId.replace("\\","\\\\") + ", " +
+//                "classification.type : " + classificationType.replace("\\","\\\\") + ", " +
+//                "feed.name : " + feedName.replace("\\","\\\\") + "]");
 
         String query = "{\n" +
                 "   \"query\" : {\n" +
                 "       \"filtered\" : {\n"+
                 "           \"query\" : {\n" +
                 "               \"query_string\" : {\n" +
-                "                   \"query\": \"active : true AND source.id.value : \\\"" + sourceId + "\\\" AND " +
-                                                "classification.type: \\\"" + classificationType + "\\\" AND " +
-                                                "feed.name : \\\"" + feedName +"\\\"\"\n" +
+                "                   \"query\": \"active : true AND source.id.value : \\\"" + sourceId.replace("\\","\\\\") + "\\\" AND " +
+                                                "classification.type: \\\"" + classificationType.replace("\\","\\\\") + "\\\" AND " +
+                                                "feed.name : \\\"" + feedName.replace("\\","\\\\") +"\\\"\"\n" +
                 "               }\n" +
                 "           }\n" +
                 "       }\n" +
