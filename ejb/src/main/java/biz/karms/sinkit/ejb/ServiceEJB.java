@@ -1,5 +1,7 @@
 package biz.karms.sinkit.ejb;
 
+import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
+import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ioc.IoCRecord;
 import org.infinispan.Cache;
 import org.infinispan.manager.DefaultCacheManager;
@@ -53,7 +55,7 @@ public class ServiceEJB {
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "addToCache: Rolling back.", e1);
-                return false;
+                return false; //finally?
             }
             return false;
         }
@@ -67,10 +69,11 @@ public class ServiceEJB {
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "addToCache: Rolling back.", e1);
                 return false;
-            }
+            } //finally?
             return false;
         }
 
+        // TODO: Should we use hashes? Is thus constructed key <= 255?
         final String key = ioCRecord.getSource().getId().getValue();
         if (key != null) {
             try {
@@ -109,7 +112,7 @@ public class ServiceEJB {
                     }
                 } catch (Exception e1) {
                     log.log(Level.SEVERE, "Rolling back", e1);
-                    return false;
+                    return false; //finally?
                 }
                 return false;
             }
@@ -127,7 +130,7 @@ public class ServiceEJB {
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "removeFromCache: Rolling back.", e1);
-                return false;
+                return false; //finally?
             }
             return false;
         }
@@ -140,7 +143,7 @@ public class ServiceEJB {
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "removeFromCache: Rolling back.", e1);
-                return false;
+                return false; //finally?
             }
             return false;
         }
@@ -175,7 +178,7 @@ public class ServiceEJB {
                     }
                 } catch (Exception e1) {
                     log.log(Level.SEVERE, "removeFromCache: Rolling back.", e1);
-                    return false;
+                    return false; //finally?
                 }
                 return false;
             }
@@ -205,7 +208,7 @@ public class ServiceEJB {
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "dropTheWholeCache: Rolling back.", e1);
-                return false;
+                return false; //finally?
             }
             return false;
         }

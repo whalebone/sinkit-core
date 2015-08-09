@@ -138,7 +138,7 @@ public class CIDRUtils {
     }
 
     public String getEndIPBigIntegerString() {
-        return  String.format("%040d", endIp);
+        return String.format("%040d", endIp);
     }
 
     public String getNetworkAddress() {
@@ -160,4 +160,24 @@ public class CIDRUtils {
 
         return (st == -1 || st == 0) && (te == -1 || te == 0);
     }
+
+    //TODO think about porting this whole class to SubnetUtils
+    /*
+    public static boolean isValidSubnetFormat(String subnet) {
+        try {
+            SubnetUtils subnetUtils = new SubnetUtils(subnet);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    public static boolean isValidSubnet(String subnet) {
+        try {
+            SubnetUtils subnetUtils = new SubnetUtils(subnet);
+            return subnetUtils.getInfo().getAddress().equals(subnetUtils.getInfo().getNetworkAddress());
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }*/
 }

@@ -1,4 +1,4 @@
-package biz.karms.sinkit.ejb;
+package biz.karms.sinkit.ejb.cache.pojo;
 
 import biz.karms.sinkit.ejb.util.SettingsMapBridge;
 import org.hibernate.search.annotations.*;
@@ -12,7 +12,7 @@ import java.util.HashMap;
 @Indexed
 public class Rule implements Serializable {
 
-    private static final long serialVersionUID = 821232233347791L;
+    private static final long serialVersionUID = 821232233347691L;
 
     @Field
     private String startAddress;

@@ -1,13 +1,12 @@
 package biz.karms.sinkit.ejb;
 
+import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
+import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import org.infinispan.Cache;
 import org.infinispan.manager.DefaultCacheManager;
 
 import javax.annotation.PostConstruct;
-import javax.ejb.DependsOn;
 import javax.ejb.Stateless;
-import javax.ejb.TransactionManagement;
-import javax.ejb.TransactionManagementType;
 import javax.inject.Inject;
 import java.util.logging.Level;
 import java.util.logging.Logger;

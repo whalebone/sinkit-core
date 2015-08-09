@@ -65,19 +65,19 @@
             <artifactId>jboss-ejb-api_3.2_spec</artifactId>
             <scope>provided</scope>
         </dependency>
-<!--
-        <dependency>
-            <groupId>javax.json</groupId>
-            <artifactId>javax.json-api</artifactId>
-            <version>1.0-b06</version>
-        </dependency>
+
+        <!-- SubnetUtils -->
+        <!--<dependency>
+            <groupId>commons-net</groupId>
+            <artifactId>commons-net</artifactId>
+            <version>3.3</version>
+        </dependency>-->
 
         <dependency>
-            <groupId>org.glassfish</groupId>
-            <artifactId>javax.json</artifactId>
-            <version>1.0-b06</version>
-            <scope>runtime</scope>
-        </dependency>-->
+            <groupId>commons-validator</groupId>
+            <artifactId>commons-validator</artifactId>
+            <version>1.4.1</version>
+        </dependency>
 
         <dependency>
             <groupId>org.infinispan</groupId>
@@ -149,16 +149,5 @@
             </plugin>
         </plugins>
     </build>
-<!--
-    <repositories>
-
-        <repository>
-            <id>sonatype</id>
-            <name>Sonatype Groups</name>
-            <url>https://oss.sonatype.org/content/groups/public/</url>
-        </repository>
-
-    </repositories>
-    -->
 </project>
 

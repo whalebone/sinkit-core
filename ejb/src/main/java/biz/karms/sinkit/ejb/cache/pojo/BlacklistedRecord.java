@@ -1,4 +1,4 @@
-package biz.karms.sinkit.ejb;
+package biz.karms.sinkit.ejb.cache.pojo;
 
 import org.hibernate.search.annotations.*;
 
@@ -12,7 +12,7 @@ import java.util.Map;
 @Indexed
 public class BlacklistedRecord implements Serializable {
 
-    private static final long serialVersionUID = 2184815523047755691L;
+    private static final long serialVersionUID = 2184815523047755671L;
 
     @Field(analyze = Analyze.YES)
     private String blackListedDomainOrIP;
