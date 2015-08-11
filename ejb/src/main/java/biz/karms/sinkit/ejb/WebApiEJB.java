@@ -17,9 +17,11 @@ import org.infinispan.query.SearchManager;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.annotation.PostConstruct;
+import javax.ejb.DependsOn;
 import javax.ejb.Stateless;
 import javax.ejb.TransactionManagement;
 import javax.ejb.TransactionManagementType;
+import javax.enterprise.context.Dependent;
 import javax.inject.Inject;
 import java.util.*;
 import java.util.logging.Level;
@@ -30,6 +32,7 @@ import java.util.logging.Logger;
  */
 @Stateless
 @TransactionManagement(TransactionManagementType.BEAN)
+@Dependent
 public class WebApiEJB {
 
     @Inject
@@ -346,7 +349,7 @@ public class WebApiEJB {
                 customList.setClientEndAddress(dnsClientEndAddress);
                 String blacklistWhitelistLog = customerCustomList.getLists().get(fqdnOrCIDR);
                 if (!(blacklistWhitelistLog != null && (blacklistWhitelistLog.equals("B") || blacklistWhitelistLog.equals("W") || blacklistWhitelistLog.equals("L")))) {
-                    log.log(Level.SEVERE, "putCustomLists: Expected one of <B|W|L> but got: " + blacklistWhitelistLog + ". customListsElementCounter: " +customListsElementCounter);
+                    log.log(Level.SEVERE, "putCustomLists: Expected one of <B|W|L> but got: " + blacklistWhitelistLog + ". customListsElementCounter: " + customListsElementCounter);
                     return null;
                 }
                 customList.setWhiteBlackLog(blacklistWhitelistLog);
@@ -358,13 +361,13 @@ public class WebApiEJB {
                     try {
                         cidrUtils = new CIDRUtils(fqdnOrCIDR);
                         if (cidrUtils == null) {
-                            log.log(Level.SEVERE, "putCustomLists: We have failed to construct CIDRUtils instance from " + fqdnOrCIDR + ". customListsElementCounter: "+customListsElementCounter);
+                            log.log(Level.SEVERE, "putCustomLists: We have failed to construct CIDRUtils instance from " + fqdnOrCIDR + ". customListsElementCounter: " + customListsElementCounter);
                             return null;
                         }
                         final String startAddress = cidrUtils.getStartIPBigIntegerString();
                         final String endAddress = cidrUtils.getEndIPBigIntegerString();
                         if (startAddress == null || endAddress == null) {
-                            log.log(Level.SEVERE, "putCustomLists: endAddress or startAddress were null for CIDR " + fqdnOrCIDR + ". This cannot happen. customListsElementCounter: "+ customListsElementCounter);
+                            log.log(Level.SEVERE, "putCustomLists: endAddress or startAddress were null for CIDR " + fqdnOrCIDR + ". This cannot happen. customListsElementCounter: " + customListsElementCounter);
                             return null;
                         }
                         customList.setListCidrAddress(fqdnOrCIDR);
@@ -373,7 +376,7 @@ public class WebApiEJB {
                     } catch (Exception e) {
                         // TODO: More robust approach would be break();, but it could violate consistency...
                         // Furthermore, with validation in Portal, this really shouldn't happen, hence return null;
-                        log.log(Level.SEVERE, "putCustomLists: Invalid CIDR " + customerCustomList.getDnsClient() + ", customListsElementCounter: "+customListsElementCounter, e);
+                        log.log(Level.SEVERE, "putCustomLists: Invalid CIDR " + customerCustomList.getDnsClient() + ", customListsElementCounter: " + customListsElementCounter, e);
                         return null;
                     } finally {
                         cidrUtils = null;
@@ -383,7 +386,7 @@ public class WebApiEJB {
                 //At this point, we have a valid CustomList instance, let's process it with the cache.
                 // Sanity check
                 if ((customList.getFqdn() != null && customList.getListCidrAddress() != null) || (customList.getFqdn() == null && customList.getListCidrAddress() == null)) {
-                    log.log(Level.SEVERE, "putCustomLists: Sanity violation, customList has exactly one of [FQDN,CIDR] set, not both, not none. customListsElementCounter: "+customListsElementCounter);
+                    log.log(Level.SEVERE, "putCustomLists: Sanity violation, customList has exactly one of [FQDN,CIDR] set, not both, not none. customListsElementCounter: " + customListsElementCounter);
                     return null;
                 }
 
@@ -392,14 +395,14 @@ public class WebApiEJB {
 
                 try {
                     utx.begin();
-                    log.log(Level.FINE, "putCustomLists: Putting key [" + key + "]. customListsElementCounter: "+customListsElementCounter);
+                    log.log(Level.FINE, "putCustomLists: Putting key [" + key + "]. customListsElementCounter: " + customListsElementCounter);
                     if (customListsCache.replace(key, customList) == null) {
                         customListsCache.put(key, customList);
                     }
                     utx.commit();
                     customListsElementCounter++;
                 } catch (Exception e) {
-                    log.log(Level.SEVERE, "putCustomLists: customListsElementCounter: "+customListsElementCounter, e);
+                    log.log(Level.SEVERE, "putCustomLists: customListsElementCounter: " + customListsElementCounter, e);
                     try {
                         if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                             utx.rollback();
@@ -417,7 +420,7 @@ public class WebApiEJB {
 
     /**
      * TODO: This is most likely wrong, let's talk to Rattus.
-     *
+     * <p>
      * # Example
      * ## Add some rules
      * ```

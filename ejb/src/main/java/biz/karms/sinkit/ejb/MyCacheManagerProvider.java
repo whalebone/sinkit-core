@@ -110,8 +110,10 @@ public class MyCacheManagerProvider {
 
     @PreDestroy
     public void cleanUp() {
-        manager.stop();
-        manager = null;
+        if (manager != null) {
+            manager.stop();
+            manager = null;
+        }
     }
 
 }

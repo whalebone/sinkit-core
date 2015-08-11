@@ -37,11 +37,12 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- JBoss dependency versions -->
         <version.wildfly.maven.plugin>1.0.2.Final</version.wildfly.maven.plugin>
-        <version.wildfly>9.0.0.Beta2</version.wildfly>
-        <version.jboss.bom>9.0.0.Beta2</version.jboss.bom>
+        <version.wildfly>9.0.1.Final</version.wildfly>
+        <version.jboss.bom>9.0.1.Final</version.jboss.bom>
         <version.jboss.spec.javaee.7.0>1.0.0.Final</version.jboss.spec.javaee.7.0>
         <!-- other plugin versions -->
         <version.compiler.plugin>3.1</version.compiler.plugin>
+        <version.surefire.plugin>2.16</version.surefire.plugin>
         <version.ear.plugin>2.6</version.ear.plugin>
         <version.ejb.plugin>2.3</version.ejb.plugin>
         <version.war.plugin>2.1.1</version.war.plugin>
@@ -72,6 +73,14 @@
                 <groupId>org.jboss.spec</groupId>
                 <artifactId>jboss-javaee-7.0</artifactId>
                 <version>${version.jboss.spec.javaee.7.0}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jboss.arquillian</groupId>
+                <artifactId>arquillian-bom</artifactId>
+                <version>1.1.7.Final</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -117,5 +126,60 @@
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <profile>
+            <!-- The default profile skips all tests, though you can tune
+                it to run just unit tests based on a custom pattern -->
+            <!-- Seperate profiles are provided for running all tests, including
+                Arquillian tests that execute in the specified container -->
+            <id>default</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>${version.surefire.plugin}</version>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
 
+        <profile>
+            <!-- An optional Arquillian testing profile that executes tests
+                in your WildFly instance -->
+            <!-- This profile will start a new WildFly instance, and execute the
+                test, shutting it down when done -->
+            <!-- Run with: mvn clean test -Parq-wildfly-managed -->
+            <id>arq-wildfly-managed</id>
+            <dependencies>
+                <dependency>
+                    <groupId>org.wildfly.arquillian</groupId>
+                    <artifactId>wildfly-arquillian-container-managed</artifactId>
+                    <version>1.0.0.Final</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+
+        <profile>
+            <!-- An optional Arquillian testing profile that executes tests
+                in a remote WildFly instance -->
+            <!-- Run with: mvn clean test -Parq-wildfly-remote -->
+            <id>arq-wildfly-remote</id>
+            <dependencies>
+                <dependency>
+                    <groupId>org.wildfly.arquillian</groupId>
+                    <artifactId>wildfly-arquillian-container-remote</artifactId>
+                    <!--<version>1.0.0.Final</version>-->
+                    <version>1.0.0.Alpha5</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 </project>
