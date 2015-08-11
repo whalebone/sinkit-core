@@ -37,17 +37,47 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- JBoss dependency versions -->
         <version.wildfly.maven.plugin>1.0.2.Final</version.wildfly.maven.plugin>
-        <version.wildfly>9.0.0.Beta2</version.wildfly>
-        <version.jboss.bom>9.0.0.Beta2</version.jboss.bom>
+        <version.wildfly>9.0.1.Final</version.wildfly>
+        <version.jboss.bom>9.0.1.Final</version.jboss.bom>
         <version.jboss.spec.javaee.7.0>1.0.0.Final</version.jboss.spec.javaee.7.0>
+        <version.ejb>3.2</version.ejb>
+
         <!-- other plugin versions -->
         <version.compiler.plugin>3.1</version.compiler.plugin>
+        <version.surefire.plugin>2.16</version.surefire.plugin>
         <version.ear.plugin>2.6</version.ear.plugin>
         <version.ejb.plugin>2.3</version.ejb.plugin>
         <version.war.plugin>2.1.1</version.war.plugin>
+
         <!-- maven-compiler-plugin -->
         <maven.compiler.target>1.8</maven.compiler.target>
         <maven.compiler.source>1.8</maven.compiler.source>
+
+        <!-- Testing -->
+        <arquillian.bom.version>1.1.7.Final</arquillian.bom.version>
+        <arquillian.container.managed.version>1.0.0.Final</arquillian.container.managed.version>
+        <!-- 1.0.0.Final for remote brings up https://issues.jboss.org/browse/JBTM-2414 :-( with WildFly 9.0.1 -->
+        <arquillian.container.remote>1.0.0.Alpha5</arquillian.container.remote>
+        <org.testng.version>6.9.6</org.testng.version>
+        <htmlunit.version>2.18</htmlunit.version>
+
+        <!-- Documentation, JavaDoc in Markdown -->
+        <maven.javadoc.plugin.version>2.9</maven.javadoc.plugin.version>
+        <pegdown.doclet.version>1.1</pegdown.doclet.version>
+
+        <!-- Elastic Search -->
+        <io.searchbox.jest.version>0.1.6</io.searchbox.jest.version>
+
+        <!-- Infinispan and business core deps-->
+        <infinispan.core.version>7.2.3.Final</infinispan.core.version>
+        <infinispan.cachestore.jdbc.version>7.2.3.Final</infinispan.cachestore.jdbc.version>
+        <infinispan.query.version>7.2.3.Final</infinispan.query.version>
+        <hibernate.search.version>5.3.0.Final</hibernate.search.version>
+        <com.mchange.c3p0.version>0.9.5.1</com.mchange.c3p0.version>
+        <com.google.code.gson.version>2.3.1</com.google.code.gson.version>
+        <postgresql.driver.version>9.2-1004-jdbc41</postgresql.driver.version>
+        <commons.validator.version>1.4.1</commons.validator.version>
+        <commons.codec.version>1.10</commons.codec.version>
     </properties>
 
     <dependencyManagement>
@@ -72,6 +102,14 @@
                 <groupId>org.jboss.spec</groupId>
                 <artifactId>jboss-javaee-7.0</artifactId>
                 <version>${version.jboss.spec.javaee.7.0}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jboss.arquillian</groupId>
+                <artifactId>arquillian-bom</artifactId>
+                <version>${arquillian.bom.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -104,18 +142,72 @@
             </plugin>
             <plugin>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.9</version>
+                <version>${maven.javadoc.plugin.version}</version>
                 <configuration>
                     <doclet>ch.raffael.doclets.pegdown.PegdownDoclet</doclet>
                     <docletArtifact>
                         <groupId>ch.raffael.pegdown-doclet</groupId>
                         <artifactId>pegdown-doclet</artifactId>
-                        <version>1.1</version>
+                        <version>${pegdown.doclet.version}}</version>
                     </docletArtifact>
                     <useStandardDocletOptions>true</useStandardDocletOptions>
                 </configuration>
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <profile>
+            <!-- The default profile skips all tests, though you can tune
+                it to run just unit tests based on a custom pattern -->
+            <!-- Seperate profiles are provided for running all tests, including
+                Arquillian tests that execute in the specified container -->
+            <id>default</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>${version.surefire.plugin}</version>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
 
+        <profile>
+            <!-- An optional Arquillian testing profile that executes tests
+                in your WildFly instance -->
+            <!-- This profile will start a new WildFly instance, and execute the
+                test, shutting it down when done -->
+            <!-- Run with: mvn clean test -Parq-wildfly-managed -->
+            <id>arq-wildfly-managed</id>
+            <dependencies>
+                <dependency>
+                    <groupId>org.wildfly.arquillian</groupId>
+                    <artifactId>wildfly-arquillian-container-managed</artifactId>
+                    <version>${arquillian.container.managed.version}</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+
+        <profile>
+            <!-- An optional Arquillian testing profile that executes tests
+                in a remote WildFly instance -->
+            <!-- Run with: mvn clean test -Parq-wildfly-remote -->
+            <id>arq-wildfly-remote</id>
+            <dependencies>
+                <dependency>
+                    <groupId>org.wildfly.arquillian</groupId>
+                    <artifactId>wildfly-arquillian-container-remote</artifactId>
+                    <version>${arquillian.container.remote}</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 </project>

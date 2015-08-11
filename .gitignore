@@ -2,9 +2,10 @@ target
 .classpath
 .settings
 .project
-biz.karms.sinkit.ejb.BlacklistedRecord/
+biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord/
 sinkit-ear.ear.redeploy
 .idea/
 *.iml
-biz.karms.sinkit.ejb.Rule
+biz.karms.sinkit.ejb.cache.pojo.Rule
 log.log
+biz.karms.sinkit.ejb.Rule

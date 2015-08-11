@@ -1,9 +1,13 @@
 package biz.karms.sinkit.ejb;
 
+import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
+import biz.karms.sinkit.ejb.cache.pojo.CustomList;
+import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ejb.dto.AllDNSSettingDTO;
 import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
 import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
+import org.apache.commons.validator.routines.DomainValidator;
 import org.apache.lucene.search.Query;
 import org.hibernate.search.query.dsl.QueryBuilder;
 import org.infinispan.Cache;
@@ -13,9 +17,11 @@ import org.infinispan.query.SearchManager;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.annotation.PostConstruct;
+import javax.ejb.DependsOn;
 import javax.ejb.Stateless;
 import javax.ejb.TransactionManagement;
 import javax.ejb.TransactionManagementType;
+import javax.enterprise.context.Dependent;
 import javax.inject.Inject;
 import java.util.*;
 import java.util.logging.Level;
@@ -26,6 +32,7 @@ import java.util.logging.Logger;
  */
 @Stateless
 @TransactionManagement(TransactionManagementType.BEAN)
+@Dependent
 public class WebApiEJB {
 
     @Inject
@@ -38,6 +45,8 @@ public class WebApiEJB {
 
     private Cache<String, Rule> ruleCache = null;
 
+    private Cache<String, CustomList> customListsCache = null;
+
     @Inject
     private javax.transaction.UserTransaction utx;
 
@@ -45,8 +54,9 @@ public class WebApiEJB {
     public void setup() {
         blacklistCache = m.getCache("BLACKLIST_CACHE");
         ruleCache = m.getCache("RULES_CACHE");
-        if (blacklistCache == null || ruleCache == null) {
-            throw new IllegalStateException("Both BLACKLIST_CACHE and RULES_CACHE must not be null.");
+        customListsCache = m.getCache("CUSTOM_LISTS_CACHE");
+        if (blacklistCache == null || ruleCache == null || customListsCache == null) {
+            throw new IllegalStateException("Both BLACKLIST_CACHE and RULES_CACHE and CUSTOM_LISTS_CACHE must not be null.");
         }
     }
 
@@ -249,7 +259,6 @@ public class WebApiEJB {
                     log.log(Level.SEVERE, "postAllDNSClientSettings: Got an invalid or null record. Can't process this.");
                     return null;
                 }
-                //TODO: It is very wasteful to calculate the whole thing for just the one /32 or /128 masked client IP.
                 CIDRUtils cidrUtils = new CIDRUtils(allDNSSettingDTO.getDnsClient());
                 if (cidrUtils == null) {
                     log.log(Level.SEVERE, "postAllDNSClientSettings: We have failed to construct CIDRUtils instance.");
@@ -281,14 +290,137 @@ public class WebApiEJB {
         return allDNSSetting.length + " RULES PROCESSED " + ruleCache.size() + " PRESENT";
     }
 
+    /**
+     * Creates/updates customer custom lists
+     * <p>
+     * TODO: This method is wayyy too long and complicated. Refactor CustomList creation out into some CustomList factory.
+     * <p>
+     * Key for the cache is a String constructed as the following concatenation:
+     * "DNS client CIDR"+"<Listed CIDR | Listed FQDN>"  By Listed we mean a member of the list of White/Black/Log listed strings.
+     * <p>
+     * Note: Let's talk about the Key with Rattus and assert its length...<= 255? Should customerId be part of it? Should we use hashes?
+     * Note: The same old problem with nested subnets: What if more Black/White lists span more nested subnets?
+     *
+     * @param customerId
+     * @param customerCustomLists
+     * @return
+     */
     public String putCustomLists(final Integer customerId, final CustomerCustomListDTO[] customerCustomLists) {
-        //TODO
-        throw new NotImplementedException();
+        if (customerId == null || customerCustomLists == null) {
+            log.log(Level.SEVERE, "putCustomLists: customerId and customerCustomLists cannot be null.");
+            return null;
+        }
+        //TODO: If customerCustomLists is empty - should we clear/delete all customerId's lists? Ask Rattus.
+        final DomainValidator domainValidator = DomainValidator.getInstance();
+        String dnsClientStartAddress;
+        String dnsClientEndAddress;
+        int customListsElementCounter = 0;
+        for (CustomerCustomListDTO customerCustomList : customerCustomLists) {
+            // Let's calculate DNS Client address
+            CIDRUtils cidrUtils;
+            try {
+                cidrUtils = new CIDRUtils(customerCustomList.getDnsClient());
+                if (cidrUtils == null) {
+                    log.log(Level.SEVERE, "putCustomLists: We have failed to construct CIDRUtils instance from " + customerCustomList.getDnsClient());
+                    return null;
+                }
+                dnsClientStartAddress = cidrUtils.getStartIPBigIntegerString();
+                dnsClientEndAddress = cidrUtils.getEndIPBigIntegerString();
+                if (dnsClientStartAddress == null || dnsClientEndAddress == null) {
+                    log.log(Level.SEVERE, "putCustomLists: dnsClientStartAddress or dnsClientEndAddress were null. This cannot happen.");
+                    return null;
+                }
+            } catch (Exception e) {
+                // TODO: More robust approach would be break();, but it could violate consistency...
+                // Furthermore, with validation in Portal, this really shouldn't happen, hence return null;
+                log.log(Level.SEVERE, "putCustomLists: Invalid CIDR " + customerCustomList.getDnsClient(), e);
+                return null;
+            } finally {
+                cidrUtils = null;
+            }
+
+            // Let's process list of Blacklisted / Whitelisted / Logged CIDRs and FQDNs.
+            for (String fqdnOrCIDR : customerCustomList.getLists().keySet()) {
+                // TODO: OMG, this should go to some CustomList factory.
+                final CustomList customList = new CustomList();
+                customList.setCustomerId(customerId);
+                customList.setClientCidrAddress(customerCustomList.getDnsClient());
+                customList.setClientStartAddress(dnsClientStartAddress);
+                customList.setClientEndAddress(dnsClientEndAddress);
+                String blacklistWhitelistLog = customerCustomList.getLists().get(fqdnOrCIDR);
+                if (!(blacklistWhitelistLog != null && (blacklistWhitelistLog.equals("B") || blacklistWhitelistLog.equals("W") || blacklistWhitelistLog.equals("L")))) {
+                    log.log(Level.SEVERE, "putCustomLists: Expected one of <B|W|L> but got: " + blacklistWhitelistLog + ". customListsElementCounter: " + customListsElementCounter);
+                    return null;
+                }
+                customList.setWhiteBlackLog(blacklistWhitelistLog);
+                if (domainValidator.isValid(fqdnOrCIDR)) {
+                    //Let's assume it is a Domain name, not a CIDR formatted IP address or subnet
+                    customList.setFqdn(fqdnOrCIDR);
+                } else {
+                    // In this case, we have to calculate CIDR subnet start and end address
+                    try {
+                        cidrUtils = new CIDRUtils(fqdnOrCIDR);
+                        if (cidrUtils == null) {
+                            log.log(Level.SEVERE, "putCustomLists: We have failed to construct CIDRUtils instance from " + fqdnOrCIDR + ". customListsElementCounter: " + customListsElementCounter);
+                            return null;
+                        }
+                        final String startAddress = cidrUtils.getStartIPBigIntegerString();
+                        final String endAddress = cidrUtils.getEndIPBigIntegerString();
+                        if (startAddress == null || endAddress == null) {
+                            log.log(Level.SEVERE, "putCustomLists: endAddress or startAddress were null for CIDR " + fqdnOrCIDR + ". This cannot happen. customListsElementCounter: " + customListsElementCounter);
+                            return null;
+                        }
+                        customList.setListCidrAddress(fqdnOrCIDR);
+                        customList.setListStartAddress(startAddress);
+                        customList.setListEndAddress(endAddress);
+                    } catch (Exception e) {
+                        // TODO: More robust approach would be break();, but it could violate consistency...
+                        // Furthermore, with validation in Portal, this really shouldn't happen, hence return null;
+                        log.log(Level.SEVERE, "putCustomLists: Invalid CIDR " + customerCustomList.getDnsClient() + ", customListsElementCounter: " + customListsElementCounter, e);
+                        return null;
+                    } finally {
+                        cidrUtils = null;
+                    }
+                }
+
+                //At this point, we have a valid CustomList instance, let's process it with the cache.
+                // Sanity check
+                if ((customList.getFqdn() != null && customList.getListCidrAddress() != null) || (customList.getFqdn() == null && customList.getListCidrAddress() == null)) {
+                    log.log(Level.SEVERE, "putCustomLists: Sanity violation, customList has exactly one of [FQDN,CIDR] set, not both, not none. customListsElementCounter: " + customListsElementCounter);
+                    return null;
+                }
+
+                // TODO: Talk to Rattus. ClientCidrAddresses cannot be arbitrary and must be thoroughly validated in Portal. Should we hash this?
+                final String key = customList.getClientCidrAddress() + ((customList.getFqdn() != null) ? customList.getFqdn() : customList.getListCidrAddress());
+
+                try {
+                    utx.begin();
+                    log.log(Level.FINE, "putCustomLists: Putting key [" + key + "]. customListsElementCounter: " + customListsElementCounter);
+                    if (customListsCache.replace(key, customList) == null) {
+                        customListsCache.put(key, customList);
+                    }
+                    utx.commit();
+                    customListsElementCounter++;
+                } catch (Exception e) {
+                    log.log(Level.SEVERE, "putCustomLists: customListsElementCounter: " + customListsElementCounter, e);
+                    try {
+                        if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
+                            utx.rollback();
+                        }
+                    } catch (Exception e1) {
+                        log.log(Level.SEVERE, "putCustomLists", e1);
+                        return null; //finally?
+                    }
+                    return null;
+                }
+            }
+        }
+        return customListsElementCounter + " CUSTOM LISTS ELEMENTS PROCESSED, " + customListsCache.size() + " PRESENT";
     }
 
     /**
      * TODO: This is most likely wrong, let's talk to Rattus.
-     *
+     * <p>
      * # Example
      * ## Add some rules
      * ```
@@ -357,7 +489,7 @@ public class WebApiEJB {
                                 }
                             } catch (Exception e1) {
                                 log.log(Level.SEVERE, "putFeedSettings", e1);
-                                return null;
+                                return null; //finally?
                             }
                             return null;
                         }

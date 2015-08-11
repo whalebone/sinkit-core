@@ -1,6 +1,6 @@
 package biz.karms.sinkit.rest;
 
-import biz.karms.sinkit.ejb.BlacklistedRecord;
+import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.CoreServiceEJB;
 import biz.karms.sinkit.ejb.DNSApiEJB;
 import biz.karms.sinkit.ejb.WebApiEJB;

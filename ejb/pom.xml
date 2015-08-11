@@ -31,18 +31,6 @@
         </developer>
     </developers>
 
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.wildfly.bom</groupId>
-                <artifactId>jboss-javaee-7.0-with-infinispan</artifactId>
-                <version>${version.jboss.bom}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
     <dependencies>
 
         <!-- Import the CDI API, we use provided scope as the API is included in JBoss WildFly -->
@@ -65,74 +53,74 @@
             <artifactId>jboss-ejb-api_3.2_spec</artifactId>
             <scope>provided</scope>
         </dependency>
-<!--
-        <dependency>
-            <groupId>javax.json</groupId>
-            <artifactId>javax.json-api</artifactId>
-            <version>1.0-b06</version>
-        </dependency>
+
+        <!-- SubnetUtils -->
+        <!--<dependency>
+            <groupId>commons-net</groupId>
+            <artifactId>commons-net</artifactId>
+            <version>3.3</version>
+        </dependency>-->
 
         <dependency>
-            <groupId>org.glassfish</groupId>
-            <artifactId>javax.json</artifactId>
-            <version>1.0-b06</version>
-            <scope>runtime</scope>
-        </dependency>-->
+            <groupId>commons-validator</groupId>
+            <artifactId>commons-validator</artifactId>
+            <version>${commons.validator.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>org.infinispan</groupId>
             <artifactId>infinispan-core</artifactId>
-            <version>7.2.3.Final</version>
+            <version>${infinispan.core.version}</version>
             <scope>compile</scope>
         </dependency>
 
         <dependency>
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-search</artifactId>
-            <version>5.3.0.Final</version>
+            <version>${hibernate.search.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.mchange</groupId>
             <artifactId>c3p0</artifactId>
-            <version>0.9.5.1</version>
+            <version>${com.mchange.c3p0.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <version>9.2-1004-jdbc41</version>
+            <version>${postgresql.driver.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.infinispan</groupId>
             <artifactId>infinispan-cachestore-jdbc</artifactId>
-            <version>7.2.3.Final</version>
+            <version>${infinispan.cachestore.jdbc.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.infinispan</groupId>
             <artifactId>infinispan-query</artifactId>
-            <version>7.2.3.Final</version>
+            <version>${infinispan.query.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
-            <version>2.3.1</version>
+            <version>${com.google.code.gson.version}</version>
         </dependency>
 
         <dependency>
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
-            <version>1.10</version>
+            <version>${commons.codec.version}</version>
         </dependency>
 
-        <!-- elasticsearch restfull client-->
+        <!-- Elasticsearch RESTful client-->
         <dependency>
             <groupId>io.searchbox</groupId>
             <artifactId>jest</artifactId>
-            <version>0.1.6</version>
+            <version>${io.searchbox.jest.version}</version>
         </dependency>
     </dependencies>
 
@@ -143,22 +131,10 @@
                 <artifactId>maven-ejb-plugin</artifactId>
                 <version>${version.ejb.plugin}</version>
                 <configuration>
-                    <!-- EJB 3.2 -->
-                    <ejbVersion>3.2</ejbVersion>
+                    <ejbVersion>${version.ejb}</ejbVersion>
                 </configuration>
             </plugin>
         </plugins>
     </build>
-<!--
-    <repositories>
-
-        <repository>
-            <id>sonatype</id>
-            <name>Sonatype Groups</name>
-            <url>https://oss.sonatype.org/content/groups/public/</url>
-        </repository>
-
-    </repositories>
-    -->
 </project>
 

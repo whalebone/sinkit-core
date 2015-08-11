@@ -90,8 +90,19 @@ public class MyCacheManagerProvider {
                     .hash().numOwners(2)
                     .indexing().index(Index.ALL)
                     .build());
+            manager.defineConfiguration("CUSTOM_LISTS_CACHE", new ConfigurationBuilder()
+                    .eviction()
+                    .maxEntries(MAX_ENTRIES_RULES)
+                            // Custom lists cannot be evicted ever.
+                    .expiration().disableReaper()
+                    .expiration().lifespan(ENTRY_LIFESPAN_NEVER)
+                    .clustering().cacheMode(CacheMode.DIST_ASYNC)
+                    .hash().numOwners(2)
+                    .indexing().index(Index.ALL)
+                    .build());
             manager.getCache("BLACKLIST_CACHE").start();
             manager.getCache("RULES_CACHE").start();
+            manager.getCache("CUSTOM_LISTS_CACHE").start();
             log.log(Level.INFO, "I'm returning DefaultCacheManager instance " + manager + ".");
         }
         return manager;
@@ -99,8 +110,10 @@ public class MyCacheManagerProvider {
 
     @PreDestroy
     public void cleanUp() {
-        manager.stop();
-        manager = null;
+        if (manager != null) {
+            manager.stop();
+            manager = null;
+        }
     }
 
 }
