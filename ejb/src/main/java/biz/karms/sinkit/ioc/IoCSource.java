@@ -1,8 +1,6 @@
 package biz.karms.sinkit.ioc;
 
 import com.google.gson.annotations.SerializedName;
-import org.hibernate.search.annotations.Field;
-import org.hibernate.search.annotations.Indexed;
 import org.hibernate.search.annotations.NumericField;
 
 import java.io.Serializable;
@@ -10,39 +8,26 @@ import java.io.Serializable;
 /**
  * Created by tkozel on 24.6.15.
  */
-@Indexed
 public class IoCSource implements Serializable {
 
-    private static final long serialVersionUID = 2184815523047755695L;
+    private static final long serialVersionUID = 6742947300724661734L;
 
-    @Field
     private IoCSourceId id;
-
-    @Field
     private String url;
-
-    @Field
     private String ip;
-
-    @Field
     private String fqdn;
 
-    @Field
     @SerializedName("reverse_domain_name")
     private String reverseDomainName;
 
-    @Field
     @NumericField
     private Integer asn;
 
-    @Field
     @SerializedName("asn_name")
     private String asnName;
 
-    @Field
     private IoCGeolocation geolocation;
 
-    @Field
     @SerializedName("bgp_prefix")
     private String bgpPrefix;
 

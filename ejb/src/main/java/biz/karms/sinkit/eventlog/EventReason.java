@@ -7,6 +7,8 @@ import java.io.Serializable;
  */
 public class EventReason implements Serializable {
 
+    private static final long serialVersionUID = 8092255064427923820L;
+
     private String fqdn;
     private String ip;
 

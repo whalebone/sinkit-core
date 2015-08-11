@@ -1,24 +1,16 @@
 package biz.karms.sinkit.ioc;
 
-import org.hibernate.search.annotations.Field;
-import org.hibernate.search.annotations.Indexed;
-
 import java.io.Serializable;
 import java.util.Date;
 
 /**
  * Created by tkozel on 25.6.15.
  */
-
-@Indexed
 public class IoCSeen implements Serializable {
 
-    private static final long serialVersionUID = 2184815523047755699L;
+    private static final long serialVersionUID = -8503565375996995715L;
 
-    @Field
     private Date first;
-
-    @Field
     private Date last;
 
     public Date getFirst() {

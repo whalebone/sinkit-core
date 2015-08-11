@@ -2,10 +2,14 @@ package biz.karms.sinkit.rest;
 
 import biz.karms.sinkit.exception.IoCValidationException;
 import com.google.gson.JsonSyntaxException;
+import com.kanishka.virustotal.exception.InvalidArguentsException;
+import com.kanishka.virustotal.exception.QuotaExceededException;
+import com.kanishka.virustotal.exception.UnauthorizedAccessException;
 
 import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Response;
+import java.io.IOException;
 import java.util.logging.Logger;
 
 /**
@@ -110,7 +114,7 @@ public class SinkitREST {
     @POST
     @Path("/blacklist/ioc/")
     @Produces({"application/json;charset=UTF-8"})
-    @Consumes({"application/json;charset=UTF-8"})
+    //@Consumes({"application/json;charset=UTF-8"})
     public Response putIoCRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, String ioc) {
 
         if (!stupidAuthenticator.isAuthenticated(token)) {
@@ -218,4 +222,35 @@ public class SinkitREST {
         }
     }
 
+    @POST
+    @Path("/log/record")
+    public String logRecrod(@HeaderParam(AUTH_HEADER_PARAM) String token, String logRecord) {
+        if (stupidAuthenticator.isAuthenticated(token)) {
+            try {
+                sinkitService.addEventLogRecord(logRecord);
+                return "OK";
+            } catch (Exception e) {
+                e.printStackTrace();
+                return "Not Ok";
+            }
+        } else {
+            return AUTH_FAIL;
+        }
+    }
+
+    @POST
+    @Path("/total/enrich")
+    public String enrich(@HeaderParam(AUTH_HEADER_PARAM) String token) {
+        if (stupidAuthenticator.isAuthenticated(token)) {
+            try {
+                sinkitService.enrich();
+                return "OK";
+            } catch (Exception e) {
+                e.printStackTrace();
+                return "Not Ok";
+            }
+        } else {
+            return AUTH_FAIL;
+        }
+    }
 }

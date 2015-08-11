@@ -1,22 +1,18 @@
 package biz.karms.sinkit.ioc;
 
 import org.hibernate.search.annotations.Field;
-import org.hibernate.search.annotations.Indexed;
 
 import java.io.Serializable;
 
 /**
  * Created by tkozel on 10.7.15.
  */
-@Indexed
+
 public class IoCSourceId implements Serializable {
 
-    private static final long serialVersionUID = 2184815523040755395L;
+    private static final long serialVersionUID = 2510134193901542038L;
 
-    @Field
     private String value;
-
-    @Field
     private IoCSourceIdType type;
 
     public String getValue() {

@@ -1,9 +1,13 @@
 package biz.karms.sinkit.eventlog;
 
+import java.io.Serializable;
+
 /**
  * Created by tkozel on 23.7.15.
  */
-public class EventDNSRequest {
+public class EventDNSRequest implements Serializable {
+
+    private static final long serialVersionUID = -8270442960082815073L;
 
     private String ip;
     private String raw;

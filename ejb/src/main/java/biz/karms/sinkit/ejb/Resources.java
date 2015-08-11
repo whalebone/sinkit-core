@@ -1,5 +1,9 @@
 package biz.karms.sinkit.ejb;
 
+import biz.karms.sinkit.ejb.elastic.JestClientProvider;
+import biz.karms.sinkit.ejb.virustotal.VirusTotalClientProvider;
+import com.kanishka.virustotal.exception.APIKeyNotFoundException;
+import com.kanishka.virustotalv2.VirustotalPublicV2;
 import io.searchbox.client.JestClient;
 import org.infinispan.manager.DefaultCacheManager;
 
@@ -19,9 +23,6 @@ public class Resources {
     @Inject
     MyCacheManagerProvider cacheManagerProvider;
 
-    @Inject
-    JestClientProvider jestClientProvider;
-
     @Produces
     @Default
     Logger getLogger(InjectionPoint ip) {
@@ -34,11 +35,4 @@ public class Resources {
     DefaultCacheManager getDefaultCacheManager() {
         return cacheManagerProvider.getCacheManager();
     }
-
-    @Produces
-    @Default
-    JestClient getJestClient() {
-        return jestClientProvider.getJestClient();
-    }
-
 }

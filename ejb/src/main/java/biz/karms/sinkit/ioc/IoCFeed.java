@@ -1,22 +1,15 @@
 package biz.karms.sinkit.ioc;
 
-import org.hibernate.search.annotations.Field;
-import org.hibernate.search.annotations.Indexed;
-
 import java.io.Serializable;
 
 /**
  * Created by tkozel on 24.6.15.
  */
-@Indexed
 public class IoCFeed implements Serializable {
 
-    private static final long serialVersionUID = 2184815523047755692L;
+    private static final long serialVersionUID = -5066334431395905204L;
 
-    @Field
     private String url;
-
-    @Field
     private String name;
 
     public IoCFeed() {}

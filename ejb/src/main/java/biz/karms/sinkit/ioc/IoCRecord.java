@@ -1,53 +1,34 @@
 package biz.karms.sinkit.ioc;
 
+import biz.karms.sinkit.ejb.elastic.Indexable;
 import com.google.gson.annotations.SerializedName;
 import io.searchbox.annotations.JestId;
-import org.hibernate.search.annotations.Field;
-import org.hibernate.search.annotations.Indexed;
 
-import java.io.Serializable;
-import java.lang.annotation.ElementType;
-import java.util.Calendar;
+import java.util.Arrays;
 
 /**
  * Created by tkozel on 24.6.15.
  */
-@Indexed
-public class IoCRecord implements Serializable {
+public class IoCRecord implements Indexable {
 
     public static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
 
-    private static final long serialVersionUID = 2184815523047755697L;
+    private static final long serialVersionUID = -595246622767555283L;
 
     @JestId
     private transient String documentId;
-
-    @Field
     private IoCFeed feed;
-
-    @Field
     private IoCDescription description;
-
-    @Field
     private IoCClassification classification;
-
-    @Field
     private IoCProtocol protocol;
-
-    @Field
     private String raw;
-
-    @Field
     private IoCSource source;
-
-    @Field
     private IoCTime time;
-
-    @Field
     private IoCSeen seen;
-
-    @Field
     private boolean active;
+
+    @SerializedName("virus_total_reports")
+    private IoCVirusTotalReport[] virusTotalReports;
 
     public IoCRecord() {}
 
@@ -131,6 +112,14 @@ public class IoCRecord implements Serializable {
         this.active = active;
     }
 
+    public IoCVirusTotalReport[] getVirusTotalReports() {
+        return virusTotalReports;
+    }
+
+    public void setVirusTotalReports(IoCVirusTotalReport[] virusTotalReports) {
+        this.virusTotalReports = virusTotalReports;
+    }
+
     @Override
     public String toString() {
         return "IoCRecord{" +
@@ -144,6 +133,7 @@ public class IoCRecord implements Serializable {
                 ", time=" + time +
                 ", seen=" + seen +
                 ", active=" + active +
+                ", virusTotalReports=" + Arrays.toString(virusTotalReports) +
                 '}';
     }
 }
