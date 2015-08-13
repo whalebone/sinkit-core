@@ -7,6 +7,7 @@ import biz.karms.sinkit.ejb.WebApiEJB;
 import biz.karms.sinkit.ejb.dto.AllDNSSettingDTO;
 import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
 import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
+import biz.karms.sinkit.eventlog.EventLogRecord;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCValidationException;
 import biz.karms.sinkit.ioc.IoCRecord;
@@ -18,6 +19,7 @@ import javax.ejb.EJB;
 import javax.enterprise.context.SessionScoped;
 import javax.inject.Inject;
 import java.io.Serializable;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -193,5 +195,21 @@ public class SinkitService implements Serializable {
             log.log(Level.SEVERE, "postCreateFeedSettings", e);
             return new GsonBuilder().create().toJson(ERR_MSG);
         }
+    }
+
+    void addEventLogRecord(final String json) throws ArchiveException {
+        EventLogRecord logRec = new GsonBuilder().create().fromJson(json, EventLogRecord.class);
+        coreService.logEvent(
+                logRec.getAction(),
+                logRec.getClient(),
+                logRec.getRequest().getIp(),
+                logRec.getRequest().getRaw(),
+                logRec.getReason().getFqdn(),
+                logRec.getReason().getIp(),
+                logRec.getMatchedIocs());
+    }
+
+    public void enrich() {
+        coreService.enrich();
     }
 }

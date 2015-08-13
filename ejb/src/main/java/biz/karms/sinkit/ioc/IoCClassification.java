@@ -8,15 +8,11 @@ import java.io.Serializable;
 /**
  * Created by tkozel on 24.6.15.
  */
-@Indexed
 public class IoCClassification implements Serializable {
 
-    private static final long serialVersionUID = 2184815523047755694L;
+    private static final long serialVersionUID = -5807317040203145173L;
 
-    @Field
     private String type;
-
-    @Field
     private String taxonomy;
 
     public IoCClassification() {}

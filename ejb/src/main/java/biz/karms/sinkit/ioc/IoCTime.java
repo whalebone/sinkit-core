@@ -4,21 +4,14 @@ package biz.karms.sinkit.ioc;
  * Created by tkozel on 24.6.15.
  */
 
-import org.hibernate.search.annotations.Field;
-import org.hibernate.search.annotations.Indexed;
-
 import java.io.Serializable;
 import java.util.Date;
 
-@Indexed
 public class IoCTime implements Serializable {
 
-    private static final long serialVersionUID = 2184815523047755696L;
+    private static final long serialVersionUID = 3518598035766322842L;
 
-    @Field
     private Date source;
-
-    @Field
     private Date observation;
 
     public Date getSource() {

@@ -1,17 +1,14 @@
 package biz.karms.sinkit.ioc;
 
-import org.hibernate.search.annotations.Field;
-import org.hibernate.search.annotations.Indexed;
+import java.io.Serializable;
 
 /**
  * Created by tkozel on 25.6.15.
  */
-@Indexed
-public class IoCProtocol {
+public class IoCProtocol implements Serializable {
 
-    private static final long serialVersionUID = 2184815523047755698L;
+    private static final long serialVersionUID = -5416774385239247512L;
 
-    @Field
     private String application;
 
     public String getApplication() {

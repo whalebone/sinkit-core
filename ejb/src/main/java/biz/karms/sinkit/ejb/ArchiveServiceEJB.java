@@ -1,15 +1,13 @@
 package biz.karms.sinkit.ejb;
 
+import biz.karms.sinkit.ejb.elastic.ElasticServiceEJB;
 import biz.karms.sinkit.eventlog.EventLogRecord;
+import biz.karms.sinkit.eventlog.VirusTotalRequestStatus;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.ioc.IoCRecord;
-
-import io.searchbox.client.JestClient;
+import com.google.gson.GsonBuilder;
 import io.searchbox.client.JestResult;
-import io.searchbox.client.JestResultHandler;
-import io.searchbox.core.Index;
-import io.searchbox.core.Search;
-import io.searchbox.core.SearchResult;
+import io.searchbox.core.Get;
 import io.searchbox.core.Update;
 import io.searchbox.params.Parameters;
 
@@ -17,8 +15,8 @@ import javax.ejb.Singleton;
 import javax.ejb.Startup;
 import javax.inject.Inject;
 import java.io.IOException;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -26,21 +24,13 @@ import java.util.logging.Logger;
  * Created by tkozel on 24.6.15.
  */
 @Singleton
-//TODO: Note that you will end up with many instances, each for a caller. No Lock? No TX?
 public class ArchiveServiceEJB {
 
     @Inject
     private Logger log;
 
     @Inject
-    private JestClient elasticClient;
-
-    private static final String ELASTIC_IOC_INDEX = "iocs";
-    private static final String ELASTIC_IOC_TYPE = "intelmq";
-    private static final String ELASTIC_LOG_INDEX = "logs";
-    private static final String ELASTIC_LOG_TYPE = "match";
-
-    private static final String PARAMETER_FROM = "from";
+    private ElasticServiceEJB elasticService;
 
     public IoCRecord findActiveIoCRecordBySourceId(
             String sourceId, String classificationType, String feedName) throws ArchiveException {
@@ -63,46 +53,9 @@ public class ArchiveServiceEJB {
                 "   }\n" +
                 "}\n";
 
-        return this.searchArchiveForSingleHit(query);
+        return elasticService.searchForSingleHit(query, ElasticServiceEJB.ELASTIC_IOC_INDEX,
+                ElasticServiceEJB.ELASTIC_IOC_TYPE, IoCRecord.class);
     }
-
-//    public IoCRecord findActiveIoCRecordByIp(String ip, String type, String feed) throws ArchiveException {
-//
-//        //log.info("searching elastic [ ip : " + ip + ", type : " + type + ", feed : " + feed + "]");
-//
-//        String query = "{\n" +
-//                "   \"query\" : {\n" +
-//                "       \"filtered\" : {\n"+
-//                "           \"query\" : {\n" +
-//                "               \"query_string\" : {\n" +
-//                "                   \"query\": \"active : true AND source.ip : \\\"" + ip + "\\\" AND classification.type: \\\"" + type + "\\\" AND feed.name : \\\"" + feed +"\\\"\"\n" +
-//                "               }\n" +
-//                "           }\n" +
-//                "       }\n" +
-//                "   }\n" +
-//                "}\n";
-//
-//        return this.searchArchiveForSingleHit(query);
-//    }
-//
-//    public IoCRecord findActiveIoCRecordByFQDN(String fqdn, String type, String feed) throws ArchiveException {
-//
-//        //log.info("searching elastic [ fqdn : " + fqdn + ", type : " + type + ", feed : " + feed + "]");
-//
-//        String query = "{\n" +
-//                "   \"query\" : {\n" +
-//                "       \"filtered\" : {\n"+
-//                "           \"query\" : {\n" +
-//                "               \"query_string\" : {\n" +
-//                "                   \"query\": \"active : true AND source.fqdn : \\\"" + fqdn + "\\\" AND classification.type: \\\"" + type + "\\\" AND feed.name : \\\"" + feed +"\\\"\"\n" +
-//                "               }\n" +
-//                "           }\n" +
-//                "       }\n" +
-//                "   }\n" +
-//                "}\n";
-//
-//       return this.searchArchiveForSingleHit(query);
-//    }
 
     public List<IoCRecord> findIoCsForDeactivation(int hours) throws ArchiveException {
 
@@ -128,83 +81,13 @@ public class ArchiveServiceEJB {
                 "   }\n" +
                 "}\n";
 
-        return this.searchArchive(query);
-    }
-
-    private IoCRecord searchArchiveForSingleHit(String query) throws ArchiveException {
-
-        List<IoCRecord> hits = this.searchArchive(query);
-
-        if (hits.isEmpty()) return null;
-        else if (hits.size() > 1) {
-            log.severe("Query returned more than single result: " + query);
-            throw new ArchiveException("Search returned " + hits.size() + " hits. Expecting max one -> panic!");
-        }
-
-
-        return hits.get(0);
-    }
-
-    private List<IoCRecord> searchArchive(String query) throws ArchiveException {
-
-        return searchArchive(query, 0, 1000);
-    }
-
-    private List<IoCRecord> searchArchive(String query, int from, int size) throws ArchiveException {
-
-        Search search = new Search.Builder(query)
-                            .addIndex(ELASTIC_IOC_INDEX)
-                            .addType(ELASTIC_IOC_TYPE)
-                            .setParameter(PARAMETER_FROM, from)
-                            .setParameter(Parameters.SIZE, size)
-                            .build();
-
-        //log.info("Searching archive with query: \n" + query);
-
-        SearchResult result;
-        try {
-            result = elasticClient.execute(search);
-        } catch (IOException e) {
-            throw new ArchiveException("IoC search went wrong.", e);
-        }
-
-        if (!result.isSucceeded()) {
-            throw new ArchiveException(result.getErrorMessage());
-        }
-
-        //log.info("Found " + result.getTotal() + " hits");
-
-        //log.info(result.getJsonString());
-        if (result.getTotal() < 1) return new ArrayList<>();
-
-        return result.getSourceAsObjectList(IoCRecord.class);
+        return elasticService.search(query, ElasticServiceEJB.ELASTIC_IOC_INDEX,
+                ElasticServiceEJB.ELASTIC_IOC_TYPE, IoCRecord.class);
     }
 
     public IoCRecord archiveIoCRecord(IoCRecord ioc) throws ArchiveException {
-
-        Index index = new Index.Builder(ioc)
-                .index(ELASTIC_IOC_INDEX)
-                .type(ELASTIC_IOC_TYPE)
-                .setParameter(Parameters.REFRESH, true)
-                .build();
-        //log.info("Indexing ioc [" + ioc.toString() + "]");
-
-        JestResult result;
-        try {
-            result = elasticClient.execute(index);
-        } catch (IOException e) {
-            throw new ArchiveException("Indexing IoC went wrong.", e);
-        }
-
-        if (result.isSucceeded()) {
-            String docId = result.getJsonObject().getAsJsonPrimitive("_id").getAsString();
-            ioc.setDocumentId(docId);
-            //log.info("Indexed ioc: [" + ioc.toString() + "]");
-        } else {
-            log.severe("Archive returned error: " + result.getErrorMessage());
-            throw new ArchiveException(result.getErrorMessage());
-        }
-        return ioc;
+        return elasticService.index(ioc, ElasticServiceEJB.ELASTIC_IOC_INDEX,
+                ElasticServiceEJB.ELASTIC_IOC_TYPE);
     }
 
     public IoCRecord deactivateRecord(IoCRecord ioc) throws ArchiveException {
@@ -223,10 +106,10 @@ public class ArchiveServiceEJB {
         //log.info("Deactivating ioc [" + ioc.toString() + "]");
         try {
             result =
-                    elasticClient.execute(
+                    elasticService.getElasticClient().execute(
                             new Update.Builder(query)
-                                    .index(ELASTIC_IOC_INDEX)
-                                    .type(ELASTIC_IOC_TYPE)
+                                    .index(ElasticServiceEJB.ELASTIC_IOC_INDEX)
+                                    .type(ElasticServiceEJB.ELASTIC_IOC_TYPE)
                                     .id(ioc.getDocumentId())
                                     .setParameter(Parameters.REFRESH, true)
                                     .build()
@@ -244,31 +127,13 @@ public class ArchiveServiceEJB {
         return ioc;
     }
 
-    public void archiveEventLogRecord(EventLogRecord logRecord) {
+    public EventLogRecord archiveEventLogRecord(EventLogRecord logRecord) throws ArchiveException {
 
-        String indexName = ELASTIC_LOG_INDEX + "-" + new SimpleDateFormat("yyyy.MM.dd").format(logRecord.getLogged());
+        DateFormat df = new SimpleDateFormat("YYYY.MM.dd");
+        String index = ElasticServiceEJB.ELASTIC_LOG_INDEX + "-" + df.format(logRecord.getLogged());
 
-        Index index = new Index.Builder(logRecord)
-                .index(indexName)
-                .type(ELASTIC_LOG_TYPE)
-                .setParameter(Parameters.REFRESH, true)
-                .build();
-        //log.finest("Indexing logRecord [" + logRecord.toString() + "]");
-
-        elasticClient.executeAsync(index, new JestResultHandler<JestResult>() {
-
-            @Override
-            public void completed(JestResult result) {
-                if (!result.isSucceeded()) {
-                    log.severe("Archive returned error: " + result.getErrorMessage());
-                }
-            }
-
-            @Override
-            public void failed(Exception ex) {
-                log.severe("Indexing eventLog went wrong: " + ex.getMessage());
-            }
-        });
+        return elasticService.index(logRecord, index,
+                ElasticServiceEJB.ELASTIC_LOG_TYPE);
     }
 
     public List<IoCRecord> getActiveIoCs(int from, int size) throws ArchiveException {
@@ -283,6 +148,74 @@ public class ArchiveServiceEJB {
                 "   }\n" +
                 "}\n";
 
-        return this.searchArchive(query, from, size);
+        return elasticService.search(query, ElasticServiceEJB.ELASTIC_IOC_INDEX,
+                ElasticServiceEJB.ELASTIC_IOC_TYPE, from, size, IoCRecord.class);
+    }
+
+    public IoCRecord getIoCRecordById(String id) throws ArchiveException {
+
+        JestResult result;
+        IoCRecord ioc;
+
+        Get get = new Get.Builder(ElasticServiceEJB.ELASTIC_IOC_INDEX, id)
+                .type(ElasticServiceEJB.ELASTIC_IOC_TYPE).build();
+        try {
+
+            result = elasticService.getElasticClient().execute(get);
+            ioc = result.getSourceAsObject(IoCRecord.class);
+
+        } catch (IOException e) {
+            throw new ArchiveException("IoC search went wrong.", e);
+        }
+
+        if (!result.isSucceeded()) {
+            return null;
+        }
+
+        return ioc;
+    }
+
+    public EventLogRecord getLogRecordWaitingForVTScan() throws ArchiveException {
+
+        String status = new GsonBuilder().create().toJson(VirusTotalRequestStatus.WAITING);
+
+        String query = "{\n" +
+                "   \"query\": {\n" +
+                "               \"term\": {\n" +
+                "                   \"virus_total_request.status\": " + status + "\n" +
+                "               }\n" +
+                "   },\n" +
+                "   \"sort\": { \"logged\": { \"order\": \"asc\" }}\n" +
+                "}\n";
+
+        List<EventLogRecord> logRecords =
+                elasticService.search(query, ElasticServiceEJB.ELASTIC_LOG_INDEX + "-*",
+                        ElasticServiceEJB.ELASTIC_LOG_TYPE, 0, 1, EventLogRecord.class);
+
+        if (logRecords.size() == 0) return null;
+
+        return logRecords.get(0);
+    }
+
+    public EventLogRecord getLogRecordWaitingForVTReport() throws ArchiveException {
+
+        String status = new GsonBuilder().create().toJson(VirusTotalRequestStatus.WAITING_FOR_REPORT);
+
+        String query = "{\n" +
+                "   \"query\": {\n" +
+                "               \"term\": {\n" +
+                "                   \"virus_total_request.status\": " + status + "\n" +
+                "               }\n" +
+                "   },\n" +
+                "   \"sort\": { \"virus_total_request.processed\": { \"order\": \"asc\" }}\n" +
+                "}\n";
+
+        List<EventLogRecord> logRecords =
+                elasticService.search(query, ElasticServiceEJB.ELASTIC_LOG_INDEX + "-*",
+                        ElasticServiceEJB.ELASTIC_LOG_TYPE, 0, 1, EventLogRecord.class);
+
+        if (logRecords.size() == 0) return null;
+
+        return logRecords.get(0);
     }
 }

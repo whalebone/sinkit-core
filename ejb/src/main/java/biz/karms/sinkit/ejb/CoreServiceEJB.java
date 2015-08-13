@@ -1,20 +1,19 @@
 package biz.karms.sinkit.ejb;
 
-import biz.karms.sinkit.eventlog.EventDNSRequest;
-import biz.karms.sinkit.eventlog.EventLogAction;
-import biz.karms.sinkit.eventlog.EventLogRecord;
-import biz.karms.sinkit.eventlog.EventReason;
+import biz.karms.sinkit.ejb.virustotal.VirusTotalEnricherEJB;
+import biz.karms.sinkit.eventlog.*;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCValidationException;
-import biz.karms.sinkit.ioc.IoCRecord;
-import biz.karms.sinkit.ioc.IoCSeen;
-import biz.karms.sinkit.ioc.IoCSourceId;
-import biz.karms.sinkit.ioc.IoCSourceIdType;
+import biz.karms.sinkit.ioc.*;
 import biz.karms.sinkit.ioc.util.IoCSourceIdBuilder;
-import javax.ejb.*;
+
+import javax.ejb.AsyncResult;
+import javax.ejb.Asynchronous;
+import javax.ejb.Singleton;
 import javax.inject.Inject;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.concurrent.Future;
 import java.util.logging.Logger;
 
 /**
@@ -36,6 +35,9 @@ public class CoreServiceEJB {
 
     @Inject
     private CacheBuilderEJB cacheBuilder;
+
+    @Inject
+    private VirusTotalEnricherEJB virusTotal;
 
     public synchronized IoCRecord processIoCRecord(IoCRecord receivedIoc)
             throws ArchiveException, IoCValidationException {
@@ -98,7 +100,8 @@ public class CoreServiceEJB {
         return ioc;
     }
 
-    public EventLogRecord logEvent(
+    @Asynchronous
+    public Future<EventLogRecord> logEvent(
             EventLogAction action,
             String clientUid,
             String requestIp,
@@ -106,7 +109,7 @@ public class CoreServiceEJB {
             String reasonFqdn,
             String reasonIp,
             String[] matchedIoCs
-    ) {
+    ) throws ArchiveException {
         EventLogRecord logRecord = new EventLogRecord();
 
         EventDNSRequest request = new EventDNSRequest();
@@ -124,9 +127,13 @@ public class CoreServiceEJB {
         logRecord.setLogged(new Date());
         logRecord.setMatchedIocs(matchedIoCs);
 
+        VirusTotalRequest vtReq = new VirusTotalRequest();
+        vtReq.setStatus(VirusTotalRequestStatus.WAITING);
+        logRecord.setVirusTotalRequest(vtReq);
+
         archiveService.archiveEventLogRecord(logRecord);
 
-        return logRecord;
+        return new AsyncResult<>(logRecord);
     }
 
     private IoCRecord validateIoCRecord(IoCRecord ioc) throws IoCValidationException {
@@ -158,6 +165,10 @@ public class CoreServiceEJB {
 
         cacheBuilder.runCacheRebuilding();
         return true;
+    }
+
+    public void enrich() {
+        virusTotal.runEnrichmentProcess();
     }
 
     private Date addWindow(Date date) {

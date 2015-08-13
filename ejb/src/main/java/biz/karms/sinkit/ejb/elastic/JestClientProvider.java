@@ -1,4 +1,4 @@
-package biz.karms.sinkit.ejb;
+package biz.karms.sinkit.ejb.elastic;
 
 import io.searchbox.client.JestClient;
 import io.searchbox.client.JestClientFactory;

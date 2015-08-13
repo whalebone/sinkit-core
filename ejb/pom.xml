@@ -122,6 +122,13 @@
             <artifactId>jest</artifactId>
             <version>${io.searchbox.jest.version}</version>
         </dependency>
+
+        <!-- VirusTotal client-->
+        <dependency>
+            <groupId>com.kanishka.api</groupId>
+            <artifactId>VirustotalPublicV2.0</artifactId>
+            <version>${com.kanishka.api.VirustotalPublicV2.0.version}</version>
+        </dependency>
     </dependencies>
 
     <build>

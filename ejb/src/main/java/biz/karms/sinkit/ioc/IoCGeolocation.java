@@ -1,33 +1,18 @@
 package biz.karms.sinkit.ioc;
 
-import org.hibernate.search.annotations.Field;
-import org.hibernate.search.annotations.Indexed;
-import org.hibernate.search.annotations.NumericField;
-
 import java.io.Serializable;
 
 /**
  * Created by tkozel on 25.6.15.
  */
-@Indexed
 public class IoCGeolocation implements Serializable {
 
-    private static final long serialVersionUID = 2184815523047755698L;
+    private static final long serialVersionUID = -7300830254275899055L;
 
-    @Field
     private String cc;
-
-    @Field
     private String city;
-
-    @Field
-    @NumericField
     private Float latitude;
-
-    @Field
-    @NumericField
     private Float longitude;
-
 
     public String getCc() {
         return cc;
