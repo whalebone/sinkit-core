@@ -28,8 +28,7 @@ public class JestClientProvider {
 
             JestClientFactory factory = new JestClientFactory();
             factory.setHttpClientConfig(new HttpClientConfig
-                    //TODO: move into env var
-                    .Builder("http://46.101.181.215:9200")
+                    .Builder("http://" + System.getenv("SINKIT_ELASTIC_HOST") + ":" + System.getenv("SINKIT_ELASTIC_PORT"))
                     .multiThreaded(true)
                     .build()) ;
 
