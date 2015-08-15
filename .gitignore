@@ -9,3 +9,4 @@ sinkit-ear.ear.redeploy
 biz.karms.sinkit.ejb.cache.pojo.Rule
 log.log
 biz.karms.sinkit.ejb.Rule
+integration-tests/biz.karms.sinkit.ejb.cache.pojo.CustomList
