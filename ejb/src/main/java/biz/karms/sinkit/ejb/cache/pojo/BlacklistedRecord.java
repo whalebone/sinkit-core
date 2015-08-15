@@ -12,7 +12,7 @@ import java.util.Map;
 @Indexed
 public class BlacklistedRecord implements Serializable {
 
-    private static final long serialVersionUID = 2184815523047755671L;
+    private static final long serialVersionUID = 2184999923047755671L;
 
     @Field(analyze = Analyze.YES)
     private String blackListedDomainOrIP;
@@ -20,6 +20,9 @@ public class BlacklistedRecord implements Serializable {
     @Field
     @CalendarBridge(resolution = Resolution.HOUR)
     private Calendar listed;
+
+    //Intentionally not annotated.
+    private String documentId;
 
     /**
      * Feed : Type
@@ -44,6 +47,14 @@ public class BlacklistedRecord implements Serializable {
     @Override
     public int hashCode() {
         return blackListedDomainOrIP.hashCode();
+    }
+
+    public String getDocumentId() {
+        return documentId;
+    }
+
+    public void setDocumentId(String documentId) {
+        this.documentId = documentId;
     }
 
     public String getBlackListedDomainOrIP() {

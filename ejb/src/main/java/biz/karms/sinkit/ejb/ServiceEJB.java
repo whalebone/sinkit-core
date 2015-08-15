@@ -89,6 +89,7 @@ public class ServiceEJB {
                         }
                         blacklistedRecord.setSources(feedToTypeUpdate);
                         blacklistedRecord.setListed(Calendar.getInstance());
+                        blacklistedRecord.setDocumentId(ioCRecord.getDocumentId());
                         blacklistCache.replace(key, blacklistedRecord);
                         utx.commit();
                     } else {
@@ -99,6 +100,7 @@ public class ServiceEJB {
                             log.log(Level.FINE, "addToCache: ioCRecord's feed or classification type were null");
                         }
                         BlacklistedRecord blacklistedRecord = new BlacklistedRecord(key, Calendar.getInstance(), feedToType);
+                        blacklistedRecord.setDocumentId(ioCRecord.getDocumentId());
                         log.log(Level.FINE, "Putting new key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
                         blacklistCache.put(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
                         utx.commit();

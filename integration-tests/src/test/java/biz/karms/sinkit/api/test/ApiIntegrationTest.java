@@ -1,8 +1,10 @@
 package biz.karms.sinkit.api.test;
 
 
+import biz.karms.sinkit.api.test.util.IoCFactory;
 import biz.karms.sinkit.ejb.ServiceEJB;
-import biz.karms.sinkit.ioc.*;
+import biz.karms.sinkit.ioc.IoCRecord;
+import biz.karms.sinkit.ioc.IoCSourceIdType;
 import com.gargoylesoftware.htmlunit.HttpMethod;
 import com.gargoylesoftware.htmlunit.Page;
 import com.gargoylesoftware.htmlunit.WebClient;
@@ -22,7 +24,6 @@ import org.testng.annotations.Test;
 import javax.inject.Inject;
 import java.io.File;
 import java.net.URL;
-import java.util.Calendar;
 import java.util.logging.Logger;
 
 import static org.testng.Assert.assertEquals;
@@ -39,9 +40,10 @@ public class ApiIntegrationTest extends Arquillian {
     @Deployment(name = "ear", testable = true)
     public static Archive<?> createTestArchive() {
         EnterpriseArchive ear = ShrinkWrap.create(ZipImporter.class, "sinkit-ear.ear").importFrom(new File("../ear/target/sinkit-ear.ear")).as(EnterpriseArchive.class);
-        ear.getAsType(JavaArchive.class, "sinkit-ejb.jar").addClass(ApiIntegrationTest.class);
+        ear.getAsType(JavaArchive.class, "sinkit-ejb.jar").addClass(ApiIntegrationTest.class).addClass(IoCFactory.class);
         return ear;
     }
+
 
     @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 0)
     @OperateOnDeployment("ear")
@@ -80,7 +82,8 @@ public class ApiIntegrationTest extends Arquillian {
         assertEquals(200, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("Response:" + responseBody);
-        assertTrue(responseBody.contains("4 RULES PROCESSED 4 PRESENT"), "There should have been 4 processed and 4 present rules.");
+        String expected = "4 RULES PROCESSED 4 PRESENT";
+        assertTrue(responseBody.contains(expected), "Expected " + expected + ", but got: " + responseBody);
     }
 
     @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 1)
@@ -106,7 +109,8 @@ public class ApiIntegrationTest extends Arquillian {
         assertEquals(200, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("putCustomListsTest Response:" + responseBody);
-        assertTrue(responseBody.contains("6 CUSTOM LISTS ELEMENTS PROCESSED, 6 PRESENT"), "6 custom lists elements processed and 6 present were expected.");
+        String expected = "6 CUSTOM LISTS ELEMENTS PROCESSED, 6 PRESENT";
+        assertTrue(responseBody.contains(expected), "Expected: " + expected + ", but got: " + responseBody);
     }
 
     @Inject
@@ -114,53 +118,7 @@ public class ApiIntegrationTest extends Arquillian {
 
     @Test(priority = 2)
     public void addIoCsTest() throws Exception {
-        LOGGER.info("BlaBla :" + serviceEJB);
-        IoCRecord ioCRecord = new IoCRecord();
-        ioCRecord.setActive(true);
-        IoCClassification ioCClassification = new IoCClassification();
-        ioCClassification.setTaxonomy("hosted");
-        ioCClassification.setType("S");
-        ioCRecord.setClassification(ioCClassification);
-        IoCDescription ioCDescription = new IoCDescription();
-        ioCDescription.setText("test");
-        ioCRecord.setDescription(ioCDescription);
-        ioCRecord.setDocumentId("grc");
-        IoCFeed ioCFeed = new IoCFeed();
-        ioCFeed.setName("feed2");
-        ioCFeed.setUrl("feed2");
-        ioCRecord.setFeed(ioCFeed);
-        IoCProtocol ioCProtocol = new IoCProtocol();
-        ioCProtocol.setApplication("testx");
-        ioCRecord.setProtocol(ioCProtocol);
-        ioCRecord.setRaw("test_raw");
-        IoCSeen ioCSeen = new IoCSeen();
-        ioCSeen.setFirst(Calendar.getInstance().getTime());
-        ioCSeen.setLast(Calendar.getInstance().getTime());
-        ioCRecord.setSeen(ioCSeen);
-        IoCSource ioCSource = new IoCSource();
-        ioCSource.setAsn(666);
-        ioCSource.setAsnName("DevilASN");
-        ioCSource.setBgpPrefix("Meh");
-        ioCSource.setFQDN("seznam.cz"); //Nope, this is not the key
-        IoCGeolocation ioCGeolocation = new IoCGeolocation();
-        ioCGeolocation.setCc("CC_test");
-        ioCGeolocation.setCity("Zion");
-        ioCGeolocation.setLatitude(666.666f);
-        ioCGeolocation.setLongitude(666.666f);
-        ioCSource.setGeolocation(ioCGeolocation);
-        IoCSourceId ioCSourceId = new IoCSourceId();
-        ioCSourceId.setType(IoCSourceIdType.FQDN);
-        ioCSourceId.setValue("seznam.cz"); // This counts for our Infinispan key
-        ioCSource.setId(ioCSourceId);
-        ioCSource.setIp(null);
-        ioCSource.setReverseDomainName("seznam.cz");
-        ioCSource.setUrl("http://");
-        ioCRecord.setSource(ioCSource);
-        IoCTime ioCTime = new IoCTime();
-        ioCTime.setObservation(Calendar.getInstance().getTime());
-        ioCTime.setSource(Calendar.getInstance().getTime());
-        ioCRecord.setTime(ioCTime);
-
+        IoCRecord ioCRecord = IoCFactory.getIoCRecord("hosted", "blacklist", "myDocumentId", "feed2", "feed2", "seznam.cz", IoCSourceIdType.FQDN, "seznam.cz", null, "seznam.cz");
         assertTrue(serviceEJB.dropTheWholeCache(), "Dropping the whole cache failed.");
         assertTrue(serviceEJB.addToCache(ioCRecord), "Adding a new IoC to a presumably empty cache failed.");
     }
@@ -177,7 +135,8 @@ public class ApiIntegrationTest extends Arquillian {
         assertEquals(200, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("getStatsTest Response:" + responseBody);
-        assertTrue(responseBody.contains("{\"rule\":4,\"ioc\":1}"), "4 rules and 1 IoC in the cache was expected.");
+        String expected = "{\"rule\":4,\"ioc\":1}";
+        assertTrue(responseBody.contains(expected), "Expected: " + expected + ". got: " + responseBody);
     }
 
     @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 4)
@@ -192,7 +151,8 @@ public class ApiIntegrationTest extends Arquillian {
         assertEquals(200, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("getIoCsTest Response:" + responseBody);
-        assertTrue(responseBody.contains("[\"seznam.cz\"]"), "Expected [\"seznam.cz\"]");
+        String expected = "[\"seznam.cz\"]";
+        assertTrue(responseBody.contains(expected), "Expected " + expected + ", but got: " + responseBody);
     }
 
     @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 5)
@@ -207,8 +167,10 @@ public class ApiIntegrationTest extends Arquillian {
         assertEquals(200, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("getIoCTest Response:" + responseBody);
-        assertTrue(responseBody.contains("\"black_listed_domain_or_i_p\":\"seznam.cz\""), "IoC response should have contained seznam.cz");
-        assertTrue(responseBody.contains("\"sources\":{\"feed2\":\"S\"}"),"IoC should have contained feed2 with mode S");
+        String expected = "\"black_listed_domain_or_i_p\":\"seznam.cz\"";
+        assertTrue(responseBody.contains(expected), "IoC response should have contained " + expected + ", but got:" + responseBody);
+        expected = "\"sources\":{\"feed2\":\"blacklist\"}";
+        assertTrue(responseBody.contains(expected), "IoC should have contained " + expected + ", but got: " + responseBody);
     }
 
     @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 6)
@@ -223,9 +185,8 @@ public class ApiIntegrationTest extends Arquillian {
         assertEquals(200, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("getSinkHoleTest Response:" + responseBody);
-        //TODO this will change presently...
-        assertTrue(responseBody.contains("\"black_listed_domain_or_i_p\":\"seznam.cz\""), "IoC response should have contained seznam.cz");
-        assertTrue(responseBody.contains("\"sources\":{\"feed2\":\"S\"}"), "IoC should have contained feed2 with mode S");
+        String expected = "{\"sinkhole\":\"" + System.getenv("SINKIT_SINKHOLE_IP") + "\"}";
+        assertTrue(responseBody.contains(expected), "Should have contained " + expected + ", but got: " + responseBody);
     }
 }
 
