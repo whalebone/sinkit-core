@@ -1,0 +1,20 @@
+machine:
+  java:
+    version:
+      oraclejdk8
+  services:
+    - postgresql
+  environment:
+    SINKIT_ACCESS_TOKEN: blablabla
+    SINKIT_POSTGRESQL_DB_HOST: localhost
+    SINKIT_POSTGRESQL_DB_PORT: 5432
+    SINKIT_POSTGRESQL_PASS:  
+    SINKIT_POSTGRESQL_USER: ubuntu
+    SINKIT_JGROUPS_NETWORKING: jgroups-udp.xml
+    SINKIT_POSTGRESQL_DB_NAME: circle_test
+dependencies:
+  override:
+    - git clone https://github.com/kdkanishka/Virustotal-Public-API-V2.0-Client.git && pushd Virustotal-Public-API-V2.0-Client/ && mvn install -DskipTests && popd
+test:
+  override:
+    - mvn clean install -Parq-wildfly-managed
