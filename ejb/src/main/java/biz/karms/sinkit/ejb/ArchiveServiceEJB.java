@@ -11,8 +11,8 @@ import io.searchbox.core.Get;
 import io.searchbox.core.Update;
 import io.searchbox.params.Parameters;
 
+import javax.annotation.PostConstruct;
 import javax.ejb.Singleton;
-import javax.ejb.Startup;
 import javax.inject.Inject;
 import java.io.IOException;
 import java.text.DateFormat;
@@ -32,6 +32,13 @@ public class ArchiveServiceEJB {
     @Inject
     private ElasticServiceEJB elasticService;
 
+    @PostConstruct
+    public void setup() {
+        if (elasticService == null) {
+            throw new IllegalArgumentException("ElasticServiceEJB must be injected.");
+        }
+    }
+
     public IoCRecord findActiveIoCRecordBySourceId(
             String sourceId, String classificationType, String feedName) throws ArchiveException {
 
@@ -41,12 +48,12 @@ public class ArchiveServiceEJB {
 
         String query = "{\n" +
                 "   \"query\" : {\n" +
-                "       \"filtered\" : {\n"+
+                "       \"filtered\" : {\n" +
                 "           \"query\" : {\n" +
                 "               \"query_string\" : {\n" +
-                "                   \"query\": \"active : true AND source.id.value : \\\"" + sourceId.replace("\\","\\\\") + "\\\" AND " +
-                                                "classification.type: \\\"" + classificationType.replace("\\","\\\\") + "\\\" AND " +
-                                                "feed.name : \\\"" + feedName.replace("\\","\\\\") +"\\\"\"\n" +
+                "                   \"query\": \"active : true AND source.id.value : \\\"" + sourceId.replace("\\", "\\\\") + "\\\" AND " +
+                "classification.type: \\\"" + classificationType.replace("\\", "\\\\") + "\\\" AND " +
+                "feed.name : \\\"" + feedName.replace("\\", "\\\\") + "\\\"\"\n" +
                 "               }\n" +
                 "           }\n" +
                 "       }\n" +
