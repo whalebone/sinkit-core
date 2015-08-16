@@ -6,7 +6,6 @@ import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ejb.dto.Sinkhole;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
 import biz.karms.sinkit.eventlog.EventLogAction;
-import biz.karms.sinkit.eventlog.EventLogFactory;
 import biz.karms.sinkit.exception.ArchiveException;
 import org.apache.commons.validator.routines.DomainValidator;
 import org.apache.lucene.search.Query;
@@ -40,7 +39,7 @@ public class DNSApiEJB {
     private DefaultCacheManager m;
 
     @Inject
-    private ArchiveServiceEJB archiveServiceEJB;
+    private CoreServiceEJB coreServiceEJB;
 
     @Inject
     private WebApiEJB webApiEJB;
@@ -57,8 +56,8 @@ public class DNSApiEJB {
 
     @PostConstruct
     public void setup() {
-        if (m == null || archiveServiceEJB == null || webApiEJB == null) {
-            throw new IllegalArgumentException("DefaultCacheManager, WebApiEJB and ArchiveServiceEJB must be injected.");
+        if (m == null || coreServiceEJB == null || webApiEJB == null) {
+            throw new IllegalArgumentException("DefaultCacheManager, WebApiEJB and CoreServiceEJB must be injected.");
         }
         blacklistCache = m.getCache("BLACKLIST_CACHE");
         ruleCache = m.getCache("RULES_CACHE");
@@ -241,7 +240,7 @@ public class DNSApiEJB {
             return null;
         } else if ("S".equals(mode)) {
             try {
-                archiveServiceEJB.archiveEventLogRecord(EventLogFactory.getEventLogRecord(EventLogAction.BLOCK, clientIPAddress, new String[]{fqdnOrIp}, isFQDN, fqdnOrIp, blacklistedRecord.getDocumentId()));
+                coreServiceEJB.logEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, (String[]) blacklistedRecord.getSources().keySet().toArray());
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging BLOCK failed: ", e);
             } finally {
@@ -250,7 +249,7 @@ public class DNSApiEJB {
         } else if ("L".equals(mode)) {
             //Log it for customer
             try {
-                archiveServiceEJB.archiveEventLogRecord(EventLogFactory.getEventLogRecord(EventLogAction.AUDIT, clientIPAddress, new String[]{fqdnOrIp}, isFQDN, fqdnOrIp, blacklistedRecord.getDocumentId()));
+                coreServiceEJB.logEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, (String[]) blacklistedRecord.getSources().keySet().toArray());
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging AUDIT failed: ", e);
             } finally {
@@ -260,7 +259,7 @@ public class DNSApiEJB {
         } else if ("D".equals(mode)) {
             //Log it for customer
             try {
-                archiveServiceEJB.archiveEventLogRecord(EventLogFactory.getEventLogRecord(EventLogAction.INTERNAL, clientIPAddress, new String[]{fqdnOrIp}, isFQDN, fqdnOrIp, blacklistedRecord.getDocumentId()));
+                coreServiceEJB.logEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, (String[]) blacklistedRecord.getSources().keySet().toArray());
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging INTERNAL failed: ", e);
             } finally {
