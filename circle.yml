@@ -4,6 +4,7 @@ machine:
       oraclejdk8
   services:
     - postgresql
+    - elasticsearch
   environment:
     SINKIT_ACCESS_TOKEN: blablabla
     SINKIT_POSTGRESQL_DB_HOST: localhost
@@ -12,6 +13,10 @@ machine:
     SINKIT_POSTGRESQL_USER: ubuntu
     SINKIT_JGROUPS_NETWORKING: jgroups-udp.xml
     SINKIT_POSTGRESQL_DB_NAME: circle_test
+    SINKIT_SINKHOLE_IP: 46.101.144.163
+    SINKIT_SINKHOLE_IPV6: ::1
+    SINKIT_ELASTIC_HOST: localhost
+    SINKIT_ELASTIC_PORT: 9200
 dependencies:
   override:
     - git clone https://github.com/kdkanishka/Virustotal-Public-API-V2.0-Client.git && pushd Virustotal-Public-API-V2.0-Client/ && mvn install -DskipTests && popd
