@@ -6,8 +6,8 @@
     <defaultProtocol type="Servlet 3.0"/>
     <container qualifier="jboss" default="true">
         <!-- JBOSS_HOME or set: -->
-        <!--<configuration> -->
-        <!--<property name="jbossHome">/path/to/wildfly</property> -->
-        <!--</configuration> -->
+        <configuration>
+        <property name="jbossHome">target/wildfly-9.0.1.Final</property>
+        </configuration>
     </container>
 </arquillian>
