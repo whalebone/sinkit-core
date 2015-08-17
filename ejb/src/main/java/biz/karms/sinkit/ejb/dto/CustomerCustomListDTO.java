@@ -11,7 +11,7 @@ import java.util.HashMap;
  *         block, log, allow lists for each DNS client
  *         customer_id - integer
  *         cidr - <ip>/<mask_length>
- *         dns - ([a-z0-9_\-]+.)*\.[a-z0-9_\-]
+ *         dns - ([a-z0-9_\-]+.)*\.[a-z0-9_\-], The ? represents a single character and * represents any character sequence.
  *         <p>
  *         PUT /sinkit/rest/lists/<customer_id>
  *         [
@@ -21,6 +21,9 @@ import java.util.HashMap;
  *         },
  *         ...
  *         ]
+ *
+ *         dns - could contain * and ?
+ *         B|W|L - only B|W implemented ATTOW
  */
 public class CustomerCustomListDTO implements Serializable {
 

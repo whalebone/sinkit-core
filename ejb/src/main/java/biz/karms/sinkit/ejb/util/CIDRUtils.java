@@ -47,12 +47,14 @@ public class CIDRUtils {
     private BigInteger startIp;
     private BigInteger endIp;
     private final int prefixLength;
+    private boolean probablyIsIPv6;
 
     public CIDRUtils(String cidr) throws UnknownHostException {
         //TODO: This is silly. Refactor CIDRUtils so as to accept actual IPs as well as subnets.
         //TODO: Validate the thing before processing. Guava?
+        probablyIsIPv6 = cidr.contains(":");
         if (!cidr.contains("/")) {
-            if (cidr.contains(":")) {
+            if (probablyIsIPv6) {
                 this.cidr = cidr + "/128";
             } else {
                 this.cidr = cidr + "/32";
@@ -68,11 +70,9 @@ public class CIDRUtils {
         prefixLength = Integer.parseInt(networkPart);
 
         calculate();
-
     }
 
     private void calculate() throws UnknownHostException {
-
         ByteBuffer maskBuffer;
         int targetSize;
         if (inetAddress.getAddress().length == 4) {
@@ -101,7 +101,6 @@ public class CIDRUtils {
 
         this.startAddress = InetAddress.getByAddress(startIpArr);
         this.endAddress = InetAddress.getByAddress(endIpArr);
-
     }
 
     private byte[] toBytes(byte[] array, int targetSize) {
@@ -147,6 +146,10 @@ public class CIDRUtils {
 
     public String getBroadcastAddress() {
         return this.endAddress.getHostAddress();
+    }
+
+    public boolean isProbablyIsIPv6() {
+        return probablyIsIPv6;
     }
 
     public boolean isInRange(String ipAddress) throws UnknownHostException {

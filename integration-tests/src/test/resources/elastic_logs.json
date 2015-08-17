@@ -1,0 +1,89 @@
+{
+  "order": 0,
+  "template": "logs*",
+  "settings": {
+    "index.refresh_interval": "5s",
+    "index.number_of_shards": "1"
+  },
+  "mappings": {
+    "match": {
+      "numeric_detection": true,
+      "dynamic_templates": [
+        {
+          "string_fields": {
+            "mapping": {
+              "index": "not_analyzed",
+              "omit_norms": true,
+              "type": "string"
+            },
+            "match_mapping_type": "string",
+            "match": "*"
+          }
+        }
+      ],
+      "date_detection": true,
+      "properties": {
+        "reason": {
+          "properties": {
+            "fqdn": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "ip": {
+              "index": "not_analyzed",
+              "type": "string"
+            }
+          }
+        },
+        "request": {
+          "properties": {
+            "ip": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "raw": {
+              "index": "not_analyzed",
+              "type": "string"
+            }
+          }
+        },
+        "logged": {
+          "format": "yyyy-MM-dd'T'HH:mm:ssZ",
+          "type": "date"
+        },
+        "virus_total_request": {
+          "properties": {
+            "processed": {
+              "format": "yyyy-MM-dd'T'HH:mm:ssZ",
+              "type": "date"
+            },
+            "report_received": {
+              "format": "yyyy-MM-dd'T'HH:mm:ssZ",
+              "type": "date"
+            },
+            "status": {
+              "index": "not_analyzed",
+              "type": "string"
+            }
+          }
+        },
+        "matched_iocs": {
+          "index": "not_analyzed",
+          "type": "string"
+        },
+        "action": {
+          "index": "not_analyzed",
+          "type": "string"
+        },
+        "client": {
+          "index": "not_analyzed",
+          "type": "string"
+        }
+      }
+    },
+    "aliases": {}
+  },
+  "aliases": {
+    "logs": {}
+  }
+}

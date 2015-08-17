@@ -1,0 +1,175 @@
+{
+  "order": 0,
+  "template": "iocs*",
+  "settings": {
+    "index.refresh_interval": "5s",
+    "index.number_of_shards": "1"
+  },
+  "mappings": {
+    "intelmq": {
+      "numeric_detection": true,
+      "dynamic_templates": [
+        {
+          "string_fields": {
+            "mapping": {
+              "index": "not_analyzed",
+              "omit_norms": true,
+              "type": "string"
+            },
+            "match_mapping_type": "string",
+            "match": "*"
+          }
+        }
+      ],
+      "date_detection": true,
+      "properties": {
+        "feed": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "url": {
+              "index": "not_analyzed",
+              "type": "string"
+            }
+          }
+        },
+        "protocol": {
+          "type": "object",
+          "properties": {
+            "application": {
+              "index": "not_analyzed",
+              "type": "string"
+            }
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "raw": {
+          "index": "not_analyzed",
+          "type": "string"
+        },
+        "description": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "index": "not_analyzed",
+              "type": "string"
+            }
+          }
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "fqdn": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "ip": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "bgp_prefix": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "reverse_domain_name": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "id": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "index": "not_analyzed",
+                  "type": "string"
+                },
+                "value": {
+                  "index": "not_analyzed",
+                  "type": "string"
+                }
+              }
+            },
+            "asn": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "url": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "asn_name": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "geolocation": {
+              "type": "object",
+              "properties": {
+                "cc": {
+                  "index": "not_analyzed",
+                  "type": "string"
+                },
+                "city": {
+                  "index": "not_analyzed",
+                  "type": "string"
+                },
+                "latitude": {
+                  "type": "float"
+                },
+                "longitude": {
+                  "type": "float"
+                }
+              }
+            }
+          }
+        },
+        "time": {
+          "type": "object",
+          "properties": {
+            "observation": {
+              "format": "yyyy-MM-dd'T'HH:mm:ssZ",
+              "type": "date"
+            },
+            "source": {
+              "format": "yyyy-MM-dd'T'HH:mm:ssZ",
+              "type": "date"
+            }
+          }
+        },
+        "classification": {
+          "type": "object",
+          "properties": {
+            "taxonomy": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "type": {
+              "index": "not_analyzed",
+              "type": "string"
+            }
+          }
+        },
+        "seen": {
+          "type": "object",
+          "properties": {
+            "last": {
+              "format": "yyyy-MM-dd'T'HH:mm:ssZ",
+              "type": "date"
+            },
+            "first": {
+              "format": "yyyy-MM-dd'T'HH:mm:ssZ",
+              "type": "date"
+            }
+          }
+        }
+      }
+    },
+    "aliases": {}
+  },
+  "aliases": {
+    "iocs": {}
+  }
+}

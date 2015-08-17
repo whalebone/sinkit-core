@@ -8,6 +8,7 @@ import io.searchbox.core.Search;
 import io.searchbox.core.SearchResult;
 import io.searchbox.params.Parameters;
 
+import javax.annotation.PostConstruct;
 import javax.ejb.Singleton;
 import javax.inject.Inject;
 import java.io.IOException;
@@ -35,6 +36,13 @@ public class ElasticServiceEJB {
     @Inject
     private JestClient elasticClient;
 
+    @PostConstruct
+    public void setup() {
+        if (elasticClient == null) {
+            throw new IllegalArgumentException("JestClient must be injected.");
+        }
+    }
+
     public JestClient getElasticClient() {
         return elasticClient;
     }
@@ -44,9 +52,9 @@ public class ElasticServiceEJB {
      *
      * @param query Elastic Search query in JSON format
      * @param index Document index
-     * @param type Document type
+     * @param type  Document type
      * @param clazz Class of object being found
-     * @param <T> Class of object being found
+     * @param <T>   Class of object being found
      * @return Found object of class T
      * @throws ArchiveException when communication with elastic went wrong or more than single hit is found
      */
@@ -68,9 +76,9 @@ public class ElasticServiceEJB {
      *
      * @param query Elastic Search query in JSON format
      * @param index Document index
-     * @param type Document type
+     * @param type  Document type
      * @param clazz Class of object being found
-     * @param <T> Class of object being found
+     * @param <T>   Class of object being found
      * @return Found objects of class T
      * @throws ArchiveException when communication with elastic went wrong
      */
@@ -86,11 +94,11 @@ public class ElasticServiceEJB {
      *
      * @param query Elastic Search query in JSON format
      * @param index Document index
-     * @param type Document type
-     * @param from Offset of search
-     * @param size limit of returned objects
+     * @param type  Document type
+     * @param from  Offset of search
+     * @param size  limit of returned objects
      * @param clazz Class of object being found
-     * @param <T> Class of object being found
+     * @param <T>   Class of object being found
      * @return Found objects of class T
      * @throws ArchiveException when communication with elastic went wrong
      */
@@ -129,9 +137,9 @@ public class ElasticServiceEJB {
      * Stores object that implements Indexable interface
      *
      * @param document object being stored
-     * @param index Document index
-     * @param type Document type
-     * @param <T> Class of object being stored
+     * @param index    Document index
+     * @param type     Document type
+     * @param <T>      Class of object being stored
      * @return indexed object
      * @throws ArchiveException when communication with Elastic Search server went wrong
      */

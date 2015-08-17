@@ -17,7 +17,6 @@ import org.infinispan.query.SearchManager;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.annotation.PostConstruct;
-import javax.ejb.DependsOn;
 import javax.ejb.Stateless;
 import javax.ejb.TransactionManagement;
 import javax.ejb.TransactionManagementType;
@@ -132,7 +131,7 @@ public class WebApiEJB {
     }
 
     // TODO: List? Array? Map with additional data? Let's think this over.
-    public List<Object> getRules(final String clientIPAddress) {
+    public List<?> getRules(final String clientIPAddress) {
         try {
             //TODO: It is very wasteful to calculate the whole thing for just the one /32 or /128 masked client IP.
             CIDRUtils cidrUtils = new CIDRUtils(clientIPAddress);
@@ -143,7 +142,7 @@ public class WebApiEJB {
             // Let's try to hit it
             Rule rule = ruleCache.get(clientIPAddressPaddedBigInt);
             if (rule != null) {
-                List wrapit = new ArrayList<>();
+                List<Rule> wrapit = new ArrayList<>();
                 wrapit.add(rule);
                 return wrapit;
             }
