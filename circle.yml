@@ -5,6 +5,7 @@ machine:
   services:
     - postgresql
     - elasticsearch
+    - docker
   environment:
     SINKIT_ACCESS_TOKEN: blablabla
     SINKIT_POSTGRESQL_DB_HOST: localhost
@@ -25,3 +26,12 @@ dependencies:
 test:
   override:
     - mvn clean install -Parq-wildfly-managed
+deployment:
+  hub:
+    branch: master
+    commands:
+      - docker info
+      - docker build -t karm/sinkit-core .
+      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+      - docker push karm/sinkit-core
+

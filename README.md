@@ -1,5 +1,6 @@
 # sinkit-core
-A prototype of a toy project featuring Infinispan dist cache
+Integration tests: [![Circle CI](https://circleci.com/gh/intfeed/sinkit-core.svg?style=svg)](https://circleci.com/gh/intfeed/sinkit-core)
+A prototype of a toy project featuring Infinispan dist cache.
 
 ## Expected env vars
     export SINKIT_ACCESS_TOKEN=
@@ -14,3 +15,4 @@ A prototype of a toy project featuring Infinispan dist cache
     export SINKIT_ELASTIC_HOST=
     export SINKIT_ELASTIC_PORT=
     export SINKIT_VIRUS_TOTAL_API_KEY=
+
