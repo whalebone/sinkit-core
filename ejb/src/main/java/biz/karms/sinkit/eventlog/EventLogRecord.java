@@ -1,6 +1,7 @@
 package biz.karms.sinkit.eventlog;
 
 import biz.karms.sinkit.ejb.elastic.Indexable;
+import biz.karms.sinkit.ioc.IoCRecord;
 import com.google.gson.annotations.SerializedName;
 import io.searchbox.annotations.JestId;
 
@@ -27,12 +28,14 @@ public class EventLogRecord implements Indexable {
     private VirusTotalRequest virusTotalRequest;
 
     @SerializedName("matched_iocs")
-    private String[] matchedIocs;
+    private MatchedIoC[] matchedIocs;
 
+    @Override
     public String getDocumentId() {
         return documentId;
     }
 
+    @Override
     public void setDocumentId(String documentId) {
         this.documentId = documentId;
     }
@@ -85,11 +88,11 @@ public class EventLogRecord implements Indexable {
         this.virusTotalRequest = virusTotalRequest;
     }
 
-    public String[] getMatchedIocs() {
+    public MatchedIoC[] getMatchedIocs() {
         return matchedIocs;
     }
 
-    public void setMatchedIocs(String[] matchedIocs) {
+    public void setMatchedIocs(MatchedIoC[] matchedIocs) {
         this.matchedIocs = matchedIocs;
     }
 

@@ -25,7 +25,7 @@ public class IoCRecord implements Indexable {
     private IoCSource source;
     private IoCTime time;
     private IoCSeen seen;
-    private boolean active;
+    private Boolean active;
 
     @SerializedName("virus_total_reports")
     private IoCVirusTotalReport[] virusTotalReports;
@@ -104,11 +104,11 @@ public class IoCRecord implements Indexable {
         this.seen = seen;
     }
 
-    public boolean isActive() {
+    public Boolean isActive() {
         return active;
     }
 
-    public void setActive(boolean active) {
+    public void setActive(Boolean active) {
         this.active = active;
     }
 
