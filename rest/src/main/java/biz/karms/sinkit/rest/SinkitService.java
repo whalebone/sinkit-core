@@ -8,19 +8,23 @@ import biz.karms.sinkit.ejb.dto.AllDNSSettingDTO;
 import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
 import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
 import biz.karms.sinkit.eventlog.EventLogRecord;
+import biz.karms.sinkit.eventlog.MatchedIoC;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCValidationException;
 import biz.karms.sinkit.ioc.IoCRecord;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+import org.apache.avro.generic.GenericData;
 
 import javax.ejb.EJB;
 import javax.enterprise.context.SessionScoped;
 import javax.inject.Inject;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -199,6 +203,12 @@ public class SinkitService implements Serializable {
 
     void addEventLogRecord(final String json) throws ArchiveException {
         EventLogRecord logRec = new GsonBuilder().create().fromJson(json, EventLogRecord.class);
+        List<String> ids = new ArrayList<>();
+        for (MatchedIoC ioc: logRec.getMatchedIocs()) {
+            ids.add(ioc.getDocumentId());
+        }
+        String[] idss = ids.toArray(new String[ids.size()]);
+
         coreService.logEvent(
                 logRec.getAction(),
                 logRec.getClient(),
@@ -206,7 +216,7 @@ public class SinkitService implements Serializable {
                 logRec.getRequest().getRaw(),
                 logRec.getReason().getFqdn(),
                 logRec.getReason().getIp(),
-                logRec.getMatchedIocs());
+                idss);
     }
 
     public void enrich() {

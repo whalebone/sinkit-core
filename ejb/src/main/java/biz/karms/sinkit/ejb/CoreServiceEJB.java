@@ -11,8 +11,10 @@ import javax.ejb.AsyncResult;
 import javax.ejb.Asynchronous;
 import javax.ejb.Singleton;
 import javax.inject.Inject;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.Future;
 import java.util.logging.Logger;
 
@@ -125,7 +127,26 @@ public class CoreServiceEJB {
         logRecord.setAction(action);
         logRecord.setClient(clientUid);
         logRecord.setLogged(new Date());
-        logRecord.setMatchedIocs(matchedIoCs);
+        //logRecord.setMatchedIocs(matchedIoCs);
+
+        List<MatchedIoC> matchedIoCsList = new ArrayList<>();
+        for (String iocId: matchedIoCs) {
+            IoCRecord ioc = archiveService.getIoCRecordById(iocId);
+            if (ioc == null) {
+                log.warning("Match IoC with id " + iocId + " was not found -> skipping.");
+            }
+            ioc.setVirusTotalReports(null);
+            ioc.getSeen().setLast(null);
+            ioc.setRaw(null);
+            ioc.setActive(null);
+
+            MatchedIoC matchedIoc = new MatchedIoC();
+            matchedIoc.setDocumentId(iocId);
+            matchedIoc.setIoc(ioc);
+            matchedIoCsList.add(matchedIoc);
+        }
+        MatchedIoC[] matchedIoCsArray = matchedIoCsList.toArray(new MatchedIoC[matchedIoCsList.size()]);
+        logRecord.setMatchedIocs(matchedIoCsArray);
 
         VirusTotalRequest vtReq = new VirusTotalRequest();
         vtReq.setStatus(VirusTotalRequestStatus.WAITING);

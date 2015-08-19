@@ -1,8 +1,10 @@
 package biz.karms.sinkit.ejb.elastic;
 
 import biz.karms.sinkit.exception.ArchiveException;
+import biz.karms.sinkit.ioc.IoCRecord;
 import io.searchbox.client.JestClient;
 import io.searchbox.client.JestResult;
+import io.searchbox.core.Get;
 import io.searchbox.core.Index;
 import io.searchbox.core.Search;
 import io.searchbox.core.SearchResult;
@@ -21,11 +23,6 @@ import java.util.logging.Logger;
  */
 @Singleton
 public class ElasticServiceEJB {
-
-    public static final String ELASTIC_IOC_INDEX = "iocs";
-    public static final String ELASTIC_IOC_TYPE = "intelmq";
-    public static final String ELASTIC_LOG_INDEX = "logs";
-    public static final String ELASTIC_LOG_TYPE = "match";
 
     private static final String PARAMETER_FROM = "from";
     private static final int DEF_LIMIT = 1000;
@@ -69,6 +66,30 @@ public class ElasticServiceEJB {
             throw new ArchiveException("Search returned " + hits.size() + " hits. Expecting max one -> panic!");
         }
         return hits.get(0);
+    }
+
+    public <T extends Indexable> T getDocumentById(
+            String id, String index, String type, Class<T> clazz) throws ArchiveException {
+
+        JestResult result;
+        T document;
+
+        Get get = new Get.Builder(index, id)
+                .type(type).build();
+        try {
+
+            result = elasticClient.execute(get);
+            document = result.getSourceAsObject(clazz);
+
+        } catch (IOException e) {
+            throw new ArchiveException("IoC search went wrong.", e);
+        }
+
+        if (!result.isSucceeded()) {
+            return null;
+        }
+
+        return document;
     }
 
     /**

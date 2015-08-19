@@ -3,6 +3,7 @@ package biz.karms.sinkit.ejb.virustotal;
 import biz.karms.sinkit.ejb.ArchiveServiceEJB;
 import biz.karms.sinkit.ejb.virustotal.exception.VirusTotalException;
 import biz.karms.sinkit.eventlog.EventLogRecord;
+import biz.karms.sinkit.eventlog.MatchedIoC;
 import biz.karms.sinkit.eventlog.VirusTotalRequestStatus;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.ioc.IoCRecord;
@@ -97,8 +98,12 @@ public class VirusTotalEnricherEJB {
 
         String fqdn = enrichmentRequest.getReason().getFqdn();
         boolean needEnrichment = false;
+
         iocsLoop:
-        for (String iocId: enrichmentRequest.getMatchedIocs()) {
+        for (MatchedIoC matchedIoC: enrichmentRequest.getMatchedIocs()) {
+
+            String iocId = matchedIoC.getDocumentId();
+
             IoCRecord ioc = archiveService.getIoCRecordById(iocId);
             if (ioc == null) {
                 log.warning("VirusTotal: IoC with id: " + iocId + " does not exist -> skipping scan request.");
@@ -174,7 +179,10 @@ public class VirusTotalEnricherEJB {
             throw new VirusTotalException("Cannot parse scan date of report: " + report.getScanDate(),e);
         }
 
-        for (String iocId: enrichmentRequest.getMatchedIocs()) {
+        for (MatchedIoC matchedIoC: enrichmentRequest.getMatchedIocs()) {
+
+            String iocId = matchedIoC.getDocumentId();
+
             IoCRecord ioc = archiveService.getIoCRecordById(iocId);
             if (ioc == null) {
                 log.warning("VirusTotal - IoC with id: " + iocId + " does not exist -> can't be enriched.");
