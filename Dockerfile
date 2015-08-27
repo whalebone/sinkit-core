@@ -37,7 +37,7 @@ ENV WF_CONFIG /opt/sinkit/wildfly/standalone/configuration/standalone.xml
 
 # Set NIC, this makes the ugly 0.0.0.0 work.
 # Yeees, editing an XML file with AWK :-)
-RUN awk '{ if ( $0 ~ /<inet-address value=/ ) { printf( "%s\n%s\n", $0, "        <nic name=\"${sinkit.nic:eth0}\"/>"); } else {print $0; } }' \
+RUN awk '{ if ( $0 ~ /<inet-address value=/ ) { printf( "%s\n%s\n", $0, "        <nic name=\"@SINKITNIC@\"/>"); } else {print $0; } }' \
    ${WF_CONFIG} > ${WF_CONFIG}.tmp && mv ${WF_CONFIG}.tmp ${WF_CONFIG}
 
 RUN echo 'JAVA_OPTS="\
@@ -48,13 +48,6 @@ RUN echo 'JAVA_OPTS="\
  -XX:+HeapDumpOnOutOfMemoryError \
  -XX:HeapDumpPath=/opt/sinkit \
  -XX:+UseConcMarkSweepGC \
- -Djava.net.preferIPv4Stack=true \
- -Djboss.modules.system.pkgs=org.jboss.byteman \
- -Djava.awt.headless=true \
- -Dsinkit.nic=${SINKIT_NIC:-eth0} \
- -Djgroups.bind_addr=0.0.0.0 \
- -Djgroups.udp.mcast_addr=228.6.7.8 \
- -Djgroups.udp.mcast_port=46655 \
 "' >> /opt/sinkit/wildfly/bin/standalone.conf
-
-CMD ["/opt/sinkit/wildfly/bin/standalone.sh", "-b", "0.0.0.0", "-c", "standalone.xml"]
+ADD sinkit.sh /opt/sinkit/
+CMD ["/opt/sinkit/sinkit.sh"]
