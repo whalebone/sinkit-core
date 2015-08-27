@@ -22,7 +22,7 @@ dependencies:
   override:
     - git clone https://github.com/kdkanishka/Virustotal-Public-API-V2.0-Client.git && pushd Virustotal-Public-API-V2.0-Client/ && mvn install -DskipTests && popd
     - curl -XPUT localhost:9200/_template/iocs -d @integration-tests/src/test/resources/elastic_iocs.json
-    - curl -XPUT localhost:9200/_template/iocs -d @integration-tests/src/test/resources/elastic_logs.json
+    - curl -XPUT localhost:9200/_template/logs -d @integration-tests/src/test/resources/elastic_logs.json
 test:
   override:
     - mvn clean install -Parq-wildfly-managed
