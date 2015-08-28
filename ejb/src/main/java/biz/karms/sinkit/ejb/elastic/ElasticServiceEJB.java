@@ -1,7 +1,6 @@
 package biz.karms.sinkit.ejb.elastic;
 
 import biz.karms.sinkit.exception.ArchiveException;
-import biz.karms.sinkit.ioc.IoCRecord;
 import io.searchbox.client.JestClient;
 import io.searchbox.client.JestResult;
 import io.searchbox.core.Get;
@@ -81,7 +80,7 @@ public class ElasticServiceEJB {
             result = elasticClient.execute(get);
             document = result.getSourceAsObject(clazz);
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new ArchiveException("IoC search went wrong.", e);
         }
 
@@ -138,7 +137,7 @@ public class ElasticServiceEJB {
         SearchResult result;
         try {
             result = elasticClient.execute(search);
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new ArchiveException("Elastic search went wrong.", e);
         }
 
@@ -177,7 +176,7 @@ public class ElasticServiceEJB {
         JestResult result;
         try {
             result = elasticClient.execute(indexRequest);
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new ArchiveException("Indexing IoC went wrong.", e);
         }
 
