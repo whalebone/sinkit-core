@@ -67,7 +67,7 @@
         <pegdown.doclet.version>1.1</pegdown.doclet.version>
 
         <!-- Elastic Search -->
-        <io.searchbox.jest.version>0.1.6</io.searchbox.jest.version>
+        <io.searchbox.jest.version>0.1.7</io.searchbox.jest.version>
 
         <!-- Virus Total -->
         <com.kanishka.api.VirustotalPublicV2.0.version>1.1.GA-SNAPSHOT</com.kanishka.api.VirustotalPublicV2.0.version>
