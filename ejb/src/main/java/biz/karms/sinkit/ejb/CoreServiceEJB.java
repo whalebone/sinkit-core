@@ -4,9 +4,13 @@ import biz.karms.sinkit.ejb.virustotal.VirusTotalEnricherEJB;
 import biz.karms.sinkit.eventlog.*;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCValidationException;
-import biz.karms.sinkit.ioc.*;
+import biz.karms.sinkit.ioc.IoCRecord;
+import biz.karms.sinkit.ioc.IoCSeen;
+import biz.karms.sinkit.ioc.IoCSourceId;
+import biz.karms.sinkit.ioc.IoCSourceIdType;
 import biz.karms.sinkit.ioc.util.IoCSourceIdBuilder;
 
+import javax.annotation.PostConstruct;
 import javax.ejb.AsyncResult;
 import javax.ejb.Asynchronous;
 import javax.ejb.Singleton;
@@ -40,6 +44,13 @@ public class CoreServiceEJB {
 
     @Inject
     private VirusTotalEnricherEJB virusTotal;
+
+    @PostConstruct
+    public void setup() {
+        if (log == null || archiveService == null || cacheService == null || cacheBuilder == null || virusTotal == null) {
+            throw new IllegalArgumentException("Logger, ArchiveServiceEJB, ServiceEJB, CacheBuilderEJB and VirusTotalEnricherEJB must be injected.");
+        }
+    }
 
     public synchronized IoCRecord processIoCRecord(IoCRecord receivedIoc)
             throws ArchiveException, IoCValidationException {
@@ -82,16 +93,16 @@ public class CoreServiceEJB {
             ioc.setSeen(seen);
             ioc = archiveService.archiveIoCRecord(ioc);
 
-            if (ioc.getSource().getId().getType() == IoCSourceIdType.FQDN || ioc.getSource().getId().getType() == IoCSourceIdType.IP)
+            if (ioc.getSource().getId().getType() == IoCSourceIdType.FQDN || ioc.getSource().getId().getType() == IoCSourceIdType.IP) {
                 cacheService.addToCache(ioc);
-
+            }
         } else {
 
             if (receivedIoc.getTime().getSource() == null) {
                 ioc.getSeen().setLast(receivedIoc.getTime().getObservation());
             } else {
                 Date lastSource = this.addWindow(receivedIoc.getTime().getSource());
-                if (ioc.getSeen().getLast().before(lastSource) ) {
+                if (ioc.getSeen().getLast().before(lastSource)) {
                     ioc.getSeen().setLast(lastSource);
                 }
             }
@@ -130,7 +141,7 @@ public class CoreServiceEJB {
         //logRecord.setMatchedIocs(matchedIoCs);
 
         List<MatchedIoC> matchedIoCsList = new ArrayList<>();
-        for (String iocId: matchedIoCs) {
+        for (String iocId : matchedIoCs) {
             IoCRecord ioc = archiveService.getIoCRecordById(iocId);
             if (ioc == null) {
                 log.warning("Match IoC with id " + iocId + " was not found -> skipping.");
