@@ -7,14 +7,12 @@ import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.ioc.IoCRecord;
 import com.google.gson.GsonBuilder;
 import io.searchbox.client.JestResult;
-import io.searchbox.core.Get;
 import io.searchbox.core.Update;
 import io.searchbox.params.Parameters;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.Singleton;
 import javax.inject.Inject;
-import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.List;
@@ -126,7 +124,7 @@ public class ArchiveServiceEJB {
                                     .setParameter(Parameters.REFRESH, true)
                                     .build()
                     );
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new ArchiveException("IoC deactivation went wrong.", e);
         }
 
