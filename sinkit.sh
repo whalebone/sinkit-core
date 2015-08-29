@@ -2,14 +2,25 @@
 
 # @author Michal Karm Babacek
 
-# Hardcoded wait for the interface to wake up
-sleep 2
-
 # Debug logging
 echo "STAT: `networkctl status`" >> /opt/sinkit/ip.log
 echo "STAT ${SINKIT_NIC:-eth0}: `networkctl status ${SINKIT_NIC:-eth0}`" >> /opt/sinkit/ip.log
-export MYIP="`networkctl status ${SINKIT_NIC:-eth0} | awk '{if($1~/Address:/){printf($2);}}'`"
+
+# Wait for the interface to wake up
+TIMEOUT=20
+MYIP=""
+while [[ "${MYIP}X" == "X" ]] && [[ "${TIMEOUT}" -gt 0 ]]; do
+    echo "Loop ${TIMEOUT}" >> /opt/sinkit/ip.log
+    MYIP="`networkctl status ${SINKIT_NIC:-eth0} | awk '{if($1~/Address:/){printf($2);}}'`"
+    export MYIP
+    let TIMEOUT=$TIMEOUT-1
+    if [[ "${MYIP}X" != "X" ]]; then break; else sleep 1; fi
+done
 echo -e "MYIP: ${MYIP}\nMYNIC: ${SINKIT_NIC:-eth0}" >> /opt/sinkit/ip.log
+if [[ "${MYIP}X" == "X" ]]; then 
+    echo "${SINKIT_NIC:-eth0} Interface error. " >> /opt/sinkit/ip.log
+    exit 1
+fi
 
 # Replace NIC
 sed -i "s/@SINKITNIC@/${SINKIT_NIC:-eth0}/g" ${WF_CONFIG}
