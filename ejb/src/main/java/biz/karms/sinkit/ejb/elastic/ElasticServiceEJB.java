@@ -7,6 +7,7 @@ import io.searchbox.core.Get;
 import io.searchbox.core.Index;
 import io.searchbox.core.Search;
 import io.searchbox.core.SearchResult;
+import io.searchbox.indices.CreateIndex;
 import io.searchbox.params.Parameters;
 
 import javax.annotation.PostConstruct;
@@ -26,6 +27,8 @@ public class ElasticServiceEJB {
     private static final String PARAMETER_FROM = "from";
     private static final int DEF_LIMIT = 1000;
 
+    public static final String TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
+
     @Inject
     private Logger log;
 
@@ -41,6 +44,14 @@ public class ElasticServiceEJB {
 
     public JestClient getElasticClient() {
         return elasticClient;
+    }
+
+    public void createIndex(String index) throws ArchiveException {
+        try {
+            elasticClient.execute(new CreateIndex.Builder(index).build());
+        } catch (Exception e) {
+            throw new ArchiveException("Cannot create index: " + index, e);
+        }
     }
 
     /**

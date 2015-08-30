@@ -1,5 +1,6 @@
 package biz.karms.sinkit.ejb;
 
+import biz.karms.sinkit.ejb.util.IoCValidator;
 import biz.karms.sinkit.ejb.virustotal.VirusTotalEnricherEJB;
 import biz.karms.sinkit.eventlog.*;
 import biz.karms.sinkit.exception.ArchiveException;
@@ -56,61 +57,84 @@ public class CoreServiceEJB {
             throws ArchiveException, IoCValidationException {
 
         // validate ioc
-        this.validateIoCRecord(receivedIoc);
+        IoCValidator.validateIoCRecord(receivedIoc, IOC_ACTIVE_HOURS);
 
         // try to construct source ID
         IoCSourceId sid = IoCSourceIdBuilder.build(receivedIoc);
         receivedIoc.getSource().setId(sid);
-
-        if (receivedIoc.getTime().getSource() != null) {
-            Date sourceTime = receivedIoc.getTime().getSource();
-            if (this.addWindow(sourceTime).before(new Date())) {
-                //log.info("Not processing too old IoC [" + recievedIoc + "]");
-                return receivedIoc;
-            }
-        }
 
         IoCRecord ioc = archiveService.findActiveIoCRecordBySourceId(
                 receivedIoc.getSource().getId().getValue(),
                 receivedIoc.getClassification().getType(),
                 receivedIoc.getFeed().getName());
 
-        //not found in archive
+        //active not found in archive
         if (ioc == null) {
             ioc = receivedIoc;
             ioc.setActive(true);
 
-            IoCSeen seen = new IoCSeen();
-
-            seen.setFirst(ioc.getTime().getObservation());
-
-            // if ioc record does not provide timestamp of source
+            Date seenFirst;
+            Date seenLast;
             if (ioc.getTime().getSource() == null) {
-                seen.setLast(ioc.getTime().getObservation());
-            } else { // else add the defined window to time.source and set it as last seen
-                seen.setLast(this.addWindow(ioc.getTime().getSource()));
-            }
-            ioc.setSeen(seen);
-            ioc = archiveService.archiveIoCRecord(ioc);
-
-            if (ioc.getSource().getId().getType() == IoCSourceIdType.FQDN || ioc.getSource().getId().getType() == IoCSourceIdType.IP) {
-                cacheService.addToCache(ioc);
-            }
-        } else {
-
-            if (receivedIoc.getTime().getSource() == null) {
-                ioc.getSeen().setLast(receivedIoc.getTime().getObservation());
+                seenFirst = ioc.getTime().getObservation();
+                seenLast = ioc.getTime().getObservation();
             } else {
-                Date lastSource = this.addWindow(receivedIoc.getTime().getSource());
-                if (ioc.getSeen().getLast().before(lastSource)) {
-                    ioc.getSeen().setLast(lastSource);
-                }
+                seenFirst = ioc.getTime().getSource();
+                seenLast =  ioc.getTime().getSource();
             }
+            IoCSeen seen = new IoCSeen();
+            seen.setLast(seenLast);
+            seen.setFirst(seenFirst);
+            ioc.setSeen(seen);
+            ioc.getTime().setReceivedByCore(Calendar.getInstance().getTime());
+        } else {
+            //active already in archive
 
-            ioc = archiveService.archiveIoCRecord(ioc);
-            //nothing to do in cache
+            Date seenLast;
+            if (receivedIoc.getTime().getSource() == null) {
+                seenLast = receivedIoc.getTime().getObservation();
+            } else {
+                seenLast = receivedIoc.getTime().getSource();
+            }
+            if (ioc.getSeen().getLast().before(seenLast) ) {
+                ioc.getSeen().setLast(seenLast);
+            }
         }
+
+        ioc = archiveService.archiveIoCRecord(ioc);
+
+        //always add to cache
+        if (ioc.getSource().getId().getType() == IoCSourceIdType.FQDN || ioc.getSource().getId().getType() == IoCSourceIdType.IP) {
+            cacheService.addToCache(ioc);
+        }
+
         return ioc;
+    }
+
+    public synchronized int deactivateIocs() throws ArchiveException {
+        log.info("Deactivation job started");
+        int deactivated = 0;
+        List<IoCRecord> iocs;
+
+        // due to archiveService.findIoCsForDeactivation has limit for single search (i.e. max 1000 records)
+        // this has to be done in multiple runs until search returns 0 results
+        do {
+            iocs = archiveService.findIoCsForDeactivation(CoreServiceEJB.IOC_ACTIVE_HOURS);
+            if (!iocs.isEmpty()) {
+                for (IoCRecord ioc : iocs) {
+                    archiveService.deactivateRecord(ioc);
+                    cacheService.removeFromCache(ioc);
+                }
+                deactivated += iocs.size();
+            }
+        } while (iocs.size() > 0);
+
+        if (deactivated == 0) {
+            log.info("No IoCs for deactivation found. Ending job...");
+        } else {
+            log.info("IoCs deactivated: " + deactivated);
+        }
+        return deactivated;
     }
 
     @Asynchronous
@@ -137,7 +161,7 @@ public class CoreServiceEJB {
 
         logRecord.setAction(action);
         logRecord.setClient(clientUid);
-        logRecord.setLogged(new Date());
+        logRecord.setLogged(Calendar.getInstance().getTime());
         //logRecord.setMatchedIocs(matchedIoCs);
 
         List<MatchedIoC> matchedIoCsList = new ArrayList<>();
@@ -168,26 +192,6 @@ public class CoreServiceEJB {
         return new AsyncResult<>(logRecord);
     }
 
-    private IoCRecord validateIoCRecord(IoCRecord ioc) throws IoCValidationException {
-
-        if (ioc.getFeed() == null || ioc.getFeed().getName() == null) {
-            throw new IoCValidationException("IoC record doesn't have mandatory field 'feed.name'");
-        }
-        if (ioc.getSource() == null || (
-                ioc.getSource().getFQDN() == null && ioc.getSource().getIp() == null && ioc.getSource().getUrl() == null
-        )) {
-            throw new IoCValidationException("IoC can't have all IP and Domain and URL set as null");
-        }
-        if (ioc.getClassification() == null || ioc.getClassification().getType() == null) {
-            throw new IoCValidationException("IoC record doesn't have mandatory field 'classification.type'");
-        }
-        if (ioc.getTime() == null || ioc.getTime().getObservation() == null) {
-            throw new IoCValidationException("IoC record doesn't have mandatory field 'time.observation'");
-        }
-
-        return ioc;
-    }
-
     public synchronized boolean runCacheRebuilding() {
 
         if (cacheBuilder.isCacheRebuildRunning()) {
@@ -201,12 +205,5 @@ public class CoreServiceEJB {
 
     public void enrich() {
         virusTotal.runEnrichmentProcess();
-    }
-
-    private Date addWindow(Date date) {
-        Calendar c = Calendar.getInstance();
-        c.setTime(date);
-        c.add(Calendar.HOUR, IOC_ACTIVE_HOURS);
-        return c.getTime();
     }
 }
