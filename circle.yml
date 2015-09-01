@@ -25,6 +25,8 @@ dependencies:
     - elasticsearch-1.7.1/bin/elasticsearch: {background: true}
   override:
     - git clone https://github.com/kdkanishka/Virustotal-Public-API-V2.0-Client.git && pushd Virustotal-Public-API-V2.0-Client/ && mvn install -DskipTests && popd
+    - curl -XPUT 'http://localhost:9200/iocs/'
+    - curl -XPUT 'http://localhost:9200/logs/'
     - curl -XPUT localhost:9200/_template/iocs -d @integration-tests/src/test/resources/elastic_iocs.json
     - curl -XPUT localhost:9200/_template/logs -d @integration-tests/src/test/resources/elastic_logs.json
 test:
