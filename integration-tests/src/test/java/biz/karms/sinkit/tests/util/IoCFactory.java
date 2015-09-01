@@ -1,8 +1,9 @@
-package biz.karms.sinkit.api.test.util;
+package biz.karms.sinkit.tests.util;
 
 import biz.karms.sinkit.ioc.*;
 
 import java.util.Calendar;
+import java.util.Date;
 
 /**
  * @author Michal Karm Babacek
@@ -58,5 +59,33 @@ public class IoCFactory {
         ioCRecord.setTime(ioCTime);
 
         return ioCRecord;
+    }
+
+    /**
+     * Creates ioc record object as ti would be recieved from IntelMQ
+     */
+    public static IoCRecord getIoCRecordAsRecieved(String feedName, String taxonomyType, String sourceId,
+                                                   IoCSourceIdType sourcetype, Date observationTime, Date sourceTime)
+            throws Exception {
+
+        IoCRecord ioc = new IoCRecord();
+        IoCFeed feed = new IoCFeed();
+        feed.setName(feedName);
+        ioc.setFeed(feed);
+        IoCClassification classification = new IoCClassification();
+        classification.setType(taxonomyType);
+        ioc.setClassification(classification);
+        IoCSource source = new IoCSource();
+        if (sourcetype == IoCSourceIdType.FQDN) source.setFQDN(sourceId);
+        else if (sourcetype == IoCSourceIdType.IP) source.setIp(sourceId);
+        else if (sourcetype == IoCSourceIdType.URL) source.setUrl(sourceId);
+        else throw new Exception("Unknown source type: " + sourcetype);
+        ioc.setSource(source);
+        IoCTime time = new IoCTime();
+        time.setObservation(observationTime);
+        time.setSource(sourceTime);
+        ioc.setTime(time);
+
+        return ioc;
     }
 }

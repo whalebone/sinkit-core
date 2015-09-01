@@ -15,6 +15,8 @@ import javax.ejb.Singleton;
 import javax.inject.Inject;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -24,10 +26,10 @@ import java.util.logging.Logger;
 @Singleton
 public class ArchiveServiceEJB {
 
-    private static final String ELASTIC_IOC_INDEX = "iocs";
-    private static final String ELASTIC_IOC_TYPE = "intelmq";
-    private static final String ELASTIC_LOG_INDEX = "logs";
-    private static final String ELASTIC_LOG_TYPE = "match";
+    public static final String ELASTIC_IOC_INDEX = "iocs";
+    public static final String ELASTIC_IOC_TYPE = "intelmq";
+    public static final String ELASTIC_LOG_INDEX = "logs";
+    public static final String ELASTIC_LOG_TYPE = "match";
 
     @Inject
     private Logger log;
@@ -36,10 +38,14 @@ public class ArchiveServiceEJB {
     private ElasticServiceEJB elasticService;
 
     @PostConstruct
-    public void setup() {
+    public void setup() throws ArchiveException {
         if (elasticService == null) {
             throw new IllegalArgumentException("ElasticServiceEJB must be injected.");
         }
+
+        //create indices if don't exist
+        elasticService.createIndex(ELASTIC_IOC_INDEX);
+        elasticService.createIndex(ELASTIC_LOG_INDEX);
     }
 
     public IoCRecord findActiveIoCRecordBySourceId(
@@ -102,37 +108,43 @@ public class ArchiveServiceEJB {
 
     public IoCRecord deactivateRecord(IoCRecord ioc) throws ArchiveException {
 
+        ioc.getTime().setDeactivated(Calendar.getInstance().getTime());
         ioc.setActive(false);
 
-        String query = "{\n" +
-                "   \"doc\" : {\n" +
-                "       \"active\" : false\n" +
-                "   }\n" +
-                "}\n";
+        ioc = elasticService.index(ioc, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE);
 
-        //log.info(query);
-
-        JestResult result;
-        //log.info("Deactivating ioc [" + ioc.toString() + "]");
-        try {
-            result =
-                    elasticService.getElasticClient().execute(
-                            new Update.Builder(query)
-                                    .index(ELASTIC_IOC_INDEX)
-                                    .type(ELASTIC_IOC_TYPE)
-                                    .id(ioc.getDocumentId())
-                                    .setParameter(Parameters.REFRESH, true)
-                                    .build()
-                    );
-        } catch (Exception e) {
-            throw new ArchiveException("IoC deactivation went wrong.", e);
-        }
-
-        if (!result.isSucceeded()) {
-            log.severe("IoC deactovation wasn't successful: " + result.getErrorMessage());
-            //log.info(result.getJsonString());
-            throw new ArchiveException(result.getErrorMessage());
-        }
+//
+//        String query = "{\n" +
+//                "   \"doc\" : {\n" +
+//                "       \"active\": false,\n" +
+//                "       \"time.deactivated\": \"" +
+//                new SimpleDateFormat(ElasticServiceEJB.TIME_FORMAT).format(deactivated) + "\"" +
+//                "   }\n" +
+//                "}\n";
+//
+//        log.info(query);
+//
+//        JestResult result;
+//        //log.info("Deactivating ioc [" + ioc.toString() + "]");
+//        try {
+//            result =
+//                    elasticService.getElasticClient().execute(
+//                            new Update.Builder(query)
+//                                    .index(ELASTIC_IOC_INDEX)
+//                                    .type(ELASTIC_IOC_TYPE)
+//                                    .id(ioc.getDocumentId())
+//                                    .setParameter(Parameters.REFRESH, true)
+//                                    .build()
+//                    );
+//        } catch (Exception e) {
+//            throw new ArchiveException("IoC deactivation went wrong.", e);
+//        }
+//
+//        if (!result.isSucceeded()) {
+//            log.severe("IoC deactovation wasn't successful: " + result.getErrorMessage());
+//            //log.info(result.getJsonString());
+//            throw new ArchiveException(result.getErrorMessage());
+//        }
 
         return ioc;
     }

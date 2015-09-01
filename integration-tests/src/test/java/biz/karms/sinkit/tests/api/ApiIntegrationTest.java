@@ -1,14 +1,11 @@
-package biz.karms.sinkit.api.test;
+package biz.karms.sinkit.tests.api;
 
 
-import biz.karms.sinkit.api.test.util.IoCFactory;
-import biz.karms.sinkit.ejb.ServiceEJB;
+import biz.karms.sinkit.ejb.*;
+import biz.karms.sinkit.tests.util.IoCFactory;
 import biz.karms.sinkit.ioc.IoCRecord;
 import biz.karms.sinkit.ioc.IoCSourceIdType;
-import com.gargoylesoftware.htmlunit.HttpMethod;
-import com.gargoylesoftware.htmlunit.Page;
-import com.gargoylesoftware.htmlunit.WebClient;
-import com.gargoylesoftware.htmlunit.WebRequest;
+import com.gargoylesoftware.htmlunit.*;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.container.test.api.OperateOnDeployment;
 import org.jboss.arquillian.container.test.api.RunAsClient;
@@ -24,10 +21,11 @@ import org.testng.annotations.Test;
 import javax.inject.Inject;
 import java.io.File;
 import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.logging.Logger;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.*;
 
 /**
  * @author Michal Karm Babacek
@@ -188,5 +186,134 @@ public class ApiIntegrationTest extends Arquillian {
         String expected = "{\"sinkhole\":\"" + System.getenv("SINKIT_SINKHOLE_IP") + "\"}";
         assertTrue(responseBody.contains(expected), "Should have contained " + expected + ", but got: " + responseBody);
     }
-}
 
+    /**
+     * Not test exactly, just cleaning old data in elastic
+     *
+     * @param context
+     * @throws Exception
+     */
+    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 7)
+    @OperateOnDeployment("ear")
+    @RunAsClient
+    public void cleanElasticTest(@ArquillianResource URL context) throws Exception {
+        WebClient webClient = new WebClient();
+        WebRequest requestSettings = new WebRequest(
+                new URL("http://" + System.getenv("SINKIT_ELASTIC_HOST") + ":" + System.getenv("SINKIT_ELASTIC_PORT") +
+                        "/" + ArchiveServiceEJB.ELASTIC_IOC_INDEX + "/"), HttpMethod.DELETE);
+        Page page;
+        try {
+            page = webClient.getPage(requestSettings);
+            assertEquals(200, page.getWebResponse().getStatusCode());
+        } catch (Exception ex) {
+            //NO-OP index does not exist yet, but it's ok
+        }
+
+        requestSettings = new WebRequest(
+                new URL("http://" + System.getenv("SINKIT_ELASTIC_HOST") + ":" + System.getenv("SINKIT_ELASTIC_PORT") +
+                        "/" + ArchiveServiceEJB.ELASTIC_LOG_INDEX + "/"), HttpMethod.DELETE);
+        try {
+            page = webClient.getPage(requestSettings);
+            assertEquals(200, page.getWebResponse().getStatusCode());
+        } catch (Exception ex) {
+            //NO-OP index does not exist yet, but it's ok
+        }
+    }
+
+    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 8)
+    @OperateOnDeployment("ear")
+    @RunAsClient
+    public void receiveIoCTest(@ArquillianResource URL context) throws Exception {
+        WebClient webClient = new WebClient();
+        WebRequest requestSettings = new WebRequest(new URL(context + "rest/blacklist/ioc/"), HttpMethod.POST);
+        requestSettings.setAdditionalHeader("Content-Type", "application/json");
+        requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
+
+        String feed = "integrationTest";
+        String type = "phishing";
+        String fqdn = "phishing.ru";
+        requestSettings.setRequestBody(
+                "{" +
+                        "\"feed\":{" +
+                        "\"name\":\"" + feed + "\"," +
+                        "\"url\":\"http://www.greatfeed.com/feed.txt\"" +
+                        "}," +
+                        "\"classification\":{" +
+                        "\"type\": \"" + type + "\"," +
+                        "\"taxonomy\": \"Fraud\"" +
+                        "}," +
+                        "\"raw\":\"aHR0cDovL2luZm9ybWF0aW9uLnVwZGF0ZS5teWFjY291bnQtc2VjdXJlLmNvbS85ODI0YTYxOGRlNTlmYjE2MTlmNTUzNTgwYWFmZjcxMS9mMWI2YTE2OTc2MDRiNmI2M2IwODBmODQ2N2FiNGZiNS8=\"," +
+                        "\"source\":{" +
+                        "\"fqdn\":\"" + fqdn + "\"," +
+                        "\"bgp_prefix\":\"some_prefix\"," +
+                        "\"asn\":\"123456\"," +
+                        "\"asn_name\":\"some_name\"," +
+                        "\"geolocation\":{" +
+                        "\"cc\":\"RU\"," +
+                        "\"city\":\"City\"," +
+                        "\"latitude\":\"85.12645\"," +
+                        "\"longitude\":\"-12.9788\"" +
+                        "}" +
+                        "}," +
+                        "\"time\":{" +
+                        "\"observation\":\"" + new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(Calendar.getInstance().getTime()) + "\"" +
+                        "}," +
+                        "\"protocol\":{" +
+                        "\"application\":\"ssh\"" +
+                        "}," +
+                        "\"description\":{" +
+                        "   \"text\":\"description\"" +
+                        "}" +
+                        "}"
+        );
+        Page page = webClient.getPage(requestSettings);
+        assertEquals(200, page.getWebResponse().getStatusCode());
+        String responseBody = page.getWebResponse().getContentAsString();
+        LOGGER.info("Response:" + responseBody);
+        String expected = "{\"feed\":{\"url\":\"http://www.greatfeed.com/feed.txt\",\"name\":\"" + feed + "\"},\"description\":{\"text\":\"description\"},\"classification\":{\"type\":\"" + type + "\",\"taxonomy\":\"Fraud\"},\"protocol\":{\"application\":\"ssh\"},\"raw\":\"aHR0cDovL2luZm9ybWF0aW9uLnVwZGF0ZS5teWFjY291bnQtc2VjdXJlLmNvbS85ODI0YTYxOGRlNTlmYjE2MTlmNTUzNTgwYWFmZjcxMS9mMWI2YTE2OTc2MDRiNmI2M2IwODBmODQ2N2FiNGZiNS8\\u003d\",\"source\":{\"id\":{\"value\":\"" + fqdn + "\",\"type\":\"fqdn\"},\"fqdn\":\"" + fqdn + "\",\"asn\":123456,\"asn_name\":\"some_name\",\"geolocation\":{\"cc\":\"RU\",\"city\":\"City\",\"latitude\":85.12645,\"longitude\":-12.9788},\"bgp_prefix\":\"some_prefix\"},\"time\":{\"observation\":\"";
+        assertTrue(responseBody.contains(expected), "Should have contained " + expected + ", but got: " + responseBody);
+    }
+
+    @Inject
+    ArchiveServiceEJB archiveService;
+
+    @Test(priority = 9)
+    public void iocInElasticTest() throws Exception {
+
+        String feed = "integrationTest";
+        String type = "phishing";
+        String fqdn = "phishing.ru";
+
+        IoCRecord ioc = archiveService.findActiveIoCRecordBySourceId(fqdn, type, feed);
+        assertNotNull(ioc, "Excpecting IoC, but got null with fqdn: " + fqdn + ", type: " + type + ", feed: " + feed);
+        assertEquals(ioc.getFeed().getName(), feed, "Expected feed.name: " + feed + ", but got: " + ioc.getFeed().getName());
+        assertEquals(ioc.getSource().getId().getType(), IoCSourceIdType.FQDN, "Expected source.id.type: " + IoCSourceIdType.FQDN + ", but got: " + ioc.getSource().getId().getType());
+        assertEquals(ioc.getSource().getId().getValue(), fqdn, "Expected source.id.value: " + fqdn + ", but got: " + ioc.getSource().getId().getValue());
+        assertEquals(ioc.getClassification().getType(), type, "Expected classification.type: " + type + ", but got: " + ioc.getClassification().getType());
+        assertNotNull(ioc.getSeen().getFirst(), "Expected seen.first but got null");
+        assertNotNull(ioc.getSeen().getLast(), "Expected seen.last but got null");
+        Calendar c = Calendar.getInstance();
+        c.add(Calendar.HOUR, -CoreServiceEJB.IOC_ACTIVE_HOURS);
+        assertTrue(ioc.getSeen().getLast().after(c.getTime()), "Expected seen.last is not older than " + CoreServiceEJB.IOC_ACTIVE_HOURS + " hours, but got " + ioc.getSeen().getLast());
+        assertTrue(ioc.isActive(), "Expected ioc to be active, but got active: false");
+        assertNotNull(ioc.getTime().getObservation(), "Expecting time.observation, but got null");
+    }
+
+    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 10)
+    @OperateOnDeployment("ear")
+    @RunAsClient
+    public void iocInCacheTest(@ArquillianResource URL context) throws Exception {
+        WebClient webClient = new WebClient();
+        WebRequest requestSettings = new WebRequest(new URL(context + "rest/blacklist/record/phishing.ru"), HttpMethod.GET);
+        requestSettings.setAdditionalHeader("Content-Type", "application/json");
+        requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
+        Page page = webClient.getPage(requestSettings);
+        assertEquals(200, page.getWebResponse().getStatusCode());
+        String responseBody = page.getWebResponse().getContentAsString();
+        LOGGER.info("iocInCacheTest Response:" + responseBody);
+        String expected = "\"black_listed_domain_or_i_p\":\"phishing.ru\"";
+        assertTrue(responseBody.contains(expected), "IoC response should have contained " + expected + ", but got:" + responseBody);
+        expected = "\"sources\":{\"integrationTest\":\"phishing\"}";
+        assertTrue(responseBody.contains(expected), "IoC should have contained " + expected + ", but got: " + responseBody);
+    }
+}

@@ -4,7 +4,6 @@ machine:
       oraclejdk8
   services:
     - postgresql
-    - elasticsearch
     - docker
   environment:
     SINKIT_ACCESS_TOKEN: blablabla
@@ -19,10 +18,17 @@ machine:
     SINKIT_ELASTIC_HOST: localhost
     SINKIT_ELASTIC_PORT: 9200
 dependencies:
+  cache_directories:
+    - elasticsearch-1.7.1 # relative to the build directory
+  pre:
+    - if [[ ! -e elasticsearch-1.7.1 ]]; then wget https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-1.7.1.tar.gz && tar -xvf elasticsearch-1.7.1.tar.gz; fi
+    - elasticsearch-1.7.1/bin/elasticsearch: {background: true}
   override:
     - git clone https://github.com/kdkanishka/Virustotal-Public-API-V2.0-Client.git && pushd Virustotal-Public-API-V2.0-Client/ && mvn install -DskipTests && popd
     - curl -XPUT localhost:9200/_template/iocs -d @integration-tests/src/test/resources/elastic_iocs.json
     - curl -XPUT localhost:9200/_template/logs -d @integration-tests/src/test/resources/elastic_logs.json
+    - curl -XPUT localhost:9200/iocs/
+    - curl -XPUT localhost:9200/logs/
 test:
   override:
     - mvn clean install -Parq-wildfly-managed
