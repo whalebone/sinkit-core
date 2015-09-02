@@ -5,7 +5,11 @@ import biz.karms.sinkit.ejb.*;
 import biz.karms.sinkit.tests.util.IoCFactory;
 import biz.karms.sinkit.ioc.IoCRecord;
 import biz.karms.sinkit.ioc.IoCSourceIdType;
-import com.gargoylesoftware.htmlunit.*;
+import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
+import com.gargoylesoftware.htmlunit.HttpMethod;
+import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.WebRequest;
+import com.gargoylesoftware.htmlunit.Page;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.container.test.api.OperateOnDeployment;
 import org.jboss.arquillian.container.test.api.RunAsClient;
@@ -38,7 +42,7 @@ public class ApiIntegrationTest extends Arquillian {
     @Deployment(name = "ear", testable = true)
     public static Archive<?> createTestArchive() {
         EnterpriseArchive ear = ShrinkWrap.create(ZipImporter.class, "sinkit-ear.ear").importFrom(new File("../ear/target/sinkit-ear.ear")).as(EnterpriseArchive.class);
-        ear.getAsType(JavaArchive.class, "sinkit-ejb.jar").addClass(ApiIntegrationTest.class).addClass(IoCFactory.class);
+        ear.getAsType(JavaArchive.class, "sinkit-ejb.jar").addClass(ApiIntegrationTest.class).addClass(IoCFactory.class).addClass(FailingHttpStatusCodeException.class);
         return ear;
     }
 
@@ -205,17 +209,7 @@ public class ApiIntegrationTest extends Arquillian {
         try {
             page = webClient.getPage(requestSettings);
             assertEquals(200, page.getWebResponse().getStatusCode());
-        } catch (Exception ex) {
-            //NO-OP index does not exist yet, but it's ok
-        }
-
-        requestSettings = new WebRequest(
-                new URL("http://" + System.getenv("SINKIT_ELASTIC_HOST") + ":" + System.getenv("SINKIT_ELASTIC_PORT") +
-                        "/" + ArchiveServiceEJB.ELASTIC_LOG_INDEX + "/"), HttpMethod.DELETE);
-        try {
-            page = webClient.getPage(requestSettings);
-            assertEquals(200, page.getWebResponse().getStatusCode());
-        } catch (Exception ex) {
+        } catch (FailingHttpStatusCodeException ex) {
             //NO-OP index does not exist yet, but it's ok
         }
     }

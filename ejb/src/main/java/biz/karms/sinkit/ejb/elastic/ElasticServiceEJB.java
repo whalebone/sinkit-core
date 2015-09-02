@@ -46,14 +46,6 @@ public class ElasticServiceEJB {
         return elasticClient;
     }
 
-    public void createIndex(String index) throws ArchiveException {
-        try {
-            elasticClient.execute(new CreateIndex.Builder(index).build());
-        } catch (Exception e) {
-            throw new ArchiveException("Cannot create index: " + index, e);
-        }
-    }
-
     /**
      * Searches index of given type using query for single object of class T
      *
@@ -96,6 +88,8 @@ public class ElasticServiceEJB {
         }
 
         if (!result.isSucceeded()) {
+            log.warning("Can't get document with id:  " + id + ". Elastic returned: " + result.getResponseCode() +
+                    ", response code: " + result.getResponseCode());
             return null;
         }
 
@@ -153,7 +147,14 @@ public class ElasticServiceEJB {
         }
 
         if (!result.isSucceeded()) {
-            throw new ArchiveException(result.getErrorMessage());
+            if (result.getResponseCode() == 404) {
+                //when 404 is returned then perhaps the index is missing, but we can consider it as no hits were found
+                //index will be automatically created during the first indexation of a document of given index
+                log.warning("Searching the Archive returned code 404, error message: " + result.getErrorMessage());
+                return new ArrayList<>();
+            } else {
+                throw new ArchiveException("Elastic search went wrong:" + result.getErrorMessage() + ", response code: " + result.getResponseCode());
+            }
         }
 
         //log.info("Found " + result.getTotal() + " hits");
