@@ -38,14 +38,10 @@ public class ArchiveServiceEJB {
     private ElasticServiceEJB elasticService;
 
     @PostConstruct
-    public void setup() throws ArchiveException {
+    public void setup() {
         if (elasticService == null) {
             throw new IllegalArgumentException("ElasticServiceEJB must be injected.");
         }
-
-        //create indices if don't exist
-        elasticService.createIndex(ELASTIC_IOC_INDEX);
-        elasticService.createIndex(ELASTIC_LOG_INDEX);
     }
 
     public IoCRecord findActiveIoCRecordBySourceId(
