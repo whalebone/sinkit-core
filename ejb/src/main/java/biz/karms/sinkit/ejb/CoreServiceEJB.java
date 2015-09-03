@@ -1,7 +1,7 @@
 package biz.karms.sinkit.ejb;
 
 import biz.karms.sinkit.ejb.util.IoCValidator;
-import biz.karms.sinkit.ejb.virustotal.VirusTotalEnricherEJB;
+import biz.karms.sinkit.ejb.virustotal.impl.VirusTotalEnricherEJB;
 import biz.karms.sinkit.eventlog.*;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCValidationException;
@@ -43,13 +43,10 @@ public class CoreServiceEJB {
     @Inject
     private CacheBuilderEJB cacheBuilder;
 
-    @Inject
-    private VirusTotalEnricherEJB virusTotal;
-
     @PostConstruct
     public void setup() {
-        if (log == null || archiveService == null || cacheService == null || cacheBuilder == null || virusTotal == null) {
-            throw new IllegalArgumentException("Logger, ArchiveServiceEJB, ServiceEJB, CacheBuilderEJB and VirusTotalEnricherEJB must be injected.");
+        if (log == null || archiveService == null || cacheService == null || cacheBuilder == null) {
+            throw new IllegalArgumentException("Logger, ArchiveServiceEJB, ServiceEJB, CacheBuilderEJB must be injected.");
         }
     }
 
@@ -204,6 +201,6 @@ public class CoreServiceEJB {
     }
 
     public void enrich() {
-        virusTotal.runEnrichmentProcess();
+        throw new UnsupportedOperationException("VirusTotal enricher is handled by Clustered HA Singleton Timer Service. This API call is currently disabled.");
     }
 }

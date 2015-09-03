@@ -42,7 +42,7 @@ public class ApiIntegrationTest extends Arquillian {
     @Deployment(name = "ear", testable = true)
     public static Archive<?> createTestArchive() {
         EnterpriseArchive ear = ShrinkWrap.create(ZipImporter.class, "sinkit-ear.ear").importFrom(new File("../ear/target/sinkit-ear.ear")).as(EnterpriseArchive.class);
-        ear.getAsType(JavaArchive.class, "sinkit-ejb.jar").addClass(ApiIntegrationTest.class).addClass(IoCFactory.class).addClass(FailingHttpStatusCodeException.class);
+        ear.getAsType(JavaArchive.class, "sinkit-org.jboss.as.quickstarts.cluster.hasingleton.service.ejb.jar").addClass(ApiIntegrationTest.class).addClass(IoCFactory.class).addClass(FailingHttpStatusCodeException.class);
         return ear;
     }
 
