@@ -33,6 +33,24 @@
 
     <dependencies>
 
+        <dependency>
+            <groupId>org.jboss.msc</groupId>
+            <artifactId>jboss-msc</artifactId>
+            <version>${version.jboss.msc}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.wildfly</groupId>
+            <artifactId>wildfly-clustering-common</artifactId>
+            <version>${version.wildfly}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.wildfly</groupId>
+            <artifactId>wildfly-clustering-singleton</artifactId>
+            <version>${version.wildfly}</version>
+        </dependency>
+
         <!-- Import the CDI API, we use provided scope as the API is included in JBoss WildFly -->
         <dependency>
             <groupId>javax.enterprise</groupId>
@@ -148,9 +166,16 @@
                 <version>${version.ejb.plugin}</version>
                 <configuration>
                     <ejbVersion>${version.ejb}</ejbVersion>
+                    <archive>
+                        <addMavenDescriptor>false</addMavenDescriptor>
+                        <manifestEntries>
+                            <Dependencies>org.jboss.msc,
+                                org.wildfly.clustering.singleton,
+                                org.jboss.as.server</Dependencies>
+                        </manifestEntries>
+                    </archive>
                 </configuration>
             </plugin>
         </plugins>
     </build>
 </project>
-

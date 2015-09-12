@@ -35,7 +35,7 @@ public class CoreTest extends Arquillian {
     @Deployment(name = "ear", testable = true)
     public static Archive<?> createTestArchive() {
         EnterpriseArchive ear = ShrinkWrap.create(ZipImporter.class, "sinkit-ear2.ear").importFrom(new File("../ear/target/sinkit-ear.ear")).as(EnterpriseArchive.class);
-        ear.getAsType(JavaArchive.class, "sinkit-ejb.jar").addClass(CoreTest.class).addClass(IoCFactory.class);
+        ear.getAsType(JavaArchive.class, "sinkit-org.jboss.as.quickstarts.cluster.hasingleton.service.ejb.jar").addClass(CoreTest.class).addClass(IoCFactory.class);
         return ear;
     }
 

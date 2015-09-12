@@ -42,6 +42,7 @@
         <version.jboss.bom>9.0.1.Final</version.jboss.bom>
         <version.jboss.spec.javaee.7.0>1.0.0.Final</version.jboss.spec.javaee.7.0>
         <version.ejb>3.2</version.ejb>
+        <version.jboss.msc>1.2.6.Final</version.jboss.msc>
 
         <!-- other plugin versions -->
         <version.compiler.plugin>3.1</version.compiler.plugin>

@@ -2,11 +2,11 @@ target
 .classpath
 .settings
 .project
-biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord/
+biz.karms.sinkit.org.jboss.as.quickstarts.cluster.hasingleton.service.ejb.cache.pojo.BlacklistedRecord/
 sinkit-ear.ear.redeploy
 .idea/
 *.iml
-biz.karms.sinkit.ejb.cache.pojo.Rule
+biz.karms.sinkit.org.jboss.as.quickstarts.cluster.hasingleton.service.ejb.cache.pojo.Rule
 log.log
-biz.karms.sinkit.ejb.Rule
-integration-tests/biz.karms.sinkit.ejb.cache.pojo.CustomList
+biz.karms.sinkit.org.jboss.as.quickstarts.cluster.hasingleton.service.ejb.Rule
+integration-tests/biz.karms.sinkit.org.jboss.as.quickstarts.cluster.hasingleton.service.ejb.cache.pojo.CustomList

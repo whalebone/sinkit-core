@@ -64,19 +64,29 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-ear-plugin</artifactId>
                 <version>${version.ear.plugin}</version>
-                <!-- configuring the ear plugin -->
                 <configuration>
-                    <!-- Tell Maven we are using Java EE 7,  meh actually 6 for xml generation...-->
                     <version>6</version>
-                    <!-- Use Java EE ear libraries as needed. Java EE ear libraries are in easy way to package any libraries 
-                        needed in the ear, and automatically have any modules (EJB-JARs and WARs) use them -->
                     <defaultLibBundleDir>lib</defaultLibBundleDir>
+                    <archive>
+                        <addMavenDescriptor>false</addMavenDescriptor>
+                        <manifestEntries>
+                            <Dependencies>org.jboss.msc,
+                                org.wildfly.clustering.singleton,
+                                org.jboss.as.server
+                            </Dependencies>
+                        </manifestEntries>
+                    </archive>
                     <modules>
                         <webModule>
                             <groupId>biz.karms.sinkit</groupId>
                             <artifactId>sinkit-rest</artifactId>
                             <contextRoot>/sinkit</contextRoot>
                         </webModule>
+                        <ejbModule>
+                            <groupId>biz.karms.sinkit</groupId>
+                            <artifactId>sinkit-ejb</artifactId>
+                            <bundleFileName>sinkit-ejb.jar</bundleFileName>
+                        </ejbModule>
                     </modules>
                     <fileNameMapping>no-version</fileNameMapping>
                 </configuration>

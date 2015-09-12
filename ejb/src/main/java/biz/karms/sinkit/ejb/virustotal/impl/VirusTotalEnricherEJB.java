@@ -1,6 +1,8 @@
-package biz.karms.sinkit.ejb.virustotal;
+package biz.karms.sinkit.ejb.virustotal.impl;
 
 import biz.karms.sinkit.ejb.ArchiveServiceEJB;
+import biz.karms.sinkit.ejb.virustotal.VirusTotalEnricher;
+import biz.karms.sinkit.ejb.virustotal.VirusTotalServiceEJB;
 import biz.karms.sinkit.ejb.virustotal.exception.VirusTotalException;
 import biz.karms.sinkit.eventlog.EventLogRecord;
 import biz.karms.sinkit.eventlog.MatchedIoC;
@@ -13,21 +15,21 @@ import com.kanishka.virustotal.exception.InvalidArguentsException;
 import com.kanishka.virustotal.exception.QuotaExceededException;
 import com.kanishka.virustotal.exception.UnauthorizedAccessException;
 
+import javax.annotation.Resource;
 import javax.ejb.*;
+import javax.ejb.Timer;
 import javax.inject.Inject;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
  * Created by tkozel on 31.7.15.
  */
-@Startup
 @Singleton
 @TransactionManagement(TransactionManagementType.BEAN)
-public class VirusTotalEnricherEJB {
+public class VirusTotalEnricherEJB implements VirusTotalEnricher {
 
     // we can call the Virus Total API only 4 times per minute
     private static final int SHOTS_PER_RUN = 4;
@@ -41,10 +43,32 @@ public class VirusTotalEnricherEJB {
     @Inject
     private VirusTotalServiceEJB virusTotalService;
 
-    @Schedule(hour = "*", minute = "*", second = "40", persistent = false)
-    @AccessTimeout(value = 30, unit = TimeUnit.SECONDS)
-    public synchronized void runEnrichmentProcess() {
+    @Resource
+    private TimerService timerService;
 
+    @Override
+    public void initialize(String info) {
+        ScheduleExpression sexpr = new ScheduleExpression();
+        // Every 40 seconds
+        sexpr.hour("*").minute("*").second("0/40");
+        timerService.createCalendarTimer(sexpr, new TimerConfig(info, false));
+    }
+
+    @Override
+    public void stop() {
+        log.info("Stop all existing VirusTotalEnricher HASingleton timers.");
+        for (Timer timer : timerService.getTimers()) {
+            log.fine("Stop VirusTotalEnricher HASingleton timer: " + timer.getInfo());
+            timer.cancel();
+        }
+    }
+
+    @Timeout
+    public void scheduler(Timer timer) {
+        log.info("VirusTotalEnricher HASingletonTimer: Info=" + timer.getInfo());
+        if (Boolean.parseBoolean(System.getenv("SINKIT_VIRUS_TOTAL_SKIP"))) {
+            return;
+        }
         int availableVTCalls = SHOTS_PER_RUN;
 
         boolean reportRequestQueueEmpty = false;
@@ -85,22 +109,20 @@ public class VirusTotalEnricherEJB {
             }
         } catch (QuotaExceededException e) {
             log.warning("VirusTutotal enrichment: quota exceeded before than expected -> skipping next runs in batch");
-        } catch (ArchiveException|VirusTotalException e) {
+        } catch (ArchiveException | VirusTotalException e) {
             log.severe("Virus Total enrichment went wrong: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    private boolean processUrlScanRequest(final EventLogRecord enrichmentRequest) throws ArchiveException,
-            QuotaExceededException, VirusTotalException {
-
+    private boolean processUrlScanRequest(final EventLogRecord enrichmentRequest) throws ArchiveException, QuotaExceededException, VirusTotalException {
         log.finest("Processing URL scan request: " + enrichmentRequest.toString());
 
         String fqdn = enrichmentRequest.getReason().getFqdn();
         boolean needEnrichment = false;
 
         iocsLoop:
-        for (MatchedIoC matchedIoC: enrichmentRequest.getMatchedIocs()) {
+        for (MatchedIoC matchedIoC : enrichmentRequest.getMatchedIocs()) {
 
             String iocId = matchedIoC.getDocumentId();
 
@@ -146,7 +168,7 @@ public class VirusTotalEnricherEJB {
         if (needEnrichment) {
             try {
                 virusTotalService.scanUrl("http://" + fqdn + "/");
-            } catch (InvalidArguentsException|UnauthorizedAccessException|IOException e){
+            } catch (InvalidArguentsException | UnauthorizedAccessException | IOException e) {
                 throw new VirusTotalException(e);
             }
         } else {
@@ -156,17 +178,15 @@ public class VirusTotalEnricherEJB {
         return needEnrichment;
     }
 
-    private void processUrlScanReportRequest(final EventLogRecord enrichmentRequest) throws ArchiveException,
-            QuotaExceededException, VirusTotalException {
-
+    private void processUrlScanReportRequest(final EventLogRecord enrichmentRequest) throws ArchiveException, QuotaExceededException, VirusTotalException {
         log.finest("Processing URL scan report request: " + enrichmentRequest.toString());
 
         String fqdn = enrichmentRequest.getReason().getFqdn();
 
         FileScanReport report;
         try {
-          report = virusTotalService.getUrlScanReport("http://" + fqdn + "/");
-        } catch (InvalidArguentsException|UnauthorizedAccessException|IOException e){
+            report = virusTotalService.getUrlScanReport("http://" + fqdn + "/");
+        } catch (InvalidArguentsException | UnauthorizedAccessException | IOException e) {
             throw new VirusTotalException(e);
         }
 
@@ -176,10 +196,10 @@ public class VirusTotalEnricherEJB {
         try {
             total.setScanDate(virusTotalService.parseDate(report.getScanDate()));
         } catch (ParseException e) {
-            throw new VirusTotalException("Cannot parse scan date of report: " + report.getScanDate(),e);
+            throw new VirusTotalException("Cannot parse scan date of report: " + report.getScanDate(), e);
         }
 
-        for (MatchedIoC matchedIoC: enrichmentRequest.getMatchedIocs()) {
+        for (MatchedIoC matchedIoC : enrichmentRequest.getMatchedIocs()) {
 
             String iocId = matchedIoC.getDocumentId();
 
