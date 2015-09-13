@@ -1,10 +1,5 @@
 package biz.karms.sinkit.ejb;
 
-import biz.karms.sinkit.ejb.elastic.JestClientProvider;
-import biz.karms.sinkit.ejb.virustotal.VirusTotalClientProvider;
-import com.kanishka.virustotal.exception.APIKeyNotFoundException;
-import com.kanishka.virustotalv2.VirustotalPublicV2;
-import io.searchbox.client.JestClient;
 import org.infinispan.manager.DefaultCacheManager;
 
 import javax.enterprise.context.Dependent;

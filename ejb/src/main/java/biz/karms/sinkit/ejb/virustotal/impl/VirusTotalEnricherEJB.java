@@ -1,8 +1,8 @@
 package biz.karms.sinkit.ejb.virustotal.impl;
 
-import biz.karms.sinkit.ejb.ArchiveServiceEJB;
+import biz.karms.sinkit.ejb.ArchiveService;
 import biz.karms.sinkit.ejb.virustotal.VirusTotalEnricher;
-import biz.karms.sinkit.ejb.virustotal.VirusTotalServiceEJB;
+import biz.karms.sinkit.ejb.virustotal.VirusTotalService;
 import biz.karms.sinkit.ejb.virustotal.exception.VirusTotalException;
 import biz.karms.sinkit.eventlog.EventLogRecord;
 import biz.karms.sinkit.eventlog.MatchedIoC;
@@ -22,13 +22,14 @@ import javax.inject.Inject;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
  * Created by tkozel on 31.7.15.
  */
 @Singleton
-@TransactionManagement(TransactionManagementType.BEAN)
+@AccessTimeout(value = 1, unit = TimeUnit.MINUTES)
 public class VirusTotalEnricherEJB implements VirusTotalEnricher {
 
     // we can call the Virus Total API only 4 times per minute
@@ -37,11 +38,11 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
     @Inject
     private Logger log;
 
-    @Inject
-    private ArchiveServiceEJB archiveService;
+    @EJB
+    private ArchiveService archiveService;
 
-    @Inject
-    private VirusTotalServiceEJB virusTotalService;
+    @EJB
+    private VirusTotalService virusTotalService;
 
     @Resource
     private TimerService timerService;

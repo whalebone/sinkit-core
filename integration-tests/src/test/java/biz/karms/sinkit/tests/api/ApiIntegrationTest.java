@@ -1,35 +1,33 @@
 package biz.karms.sinkit.tests.api;
 
 
-import biz.karms.sinkit.ejb.*;
-import biz.karms.sinkit.tests.util.IoCFactory;
+import biz.karms.sinkit.ejb.ArchiveService;
+import biz.karms.sinkit.ejb.CacheService;
+import biz.karms.sinkit.ejb.impl.ArchiveServiceEJB;
+import biz.karms.sinkit.ejb.impl.CoreServiceEJB;
 import biz.karms.sinkit.ioc.IoCRecord;
 import biz.karms.sinkit.ioc.IoCSourceIdType;
+import biz.karms.sinkit.tests.util.IoCFactory;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.gargoylesoftware.htmlunit.HttpMethod;
+import com.gargoylesoftware.htmlunit.Page;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.WebRequest;
-import com.gargoylesoftware.htmlunit.Page;
-import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.container.test.api.OperateOnDeployment;
 import org.jboss.arquillian.container.test.api.RunAsClient;
 import org.jboss.arquillian.test.api.ArquillianResource;
 import org.jboss.arquillian.testng.Arquillian;
-import org.jboss.shrinkwrap.api.Archive;
-import org.jboss.shrinkwrap.api.ShrinkWrap;
-import org.jboss.shrinkwrap.api.importer.ZipImporter;
-import org.jboss.shrinkwrap.api.spec.EnterpriseArchive;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.testng.annotations.Test;
 
-import javax.inject.Inject;
-import java.io.File;
+import javax.ejb.EJB;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.logging.Logger;
 
-import static org.testng.Assert.*;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
 
 /**
  * @author Michal Karm Babacek
@@ -39,15 +37,13 @@ public class ApiIntegrationTest extends Arquillian {
     private static final Logger LOGGER = Logger.getLogger(ApiIntegrationTest.class.getName());
     private static final String TOKEN = System.getenv("SINKIT_ACCESS_TOKEN");
 
-    @Deployment(name = "ear", testable = true)
-    public static Archive<?> createTestArchive() {
-        EnterpriseArchive ear = ShrinkWrap.create(ZipImporter.class, "sinkit-ear.ear").importFrom(new File("../ear/target/sinkit-ear.ear")).as(EnterpriseArchive.class);
-        ear.getAsType(JavaArchive.class, "sinkit-org.jboss.as.quickstarts.cluster.hasingleton.service.ejb.jar").addClass(ApiIntegrationTest.class).addClass(IoCFactory.class).addClass(FailingHttpStatusCodeException.class);
-        return ear;
-    }
+    @EJB
+    CacheService cacheService;
 
+    @EJB
+    ArchiveService archiveService;
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 0)
+    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 1)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void postAllDNSClientSettingsTest(@ArquillianResource URL context) throws Exception {
@@ -88,7 +84,7 @@ public class ApiIntegrationTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "Expected " + expected + ", but got: " + responseBody);
     }
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 1)
+    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 2)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void putCustomListsTest(@ArquillianResource URL context) throws Exception {
@@ -115,17 +111,14 @@ public class ApiIntegrationTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "Expected: " + expected + ", but got: " + responseBody);
     }
 
-    @Inject
-    ServiceEJB serviceEJB;
-
-    @Test(priority = 2)
+    @Test(priority = 3)
     public void addIoCsTest() throws Exception {
         IoCRecord ioCRecord = IoCFactory.getIoCRecord("hosted", "blacklist", "myDocumentId", "feed2", "feed2", "seznam.cz", IoCSourceIdType.FQDN, "seznam.cz", null, "seznam.cz");
-        assertTrue(serviceEJB.dropTheWholeCache(), "Dropping the whole cache failed.");
-        assertTrue(serviceEJB.addToCache(ioCRecord), "Adding a new IoC to a presumably empty cache failed.");
+        assertTrue(cacheService.dropTheWholeCache(), "Dropping the whole cache failed.");
+        assertTrue(cacheService.addToCache(ioCRecord), "Adding a new IoC to a presumably empty cache failed.");
     }
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 3)
+    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 4)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void getStatsTest(@ArquillianResource URL context) throws Exception {
@@ -141,7 +134,7 @@ public class ApiIntegrationTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "Expected: " + expected + ". got: " + responseBody);
     }
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 4)
+    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 5)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void getIoCsTest(@ArquillianResource URL context) throws Exception {
@@ -157,7 +150,7 @@ public class ApiIntegrationTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "Expected " + expected + ", but got: " + responseBody);
     }
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 5)
+    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 6)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void getIoCTest(@ArquillianResource URL context) throws Exception {
@@ -175,7 +168,7 @@ public class ApiIntegrationTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "IoC should have contained " + expected + ", but got: " + responseBody);
     }
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 6)
+    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 7)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void getSinkHoleTest(@ArquillianResource URL context) throws Exception {
@@ -197,7 +190,7 @@ public class ApiIntegrationTest extends Arquillian {
      * @param context
      * @throws Exception
      */
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 7)
+    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 8)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void cleanElasticTest(@ArquillianResource URL context) throws Exception {
@@ -214,7 +207,7 @@ public class ApiIntegrationTest extends Arquillian {
         }
     }
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 8)
+    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 9)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void receiveIoCTest(@ArquillianResource URL context) throws Exception {
@@ -268,10 +261,7 @@ public class ApiIntegrationTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "Should have contained " + expected + ", but got: " + responseBody);
     }
 
-    @Inject
-    ArchiveServiceEJB archiveService;
-
-    @Test(priority = 9)
+    @Test(priority = 10)
     public void iocInElasticTest() throws Exception {
 
         String feed = "integrationTest";
@@ -293,7 +283,7 @@ public class ApiIntegrationTest extends Arquillian {
         assertNotNull(ioc.getTime().getObservation(), "Expecting time.observation, but got null");
     }
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 10)
+    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 11)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void iocInCacheTest(@ArquillianResource URL context) throws Exception {

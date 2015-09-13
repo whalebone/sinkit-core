@@ -19,7 +19,12 @@ package biz.karms.sinkit.ejb.hasingleton;
 import org.jboss.logging.Logger;
 
 import javax.annotation.Resource;
-import javax.ejb.*;
+import javax.ejb.ScheduleExpression;
+import javax.ejb.Singleton;
+import javax.ejb.Timeout;
+import javax.ejb.Timer;
+import javax.ejb.TimerConfig;
+import javax.ejb.TimerService;
 
 /**
  * Source: WildFly Examples, Quickstarts
@@ -30,6 +35,7 @@ import javax.ejb.*;
 @Singleton
 public class SchedulerDemoBean implements SchedulerDemo {
     private static Logger LOGGER = Logger.getLogger(SchedulerDemoBean.class);
+
     @Resource
     private TimerService timerService;
 

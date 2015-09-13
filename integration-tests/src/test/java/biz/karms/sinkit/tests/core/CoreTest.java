@@ -1,27 +1,29 @@
 package biz.karms.sinkit.tests.core;
 
-import biz.karms.sinkit.ejb.ArchiveServiceEJB;
-import biz.karms.sinkit.ejb.CoreServiceEJB;
+import biz.karms.sinkit.ejb.ArchiveService;
+import biz.karms.sinkit.ejb.CoreService;
+import biz.karms.sinkit.ejb.impl.CoreServiceEJB;
 import biz.karms.sinkit.exception.TooOldIoCException;
 import biz.karms.sinkit.ioc.IoCRecord;
 import biz.karms.sinkit.ioc.IoCSourceIdType;
 import biz.karms.sinkit.tests.util.IoCFactory;
-import org.jboss.arquillian.container.test.api.Deployment;
+import org.jboss.arquillian.container.test.api.Deployer;
+import org.jboss.arquillian.container.test.api.OperateOnDeployment;
+import org.jboss.arquillian.test.api.ArquillianResource;
 import org.jboss.arquillian.testng.Arquillian;
-import org.jboss.shrinkwrap.api.Archive;
-import org.jboss.shrinkwrap.api.ShrinkWrap;
-import org.jboss.shrinkwrap.api.importer.ZipImporter;
-import org.jboss.shrinkwrap.api.spec.EnterpriseArchive;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.testng.annotations.Test;
 
+import javax.ejb.EJB;
 import javax.inject.Inject;
-import java.io.File;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.logging.Logger;
 
-import static org.testng.Assert.*;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
 
 
 /**
@@ -32,21 +34,14 @@ public class CoreTest extends Arquillian {
     private static final Logger LOGGER = Logger.getLogger(CoreTest.class.getName());
     private static final String TOKEN = System.getenv("SINKIT_ACCESS_TOKEN");
 
-    @Deployment(name = "ear", testable = true)
-    public static Archive<?> createTestArchive() {
-        EnterpriseArchive ear = ShrinkWrap.create(ZipImporter.class, "sinkit-ear2.ear").importFrom(new File("../ear/target/sinkit-ear.ear")).as(EnterpriseArchive.class);
-        ear.getAsType(JavaArchive.class, "sinkit-org.jboss.as.quickstarts.cluster.hasingleton.service.ejb.jar").addClass(CoreTest.class).addClass(IoCFactory.class);
-        return ear;
-    }
+    @EJB
+    CoreService coreService;
 
-    @Inject
-    CoreServiceEJB coreService;
-    @Inject
-    ArchiveServiceEJB archiveService;
+    @EJB
+    ArchiveService archiveService;
 
-    @Test(priority = 11)
+    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 12)
     public void deduplicationTest() throws Exception {
-
         Calendar c = Calendar.getInstance();
         c.set(Calendar.MILLISECOND, 0);
         Date lastObservation = c.getTime();
@@ -70,22 +65,20 @@ public class CoreTest extends Arquillian {
         assertEquals(iocIndexed.getSeen().getFirst(), firstObservation, "Expected seen.first: " + firstObservation + ", but got: " + iocIndexed.getSeen().getFirst());
     }
 
-    @Test(priority = 12, expectedExceptions = TooOldIoCException.class)
+    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 13, expectedExceptions = TooOldIoCException.class)
     public void tooOldSourceTimeTest() throws Exception {
-
         Calendar c = Calendar.getInstance();
         c.set(Calendar.MILLISECOND, 0);
         Date timeObservation = c.getTime();
-        c.add(Calendar.HOUR, -CoreServiceEJB.IOC_ACTIVE_HOURS);;
+        c.add(Calendar.HOUR, -CoreServiceEJB.IOC_ACTIVE_HOURS);
         Date timeSource = c.getTime();
 
         IoCRecord ioc = IoCFactory.getIoCRecordAsRecieved("tooOldIoc", "phishing", "phishing.ru", IoCSourceIdType.FQDN, timeObservation, timeSource);
         coreService.processIoCRecord(ioc);
     }
 
-    @Test(priority = 12, expectedExceptions = TooOldIoCException.class)
+    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 14, expectedExceptions = TooOldIoCException.class)
     public void tooOldObservationTimeTest() throws Exception {
-
         Calendar c = Calendar.getInstance();
         c.set(Calendar.MILLISECOND, 0);
         c.add(Calendar.HOUR, -CoreServiceEJB.IOC_ACTIVE_HOURS);
@@ -94,9 +87,8 @@ public class CoreTest extends Arquillian {
         coreService.processIoCRecord(ioc);
     }
 
-    @Test(priority = 12)
+    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 15)
     public void goodTimeTest() throws Exception {
-
         Calendar c = Calendar.getInstance();
         c.set(Calendar.MILLISECOND, 0);
         Date timeObservation = c.getTime();
@@ -119,9 +111,8 @@ public class CoreTest extends Arquillian {
 
     }
 
-    @Test(priority = 12)
+    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 16)
     public void deactivationTest() throws Exception {
-
         Calendar c = Calendar.getInstance();
         Date deactivationTime = c.getTime();
         c.add(Calendar.HOUR, -CoreServiceEJB.IOC_ACTIVE_HOURS);

@@ -1,5 +1,6 @@
-package biz.karms.sinkit.ejb;
+package biz.karms.sinkit.ejb.impl;
 
+import biz.karms.sinkit.ejb.WebApi;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.CustomList;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
@@ -20,9 +21,13 @@ import javax.annotation.PostConstruct;
 import javax.ejb.Stateless;
 import javax.ejb.TransactionManagement;
 import javax.ejb.TransactionManagementType;
-import javax.enterprise.context.Dependent;
 import javax.inject.Inject;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -31,8 +36,7 @@ import java.util.logging.Logger;
  */
 @Stateless
 @TransactionManagement(TransactionManagementType.BEAN)
-@Dependent
-public class WebApiEJB {
+public class WebApiEJB implements WebApi {
 
     @Inject
     private Logger log;
@@ -60,10 +64,12 @@ public class WebApiEJB {
     }
 
     // Testing purposes
+    @Override
     public String sayHello(final String queryString) {
         return "Hello there." + queryString;
     }
 
+    @Override
     public Map<String, Integer> getStats() {
         Map<String, Integer> info = new HashMap<String, Integer>();
         info.put("ioc", blacklistCache.size());
@@ -71,6 +77,7 @@ public class WebApiEJB {
         return info;
     }
 
+    @Override
     public BlacklistedRecord putBlacklistedRecord(final BlacklistedRecord blacklistedRecord) {
         if (blacklistedRecord == null || blacklistedRecord.getBlackListedDomainOrIP() == null) {
             log.log(Level.SEVERE, "putBlacklistedRecord: Got null record or IoC. Can't process this.");
@@ -96,15 +103,18 @@ public class WebApiEJB {
         }
     }
 
+    @Override
     public BlacklistedRecord getBlacklistedRecord(final String key) {
         log.log(Level.FINE, "getting key [" + key + "]");
         return blacklistCache.get(key);
     }
 
-    public Set<String> getBlacklistedRecordKeys() {
-        return blacklistCache.keySet();
+    @Override
+    public Object[] getBlacklistedRecordKeys() {
+        return blacklistCache.keySet().toArray();
     }
 
+    @Override
     public String deleteBlacklistedRecord(final String key) {
         try {
             utx.begin();
@@ -131,6 +141,7 @@ public class WebApiEJB {
     }
 
     // TODO: List? Array? Map with additional data? Let's think this over.
+    @Override
     public List<?> getRules(final String clientIPAddress) {
         try {
             //TODO: It is very wasteful to calculate the whole thing for just the one /32 or /128 masked client IP.
@@ -165,10 +176,12 @@ public class WebApiEJB {
         }
     }
 
+    @Override
     public Set<String> getRuleKeys() {
         return ruleCache.keySet();
     }
 
+    @Override
     public String deleteRule(final String cidrAddress) {
         try {
             //TODO: It is very wasteful to calculate the whole thing for just the one /32 or /128 masked client IP.
@@ -209,6 +222,7 @@ public class WebApiEJB {
      * @param customerDNSSetting Map K(dnsClient in CIDR) : V(HashMap<String, String>), where HashMap<String, String> stands for: "feedUID" : "<L|S|D>"
      * @return
      */
+    @Override
     public String putDNSClientSettings(final Integer customerId, final HashMap<String, HashMap<String, String>> customerDNSSetting) {
         try {
             SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
@@ -250,6 +264,7 @@ public class WebApiEJB {
         return customerId + " SETTINGS UPDATED";
     }
 
+    @Override
     public String postAllDNSClientSettings(final AllDNSSettingDTO[] allDNSSetting) {
         //TODO: Perhaps invert the flow: create 1 utx.begin();-utx.commit(); block and loop inside...
         for (AllDNSSettingDTO allDNSSettingDTO : allDNSSetting) {
@@ -304,6 +319,7 @@ public class WebApiEJB {
      * @param customerCustomLists
      * @return
      */
+    @Override
     public String putCustomLists(final Integer customerId, final CustomerCustomListDTO[] customerCustomLists) {
         if (customerId == null || customerCustomLists == null) {
             log.log(Level.SEVERE, "putCustomLists: customerId and customerCustomLists cannot be null.");
@@ -451,6 +467,7 @@ public class WebApiEJB {
      * @param feedSettings
      * @return null or result message
      */
+    @Override
     public String putFeedSettings(final String feedUid, final HashMap<Integer, HashMap<String, String>> feedSettings) {
         CacheQuery query;
         int updated = 0;
@@ -506,6 +523,7 @@ public class WebApiEJB {
 
     }
 
+    @Override
     public String postCreateFeedSettings(FeedSettingCreateDTO feedSettingCreate) {
         //TODO
         throw new NotImplementedException();

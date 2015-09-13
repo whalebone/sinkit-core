@@ -5,6 +5,7 @@ import io.searchbox.client.JestClientFactory;
 import io.searchbox.client.config.HttpClientConfig;
 
 import javax.ejb.Singleton;
+import javax.ejb.Stateless;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import java.util.logging.Logger;
@@ -12,7 +13,6 @@ import java.util.logging.Logger;
 /**
  * Created by tkozel on 24.6.15.
  */
-@ApplicationScoped
 @Singleton
 public class JestClientProvider {
 
@@ -31,7 +31,6 @@ public class JestClientProvider {
                     .Builder("http://" + System.getenv("SINKIT_ELASTIC_HOST") + ":" + System.getenv("SINKIT_ELASTIC_PORT"))
                     .multiThreaded(true)
                     .build()) ;
-
 
             this.jestClient = factory.getObject();
         }

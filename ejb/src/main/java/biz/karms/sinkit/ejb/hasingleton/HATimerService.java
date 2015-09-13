@@ -16,6 +16,7 @@
  */
 package biz.karms.sinkit.ejb.hasingleton;
 
+import biz.karms.sinkit.ejb.IoCDeactivator;
 import biz.karms.sinkit.ejb.virustotal.VirusTotalEnricher;
 import org.jboss.as.server.ServerEnvironment;
 import org.jboss.logging.Logger;
@@ -41,6 +42,7 @@ public class HATimerService implements Service<NodeName> {
     // Timers - JNDI
     public static final String JNDI_PATH_SCHEDULER_DEMO = "global/sinkit-ear/sinkit-ejb/SchedulerDemoBean!biz.karms.sinkit.ejb.hasingleton.SchedulerDemo";
     public static final String JNDI_PATH_VIRUSTOTAL = "global/sinkit-ear/sinkit-ejb/VirusTotalEnricherEJB!biz.karms.sinkit.ejb.virustotal.VirusTotalEnricher";
+    public static final String JNDI_PATH_IOCDEACTIVATOR = "global/sinkit-ear/sinkit-ejb/IoCDeactivatorEJB!biz.karms.sinkit.ejb.IoCDeactivator";
 
     public static final ServiceName DEFAULT_SERVICE_NAME = ServiceName.JBOSS.append("sinkit", "ha", "singleton", "default");
     public static final ServiceName QUORUM_SERVICE_NAME = ServiceName.JBOSS.append("sinkit", "ha", "singleton", "quorum");
@@ -74,6 +76,7 @@ public class HATimerService implements Service<NodeName> {
             // Timers - Start
             ((SchedulerDemo) ic.lookup(JNDI_PATH_SCHEDULER_DEMO)).initialize("SCHEDULER_DEMO HASingleton timer @" + this.env.getValue().getNodeName() + " " + new Date());
             ((VirusTotalEnricher) ic.lookup(JNDI_PATH_VIRUSTOTAL)).initialize("VIRUSTOTAL HASingleton timer @" + this.env.getValue().getNodeName() + " " + new Date());
+            ((IoCDeactivator) ic.lookup(JNDI_PATH_IOCDEACTIVATOR)).initialize("IOCDEACTIVATOR HASingleton timer @" + this.env.getValue().getNodeName() + " " + new Date());
         } catch (NamingException e) {
             throw new StartException("Could not initialize timer.", e);
         }
@@ -90,6 +93,7 @@ public class HATimerService implements Service<NodeName> {
                 // Timers - Stop
                 ((SchedulerDemo) ic.lookup(JNDI_PATH_SCHEDULER_DEMO)).stop();
                 ((VirusTotalEnricher) ic.lookup(JNDI_PATH_VIRUSTOTAL)).stop();
+                ((IoCDeactivator) ic.lookup(JNDI_PATH_IOCDEACTIVATOR)).stop();
             } catch (NamingException e) {
                 LOGGER.error("Could not stop timer.", e);
             }

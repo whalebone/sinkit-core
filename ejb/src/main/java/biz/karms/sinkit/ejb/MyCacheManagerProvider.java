@@ -24,13 +24,12 @@ import java.util.logging.Logger;
 /**
  * @author Michal Karm Babacek
  */
-@ApplicationScoped
 @Singleton
 public class MyCacheManagerProvider {
 
     private static final long ENTRY_LIFESPAN = 4 * 24 * 60 * 60 * 1000; //ms
     private static final long ENTRY_LIFESPAN_NEVER = -1;
-    private static final long MAX_ENTRIES_IOC = 5000000;
+    private static final long MAX_ENTRIES_IOC = 10000000;
     private static final long MAX_ENTRIES_RULES = 5000;
 
     @Inject
@@ -45,24 +44,25 @@ public class MyCacheManagerProvider {
             GlobalConfiguration glob = new GlobalConfigurationBuilder().clusteredDefault() // Builds a default clustered
                     // configuration
                     .transport().addProperty(JGroupsTransport.CONFIGURATION_FILE, System.getenv("SINKIT_JGROUPS_NETWORKING")) // provide a specific JGroups configuration
-                            // .transport().addProperty("configurationFile", "jgroups-udp.xml") // provide a specific JGroups configuration
+                    // .transport().addProperty("configurationFile", "jgroups-udp.xml") // provide a specific JGroups configuration
                     .globalJmxStatistics().allowDuplicateDomains(true).enable() // This method enables the jmx statistics of
-                            // the global configuration and allows for duplicate JMX domains
+                    // the global configuration and allows for duplicate JMX domains
                     .build(); // Builds the GlobalConfiguration object
             Configuration loc = new ConfigurationBuilder().jmxStatistics().enable() // Enable JMX statistics
-                    .clustering().cacheMode(CacheMode.DIST_ASYNC) // Set Cache mode to DISTRIBUTED with SYNCHRONOUS replication
-                    .hash().numOwners(2) // Keeps two copies of each key/value pair
+                    //.clustering().cacheMode(CacheMode.DIST_ASYNC)
+                    .clustering().cacheMode(CacheMode.REPL_SYNC)
+                    .hash()//.numOwners(2)
                     .expiration().lifespan(ENTRY_LIFESPAN_NEVER) // Set expiration - cache entries expire after some time (given by
-                            // the lifespan parameter) and are removed from the cache (cluster-wide).
+                    // the lifespan parameter) and are removed from the cache (cluster-wide).
                     .indexing().index(Index.ALL)
                     .eviction().strategy(EvictionStrategy.LRU)
                     .maxEntries(MAX_ENTRIES_IOC)
-                            // .transaction().lockingMode(LockingMode.OPTIMISTIC).transactionManagerLookup(tml)
+                    // .transaction().lockingMode(LockingMode.OPTIMISTIC).transactionManagerLookup(tml)
                     .transaction().transactionMode(TransactionMode.TRANSACTIONAL).lockingMode(LockingMode.OPTIMISTIC)
-                            // TODO: Really? Autocommit? -- Yes, autocommit is true by default.
+                    // TODO: Really? Autocommit? -- Yes, autocommit is true by default.
                     .transactionManagerLookup(new GenericTransactionManagerLookup()).autoCommit(true)
                     .persistence().addStore(JdbcStringBasedStoreConfigurationBuilder.class)
-                            //.persistence().addStore(JdbcBinaryStoreConfigurationBuilder.class)
+                    //.persistence().addStore(JdbcBinaryStoreConfigurationBuilder.class)
                     .fetchPersistentState(true)
                     .ignoreModifications(false)
                     .purgeOnStartup(false)
@@ -83,21 +83,23 @@ public class MyCacheManagerProvider {
             manager.defineConfiguration("RULES_CACHE", new ConfigurationBuilder()
                     .eviction()
                     .maxEntries(MAX_ENTRIES_RULES)
-                            // Rules cannot be evicted ever.
+                    // Rules cannot be evicted ever.
                     .expiration().disableReaper()
                     .expiration().lifespan(ENTRY_LIFESPAN_NEVER)
-                    .clustering().cacheMode(CacheMode.DIST_ASYNC)
-                    .hash().numOwners(2)
+                    //.clustering().cacheMode(CacheMode.DIST_ASYNC)
+                    .clustering().cacheMode(CacheMode.REPL_SYNC)
+                    .hash()//.numOwners(2)
                     .indexing().index(Index.ALL)
                     .build());
             manager.defineConfiguration("CUSTOM_LISTS_CACHE", new ConfigurationBuilder()
                     .eviction()
                     .maxEntries(MAX_ENTRIES_RULES)
-                            // Custom lists cannot be evicted ever.
+                    // Custom lists cannot be evicted ever.
                     .expiration().disableReaper()
                     .expiration().lifespan(ENTRY_LIFESPAN_NEVER)
-                    .clustering().cacheMode(CacheMode.DIST_ASYNC)
-                    .hash().numOwners(2)
+                    //.clustering().cacheMode(CacheMode.DIST_ASYNC)
+                    .clustering().cacheMode(CacheMode.REPL_SYNC)
+                    .hash()//.numOwners(2)
                     .indexing().index(Index.ALL)
                     .build());
             manager.getCache("BLACKLIST_CACHE").start();

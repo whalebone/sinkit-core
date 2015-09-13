@@ -1,5 +1,6 @@
-package biz.karms.sinkit.ejb;
+package biz.karms.sinkit.ejb.impl;
 
+import biz.karms.sinkit.ejb.CacheService;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ioc.IoCRecord;
@@ -20,7 +21,7 @@ import java.util.logging.Logger;
  */
 @Singleton
 @TransactionManagement(TransactionManagementType.BEAN)
-public class ServiceEJB {
+public class CacheServiceEJB implements CacheService {
 
     @Inject
     private Logger log;
@@ -46,6 +47,7 @@ public class ServiceEJB {
 
     //TODO: Batch mode. It is wasteful to operate for 1 single update like this for thousand times.
     @Lock(LockType.WRITE)
+    @Override
     public boolean addToCache(final IoCRecord ioCRecord) {
         if (ioCRecord == null || ioCRecord.getSource() == null || ioCRecord.getClassification() == null || ioCRecord.getFeed() == null) {
             log.log(Level.SEVERE, "addToCache: ioCRecord itself or its source, classification or feed were null. Can't process that.");
@@ -123,6 +125,7 @@ public class ServiceEJB {
     }
 
     @Lock(LockType.WRITE)
+    @Override
     public boolean removeFromCache(final IoCRecord ioCRecord) {
         if (ioCRecord == null || ioCRecord.getSource() == null || ioCRecord.getFeed() == null) {
             log.log(Level.SEVERE, "removeFromCache: ioCRecord itself or its source or its feed were null. Can't process that.");
@@ -193,6 +196,8 @@ public class ServiceEJB {
      *
      * @return true if everything went well.
      */
+    @Lock(LockType.WRITE)
+    @Override
     public boolean dropTheWholeCache() {
         log.log(Level.SEVERE, "dropTheWholeCache: We are dropping the cache. This has severe operational implications.");
         try {

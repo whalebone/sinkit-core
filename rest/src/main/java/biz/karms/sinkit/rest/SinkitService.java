@@ -1,9 +1,9 @@
 package biz.karms.sinkit.rest;
 
+import biz.karms.sinkit.ejb.CoreService;
+import biz.karms.sinkit.ejb.DNSApi;
+import biz.karms.sinkit.ejb.WebApi;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
-import biz.karms.sinkit.ejb.CoreServiceEJB;
-import biz.karms.sinkit.ejb.DNSApiEJB;
-import biz.karms.sinkit.ejb.WebApiEJB;
 import biz.karms.sinkit.ejb.dto.AllDNSSettingDTO;
 import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
 import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
@@ -15,14 +15,12 @@ import biz.karms.sinkit.ioc.IoCRecord;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import org.apache.avro.generic.GenericData;
 
 import javax.ejb.EJB;
 import javax.enterprise.context.SessionScoped;
 import javax.inject.Inject;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
@@ -30,39 +28,39 @@ import java.util.logging.Logger;
 
 /**
  * @author Michal Karm Babacek
- *         <p/>
+ *         <p>
  *         TODO: Validation and filtering :-)
  */
 @SessionScoped
 public class SinkitService implements Serializable {
-    private static final long serialVersionUID = -9406069262471624L;
+    private static final long serialVersionUID = -9126069262471624L;
     public static final String ERR_MSG = "Error, please, check your input.";
 
     @EJB
-    private WebApiEJB webapiEJB;
+    private WebApi webapi;
 
     @EJB
-    private CoreServiceEJB coreService;
+    private CoreService coreService;
 
     @EJB
-    private DNSApiEJB dnsApiEJB;
+    private DNSApi dnsApi;
 
     @Inject
     private Logger log;
 
     String createHelloMessage(final String name) {
-        return new GsonBuilder().create().toJson(webapiEJB.sayHello(name));
+        return new GsonBuilder().create().toJson(webapi.sayHello(name));
     }
 
     String getStats() {
-        return new GsonBuilder().create().toJson(webapiEJB.getStats());
+        return new GsonBuilder().create().toJson(webapi.getStats());
     }
 
     String putBlacklistedRecord(final String json) {
         try {
             log.log(Level.FINE, "Received JSON " + json);
             BlacklistedRecord blacklistedRecord = new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().fromJson(json, BlacklistedRecord.class);
-            blacklistedRecord = webapiEJB.putBlacklistedRecord(blacklistedRecord);
+            blacklistedRecord = webapi.putBlacklistedRecord(blacklistedRecord);
             if (blacklistedRecord != null) {
                 return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(blacklistedRecord);
             } else {
@@ -75,19 +73,19 @@ public class SinkitService implements Serializable {
     }
 
     String getBlacklistedRecord(final String key) {
-        return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapiEJB.getBlacklistedRecord(key));
+        return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapi.getBlacklistedRecord(key));
     }
 
     String getSinkHole(final String client, final String key) {
-        return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(dnsApiEJB.getSinkHole(client, key));
+        return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(dnsApi.getSinkHole(client, key));
     }
 
     String getBlacklistedRecordKeys() {
-        return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapiEJB.getBlacklistedRecordKeys());
+        return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapi.getBlacklistedRecordKeys());
     }
 
     String deleteBlacklistedRecord(final String key) {
-        String message = webapiEJB.deleteBlacklistedRecord(key);
+        String message = webapi.deleteBlacklistedRecord(key);
         if (message == null) {
             return new GsonBuilder().create().toJson(ERR_MSG);
         }
@@ -95,15 +93,15 @@ public class SinkitService implements Serializable {
     }
 
     String getRules(final String clientIPAddress) {
-        return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapiEJB.getRules(clientIPAddress));
+        return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapi.getRules(clientIPAddress));
     }
 
     String getRuleKeys() {
-        return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapiEJB.getRuleKeys());
+        return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapi.getRuleKeys());
     }
 
     String deleteRule(final String cidrAddress) {
-        String message = webapiEJB.deleteRule(cidrAddress);
+        String message = webapi.deleteRule(cidrAddress);
         if (message == null) {
             return new GsonBuilder().create().toJson(ERR_MSG);
         }
@@ -137,7 +135,7 @@ public class SinkitService implements Serializable {
             if (customerDNSSetting == null) {
                 return new GsonBuilder().create().toJson(ERR_MSG);
             }
-            return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapiEJB.putDNSClientSettings(customerId, customerDNSSetting));
+            return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapi.putDNSClientSettings(customerId, customerDNSSetting));
         } catch (Exception e) {
             log.log(Level.SEVERE, "putDNSClientSettings", e);
             return new GsonBuilder().create().toJson(ERR_MSG);
@@ -151,7 +149,7 @@ public class SinkitService implements Serializable {
             if (allDNSSetting == null) {
                 return new GsonBuilder().create().toJson(ERR_MSG);
             }
-            return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapiEJB.postAllDNSClientSettings(allDNSSetting));
+            return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapi.postAllDNSClientSettings(allDNSSetting));
         } catch (Exception e) {
             log.log(Level.SEVERE, "postAllDNSClientSettings", e);
             return new GsonBuilder().create().toJson(ERR_MSG);
@@ -165,7 +163,7 @@ public class SinkitService implements Serializable {
             if (customerCustomLists == null) {
                 return new GsonBuilder().create().toJson(ERR_MSG);
             }
-            return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapiEJB.putCustomLists(customerId, customerCustomLists));
+            return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapi.putCustomLists(customerId, customerCustomLists));
         } catch (Exception e) {
             log.log(Level.SEVERE, "putCustomLists", e);
             return new GsonBuilder().create().toJson(ERR_MSG);
@@ -180,7 +178,7 @@ public class SinkitService implements Serializable {
             if (feedSettings == null) {
                 return new GsonBuilder().create().toJson(ERR_MSG);
             }
-            return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapiEJB.putFeedSettings(feedUid, feedSettings));
+            return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapi.putFeedSettings(feedUid, feedSettings));
         } catch (Exception e) {
             log.log(Level.SEVERE, "putFeedSettings", e);
             return new GsonBuilder().create().toJson(ERR_MSG);
@@ -194,7 +192,7 @@ public class SinkitService implements Serializable {
             if (feedSettingCreate == null) {
                 return new GsonBuilder().create().toJson(ERR_MSG);
             }
-            return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapiEJB.postCreateFeedSettings(feedSettingCreate));
+            return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapi.postCreateFeedSettings(feedSettingCreate));
         } catch (Exception e) {
             log.log(Level.SEVERE, "postCreateFeedSettings", e);
             return new GsonBuilder().create().toJson(ERR_MSG);
@@ -204,7 +202,7 @@ public class SinkitService implements Serializable {
     void addEventLogRecord(final String json) throws ArchiveException {
         EventLogRecord logRec = new GsonBuilder().create().fromJson(json, EventLogRecord.class);
         List<String> ids = new ArrayList<>();
-        for (MatchedIoC ioc: logRec.getMatchedIocs()) {
+        for (MatchedIoC ioc : logRec.getMatchedIocs()) {
             ids.add(ioc.getDocumentId());
         }
         String[] idss = ids.toArray(new String[ids.size()]);

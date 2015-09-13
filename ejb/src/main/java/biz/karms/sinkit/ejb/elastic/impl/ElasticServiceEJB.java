@@ -1,5 +1,7 @@
-package biz.karms.sinkit.ejb.elastic;
+package biz.karms.sinkit.ejb.elastic.impl;
 
+import biz.karms.sinkit.ejb.elastic.ElasticService;
+import biz.karms.sinkit.ejb.elastic.Indexable;
 import biz.karms.sinkit.exception.ArchiveException;
 import io.searchbox.client.JestClient;
 import io.searchbox.client.JestResult;
@@ -12,6 +14,7 @@ import io.searchbox.params.Parameters;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.Singleton;
+import javax.ejb.Stateless;
 import javax.inject.Inject;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -22,7 +25,7 @@ import java.util.logging.Logger;
  * Created by tkozel on 4.8.15.
  */
 @Singleton
-public class ElasticServiceEJB {
+public class ElasticServiceEJB implements ElasticService {
 
     private static final String PARAMETER_FROM = "from";
     private static final int DEF_LIMIT = 1000;
@@ -42,10 +45,6 @@ public class ElasticServiceEJB {
         }
     }
 
-    public JestClient getElasticClient() {
-        return elasticClient;
-    }
-
     /**
      * Searches index of given type using query for single object of class T
      *
@@ -57,9 +56,8 @@ public class ElasticServiceEJB {
      * @return Found object of class T
      * @throws ArchiveException when communication with elastic went wrong or more than single hit is found
      */
-    public <T extends Indexable> T searchForSingleHit(
-            String query, String index, String type, Class<T> clazz) throws ArchiveException {
-
+    @Override
+    public <T extends Indexable> T searchForSingleHit(String query, String index, String type, Class<T> clazz) throws ArchiveException {
         List<T> hits = this.search(query, index, type, clazz);
 
         if (hits.isEmpty()) return null;
@@ -70,9 +68,8 @@ public class ElasticServiceEJB {
         return hits.get(0);
     }
 
-    public <T extends Indexable> T getDocumentById(
-            String id, String index, String type, Class<T> clazz) throws ArchiveException {
-
+    @Override
+    public <T extends Indexable> T getDocumentById(String id, String index, String type, Class<T> clazz) throws ArchiveException {
         JestResult result;
         T document;
 
@@ -107,9 +104,8 @@ public class ElasticServiceEJB {
      * @return Found objects of class T
      * @throws ArchiveException when communication with elastic went wrong
      */
-    public <T extends Indexable> List<T> search(String query, String index, String type, Class<T> clazz)
-            throws ArchiveException {
-
+    @Override
+    public <T extends Indexable> List<T> search(String query, String index, String type, Class<T> clazz) throws ArchiveException {
         return search(query, index, type, 0, DEF_LIMIT, clazz);
     }
 
@@ -127,9 +123,8 @@ public class ElasticServiceEJB {
      * @return Found objects of class T
      * @throws ArchiveException when communication with elastic went wrong
      */
-    public <T extends Indexable> List<T> search(
-            String query, String index, String type, int from, int size, Class<T> clazz) throws ArchiveException {
-
+    @Override
+    public <T extends Indexable> List<T> search(String query, String index, String type, int from, int size, Class<T> clazz) throws ArchiveException {
         Search search = new Search.Builder(query)
                 .addIndex(index)
                 .addType(type)
@@ -175,9 +170,8 @@ public class ElasticServiceEJB {
      * @return indexed object
      * @throws ArchiveException when communication with Elastic Search server went wrong
      */
-    public <T extends Indexable> T index(T document, String index, String type)
-            throws ArchiveException {
-
+    @Override
+    public <T extends Indexable> T index(T document, String index, String type) throws ArchiveException {
         Index indexRequest = new Index.Builder(document)
                 .index(index)
                 .type(type)

@@ -1,22 +1,22 @@
-package biz.karms.sinkit.ejb;
+package biz.karms.sinkit.ejb.impl;
 
-import biz.karms.sinkit.ejb.elastic.ElasticServiceEJB;
+import biz.karms.sinkit.ejb.ArchiveService;
+import biz.karms.sinkit.ejb.elastic.ElasticService;
 import biz.karms.sinkit.eventlog.EventLogRecord;
 import biz.karms.sinkit.eventlog.VirusTotalRequestStatus;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.ioc.IoCRecord;
 import com.google.gson.GsonBuilder;
-import io.searchbox.client.JestResult;
-import io.searchbox.core.Update;
-import io.searchbox.params.Parameters;
 
 import javax.annotation.PostConstruct;
+import javax.ejb.EJB;
+import javax.ejb.Lock;
+import javax.ejb.LockType;
 import javax.ejb.Singleton;
 import javax.inject.Inject;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -24,7 +24,7 @@ import java.util.logging.Logger;
  * Created by tkozel on 24.6.15.
  */
 @Singleton
-public class ArchiveServiceEJB {
+public class ArchiveServiceEJB implements ArchiveService {
 
     public static final String ELASTIC_IOC_INDEX = "iocs";
     public static final String ELASTIC_IOC_TYPE = "intelmq";
@@ -34,8 +34,8 @@ public class ArchiveServiceEJB {
     @Inject
     private Logger log;
 
-    @Inject
-    private ElasticServiceEJB elasticService;
+    @EJB
+    private ElasticService elasticService;
 
     @PostConstruct
     public void setup() {
@@ -44,9 +44,9 @@ public class ArchiveServiceEJB {
         }
     }
 
-    public IoCRecord findActiveIoCRecordBySourceId(
-            String sourceId, String classificationType, String feedName) throws ArchiveException {
-
+    @Lock(LockType.READ)
+    @Override
+    public IoCRecord findActiveIoCRecordBySourceId(String sourceId, String classificationType, String feedName) throws ArchiveException {
 //        log.info("searching elastic [ source.id : " + sourceId.replace("\\","\\\\") + ", " +
 //                "classification.type : " + classificationType.replace("\\","\\\\") + ", " +
 //                "feed.name : " + feedName.replace("\\","\\\\") + "]");
@@ -69,8 +69,9 @@ public class ArchiveServiceEJB {
                 ELASTIC_IOC_TYPE, IoCRecord.class);
     }
 
+    @Lock(LockType.READ)
+    @Override
     public List<IoCRecord> findIoCsForDeactivation(int hours) throws ArchiveException {
-
         //log.info("Searching archive for active IoCs with seen.last older than " + hours + " hours.");
 
         String query = "{\n" +
@@ -97,13 +98,15 @@ public class ArchiveServiceEJB {
                 ELASTIC_IOC_TYPE, IoCRecord.class);
     }
 
+    @Lock(LockType.WRITE)
+    @Override
     public IoCRecord archiveIoCRecord(IoCRecord ioc) throws ArchiveException {
-        return elasticService.index(ioc, ELASTIC_IOC_INDEX,
-                ELASTIC_IOC_TYPE);
+        return elasticService.index(ioc, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE);
     }
 
+    @Lock(LockType.WRITE)
+    @Override
     public IoCRecord deactivateRecord(IoCRecord ioc) throws ArchiveException {
-
         ioc.getTime().setDeactivated(Calendar.getInstance().getTime());
         ioc.setActive(false);
 
@@ -145,19 +148,18 @@ public class ArchiveServiceEJB {
         return ioc;
     }
 
+    @Lock(LockType.READ)
+    @Override
     public EventLogRecord archiveEventLogRecord(EventLogRecord logRecord) throws ArchiveException {
-
         DateFormat df = new SimpleDateFormat("YYYY.MM.dd");
         String index = ELASTIC_LOG_INDEX + "-" + df.format(logRecord.getLogged());
-
-        return elasticService.index(logRecord, index,
-                ELASTIC_LOG_TYPE);
+        return elasticService.index(logRecord, index, ELASTIC_LOG_TYPE);
     }
 
+    @Lock(LockType.READ)
+    @Override
     public List<IoCRecord> getActiveIoCs(int from, int size) throws ArchiveException {
-
         //log.info("Searching archive for active IoCs with seen.last older than " + hours + " hours.");
-
         String query = "{\n" +
                 "   \"query\": {\n" +
                 "               \"term\": {\n" +
@@ -170,15 +172,16 @@ public class ArchiveServiceEJB {
                 ELASTIC_IOC_TYPE, from, size, IoCRecord.class);
     }
 
+    @Lock(LockType.READ)
+    @Override
     public IoCRecord getIoCRecordById(String id) throws ArchiveException {
-
         return elasticService.getDocumentById(id, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, IoCRecord.class);
     }
 
+    @Lock(LockType.READ)
+    @Override
     public EventLogRecord getLogRecordWaitingForVTScan() throws ArchiveException {
-
         String status = new GsonBuilder().create().toJson(VirusTotalRequestStatus.WAITING);
-
         String query = "{\n" +
                 "   \"query\": {\n" +
                 "               \"term\": {\n" +
@@ -197,8 +200,9 @@ public class ArchiveServiceEJB {
         return logRecords.get(0);
     }
 
+    @Lock(LockType.READ)
+    @Override
     public EventLogRecord getLogRecordWaitingForVTReport() throws ArchiveException {
-
         String status = new GsonBuilder().create().toJson(VirusTotalRequestStatus.WAITING_FOR_REPORT);
 
         String query = "{\n" +

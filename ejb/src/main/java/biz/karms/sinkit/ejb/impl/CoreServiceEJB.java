@@ -1,7 +1,10 @@
-package biz.karms.sinkit.ejb;
+package biz.karms.sinkit.ejb.impl;
 
+import biz.karms.sinkit.ejb.ArchiveService;
+import biz.karms.sinkit.ejb.CacheBuilder;
+import biz.karms.sinkit.ejb.CacheService;
+import biz.karms.sinkit.ejb.CoreService;
 import biz.karms.sinkit.ejb.util.IoCValidator;
-import biz.karms.sinkit.ejb.virustotal.impl.VirusTotalEnricherEJB;
 import biz.karms.sinkit.eventlog.*;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCValidationException;
@@ -12,9 +15,7 @@ import biz.karms.sinkit.ioc.IoCSourceIdType;
 import biz.karms.sinkit.ioc.util.IoCSourceIdBuilder;
 
 import javax.annotation.PostConstruct;
-import javax.ejb.AsyncResult;
-import javax.ejb.Asynchronous;
-import javax.ejb.Singleton;
+import javax.ejb.*;
 import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -27,32 +28,32 @@ import java.util.logging.Logger;
  * Created by tkozel on 25.6.15.
  */
 @Singleton
-public class CoreServiceEJB {
+public class CoreServiceEJB implements CoreService {
 
     public static final int IOC_ACTIVE_HOURS = 72;
 
     @Inject
     private Logger log;
 
-    @Inject
-    private ArchiveServiceEJB archiveService;
+    @EJB
+    private ArchiveService archiveService;
 
-    @Inject
-    private ServiceEJB cacheService;
+    @EJB
+    private CacheService cacheService;
 
-    @Inject
-    private CacheBuilderEJB cacheBuilder;
+    @EJB
+    private CacheBuilder cacheBuilder;
 
     @PostConstruct
     public void setup() {
         if (log == null || archiveService == null || cacheService == null || cacheBuilder == null) {
-            throw new IllegalArgumentException("Logger, ArchiveServiceEJB, ServiceEJB, CacheBuilderEJB must be injected.");
+            throw new IllegalArgumentException("Logger, ArchiveServiceEJB, CacheServiceEJB, CacheBuilderEJB must be injected.");
         }
     }
 
-    public synchronized IoCRecord processIoCRecord(IoCRecord receivedIoc)
-            throws ArchiveException, IoCValidationException {
-
+    @Lock(LockType.WRITE)
+    @Override
+    public IoCRecord processIoCRecord(IoCRecord receivedIoc) throws ArchiveException, IoCValidationException {
         // validate ioc
         IoCValidator.validateIoCRecord(receivedIoc, IOC_ACTIVE_HOURS);
 
@@ -108,7 +109,9 @@ public class CoreServiceEJB {
         return ioc;
     }
 
-    public synchronized int deactivateIocs() throws ArchiveException {
+    @Lock(LockType.WRITE)
+    @Override
+    public int deactivateIocs() throws ArchiveException {
         log.info("Deactivation job started");
         int deactivated = 0;
         List<IoCRecord> iocs;
@@ -135,6 +138,8 @@ public class CoreServiceEJB {
     }
 
     @Asynchronous
+    @Lock(LockType.READ)
+    @Override
     public Future<EventLogRecord> logEvent(
             EventLogAction action,
             String clientUid,
@@ -189,7 +194,9 @@ public class CoreServiceEJB {
         return new AsyncResult<>(logRecord);
     }
 
-    public synchronized boolean runCacheRebuilding() {
+    @Lock(LockType.WRITE)
+    @Override
+    public boolean runCacheRebuilding() {
 
         if (cacheBuilder.isCacheRebuildRunning()) {
             log.info("Cache rebuilding still in process -> skipping");
@@ -200,6 +207,8 @@ public class CoreServiceEJB {
         return true;
     }
 
+    @Lock(LockType.READ)
+    @Override
     public void enrich() {
         throw new UnsupportedOperationException("VirusTotal enricher is handled by Clustered HA Singleton Timer Service. This API call is currently disabled.");
     }

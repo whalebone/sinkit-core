@@ -1,5 +1,6 @@
-package biz.karms.sinkit.ejb.virustotal;
+package biz.karms.sinkit.ejb.virustotal.impl;
 
+import biz.karms.sinkit.ejb.virustotal.VirusTotalService;
 import com.kanishka.virustotal.dto.FileScanReport;
 import com.kanishka.virustotal.dto.ScanInfo;
 import com.kanishka.virustotal.exception.InvalidArguentsException;
@@ -8,6 +9,7 @@ import com.kanishka.virustotal.exception.UnauthorizedAccessException;
 import com.kanishka.virustotalv2.VirustotalPublicV2;
 
 import javax.ejb.Singleton;
+import javax.ejb.Stateless;
 import javax.inject.Inject;
 import java.io.IOException;
 import java.text.DateFormat;
@@ -19,8 +21,8 @@ import java.util.logging.Logger;
 /**
  * Created by tkozel on 31.7.15.
  */
-@Singleton
-public class VirusTotalServiceEJB {
+@Stateless
+public class VirusTotalServiceEJB implements VirusTotalService {
 
     private static final String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
 
@@ -30,9 +32,8 @@ public class VirusTotalServiceEJB {
     @Inject
     private VirustotalPublicV2 virusTotalClient;
 
-    public ScanInfo scanUrl(String url) throws QuotaExceededException,
-            InvalidArguentsException, UnauthorizedAccessException, IOException {
-
+    @Override
+    public ScanInfo scanUrl(String url) throws QuotaExceededException, InvalidArguentsException, UnauthorizedAccessException, IOException {
         log.finest("VT scanning URL: " + url);
         ScanInfo[] scanInfoArr = virusTotalClient.scanUrls(new String[]{url});
 //        for (ScanInfo scanInformation : scanInfoArr) {
@@ -51,15 +52,14 @@ public class VirusTotalServiceEJB {
         return scanInfoArr[0];
     }
 
-    public FileScanReport getUrlScanReport(String url) throws QuotaExceededException,
-            InvalidArguentsException, UnauthorizedAccessException, IOException {
-
+    @Override
+    public FileScanReport getUrlScanReport(String url) throws QuotaExceededException, InvalidArguentsException, UnauthorizedAccessException, IOException {
         log.finest("VT getting report of URL scan for UR: " + url);
         FileScanReport[] reports = virusTotalClient.getUrlScanReport(new String[]{url}, false);
-
         return reports[0];
     }
 
+    @Override
     public Date parseDate(String date) throws ParseException {
         DateFormat df = new SimpleDateFormat(DATE_FORMAT);
         return df.parse(date);

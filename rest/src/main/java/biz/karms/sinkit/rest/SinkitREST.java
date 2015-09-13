@@ -114,18 +114,16 @@ public class SinkitREST {
     @POST
     @Path("/blacklist/ioc/")
     @Produces({"application/json;charset=UTF-8"})
-    //@Consumes({"application/json;charset=UTF-8"})
+    @Consumes({"application/json;charset=UTF-8"})
     public Response putIoCRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, String ioc) {
-
         if (!stupidAuthenticator.isAuthenticated(token)) {
             return Response.status(Response.Status.UNAUTHORIZED).entity(AUTH_FAIL).build();
         }
-
         try {
             String response = sinkitService.processIoCRecord(ioc);
             return Response.status(Response.Status.OK).entity(response).build();
         } catch (IoCValidationException | JsonSyntaxException ex) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(ex.getMessage()).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(ex.getMessage()+" JSON was:"+ioc).build();
         } catch (Exception ex) {
             log.severe("Processiong IoC went wrong: " + ex.getMessage());
             log.severe("IoC: " + ioc);

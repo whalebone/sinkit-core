@@ -13,7 +13,6 @@ import java.util.logging.Logger;
 /**
  * Created by tkozel on 31.7.15.
  */
-@ApplicationScoped
 @Singleton
 public class VirusTotalClientProvider {
 

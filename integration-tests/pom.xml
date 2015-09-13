@@ -95,6 +95,14 @@
             <version>${htmlunit.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.eu.ingwar.tools</groupId>
+            <artifactId>arquillian-suite-extension</artifactId>
+            <version>${arquillian.extension.version}</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
