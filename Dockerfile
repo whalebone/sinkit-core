@@ -1,5 +1,5 @@
 FROM fedora:22
-MAINTAINER Michal Karm Babacek <karm@redhat.com>
+MAINTAINER Michal Karm Babacek <karm@email.com>
 LABEL description="Codename Feed: Sinkit Core POC"
 
 ENV DEPS            java-1.8.0-openjdk-devel.x86_64 unzip wget gawk
@@ -24,7 +24,7 @@ ADD ear/target/sinkit-ear.ear /opt/sinkit/wildfly-${WILDFLY_VERSION}/standalone/
 # Workaround for https://github.com/docker/docker/issues/5509
 RUN ln -s /opt/sinkit/wildfly-${WILDFLY_VERSION} /opt/sinkit/wildfly
 
-# TODO: Fix JGroups, remove garbage...
+# TODO: Fix remove garbage...
 EXPOSE 8080/tcp
 EXPOSE 46655/udp
 EXPOSE 7500/udp
@@ -33,12 +33,15 @@ EXPOSE 54200/udp
 EXPOSE 45688/udp
 EXPOSE 7800/udp
 
-ENV WF_CONFIG /opt/sinkit/wildfly/standalone/configuration/standalone.xml
+ENV WF_CONFIG /opt/sinkit/wildfly/standalone/configuration/standalone-ha.xml
 
 # Set NIC, this makes the ugly 0.0.0.0 work.
-# Yeees, editing an XML file with AWK :-)
+# Yikes, editing an XML file with AWK :-)
 RUN awk '{ if ( $0 ~ /<inet-address value=/ ) { printf( "%s\n%s\n", $0, "        <nic name=\"@SINKITNIC@\"/>"); } else {print $0; } }' \
    ${WF_CONFIG} > ${WF_CONFIG}.tmp && mv ${WF_CONFIG}.tmp ${WF_CONFIG}
+
+RUN awk '/periodic-rotating-file-handler/ {f=1} !f; /\/periodic-rotating-file-handler/ {print "<size-rotating-file-handler name=\"FILE\"><rotate-size value=\"1G\"/><max-backup-index value=\"4\"/><level name=\"INFO\"/></size-rotating-file-handler>"; f=0}' \
+${WF_CONFIG} > ${WF_CONFIG}.tmp && mv ${WF_CONFIG}.tmp ${WF_CONFIG}
 
 RUN echo 'JAVA_OPTS="\
  -server \
