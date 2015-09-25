@@ -21,6 +21,8 @@ import org.infinispan.query.SearchManager;
 import javax.annotation.PostConstruct;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
+import javax.ejb.TransactionManagement;
+import javax.ejb.TransactionManagementType;
 import javax.inject.Inject;
 import java.net.UnknownHostException;
 import java.util.ArrayList;

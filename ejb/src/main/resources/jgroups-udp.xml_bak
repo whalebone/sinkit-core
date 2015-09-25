@@ -16,9 +16,9 @@
 -->
 <config xmlns="urn:org:jgroups"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="urn:org:jgroups file:schema/JGroups-2.8.xsd">
+        xsi:schemaLocation="urn:org:jgroups http://www.jgroups.org/schema/jgroups.xsd">
+    <!-- bind_addr="${jgroups.bind_addr:127.0.0.1}" -->
     <UDP
-            bind_addr="${jgroups.bind_addr:127.0.0.1}"
             mcast_addr="${jgroups.udp.mcast_addr:228.6.7.8}"
             mcast_port="${jgroups.udp.mcast_port:46655}"
             tos="8"
@@ -57,15 +57,15 @@
     <MERGE2 max_interval="30000" min_interval="10000"/>
     <FD_SOCK/>
     <FD_ALL/>
-    <BARRIER />
-    <pbcast.NAKACK  exponential_backoff="0"
-                    use_mcast_xmit="true"
-                    retransmit_timeout="300,600,1200"
-                    discard_delivered_msgs="true"/>
+    <BARRIER/>
+    <pbcast.NAKACK exponential_backoff="0"
+                   use_mcast_xmit="true"
+                   retransmit_timeout="300,600,1200"
+                   discard_delivered_msgs="true"/>
     <UNICAST timeout="300,600,1200"/>
     <pbcast.STABLE stability_delay="1000" desired_avg_gossip="50000" max_bytes="1000000"/>
     <pbcast.GMS print_local_addr="false" join_timeout="3000" view_bundling="true"/>
     <UFC max_credits="500000" min_threshold="0.20"/>
     <MFC max_credits="500000" min_threshold="0.20"/>
-    <FRAG2 frag_size="60000"  />
+    <FRAG2 frag_size="60000"/>
 </config>

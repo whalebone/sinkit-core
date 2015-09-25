@@ -14,7 +14,8 @@ import java.util.logging.Logger;
 /**
  * Created by tkozel on 29.6.15.
  */
-@Singleton
+//TODO
+@Stateless
 @AccessTimeout(value = 40, unit = TimeUnit.MINUTES)
 public class IoCDeactivatorEJB implements IoCDeactivator {
 

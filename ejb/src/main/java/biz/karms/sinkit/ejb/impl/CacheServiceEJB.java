@@ -19,7 +19,7 @@ import java.util.logging.Logger;
 /**
  * @author Michal Karm Babacek
  */
-@Singleton
+@Stateless
 @TransactionManagement(TransactionManagementType.BEAN)
 public class CacheServiceEJB implements CacheService {
 
@@ -46,7 +46,6 @@ public class CacheServiceEJB implements CacheService {
     }
 
     //TODO: Batch mode. It is wasteful to operate for 1 single update like this for thousand times.
-    @Lock(LockType.WRITE)
     @Override
     public boolean addToCache(final IoCRecord ioCRecord) {
         if (ioCRecord == null || ioCRecord.getSource() == null || ioCRecord.getClassification() == null || ioCRecord.getFeed() == null) {
@@ -124,7 +123,6 @@ public class CacheServiceEJB implements CacheService {
         return true;
     }
 
-    @Lock(LockType.WRITE)
     @Override
     public boolean removeFromCache(final IoCRecord ioCRecord) {
         if (ioCRecord == null || ioCRecord.getSource() == null || ioCRecord.getFeed() == null) {
@@ -196,7 +194,6 @@ public class CacheServiceEJB implements CacheService {
      *
      * @return true if everything went well.
      */
-    @Lock(LockType.WRITE)
     @Override
     public boolean dropTheWholeCache() {
         log.log(Level.SEVERE, "dropTheWholeCache: We are dropping the cache. This has severe operational implications.");

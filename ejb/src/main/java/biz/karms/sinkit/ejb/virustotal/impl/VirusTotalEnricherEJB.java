@@ -28,8 +28,8 @@ import java.util.logging.Logger;
 /**
  * Created by tkozel on 31.7.15.
  */
-@Singleton
-@AccessTimeout(value = 1, unit = TimeUnit.MINUTES)
+//TODO
+@Stateless
 public class VirusTotalEnricherEJB implements VirusTotalEnricher {
 
     // we can call the Virus Total API only 4 times per minute

@@ -27,7 +27,7 @@ import java.util.logging.Logger;
 /**
  * Created by tkozel on 25.6.15.
  */
-@Singleton
+@Stateless
 public class CoreServiceEJB implements CoreService {
 
     public static final int IOC_ACTIVE_HOURS = 72;
@@ -51,7 +51,6 @@ public class CoreServiceEJB implements CoreService {
         }
     }
 
-    @Lock(LockType.WRITE)
     @Override
     public IoCRecord processIoCRecord(IoCRecord receivedIoc) throws ArchiveException, IoCValidationException {
         // validate ioc
@@ -109,7 +108,6 @@ public class CoreServiceEJB implements CoreService {
         return ioc;
     }
 
-    @Lock(LockType.WRITE)
     @Override
     public int deactivateIocs() throws ArchiveException {
         log.info("Deactivation job started");
@@ -138,7 +136,6 @@ public class CoreServiceEJB implements CoreService {
     }
 
     @Asynchronous
-    @Lock(LockType.READ)
     @Override
     public Future<EventLogRecord> logEvent(
             EventLogAction action,
@@ -194,7 +191,6 @@ public class CoreServiceEJB implements CoreService {
         return new AsyncResult<>(logRecord);
     }
 
-    @Lock(LockType.WRITE)
     @Override
     public boolean runCacheRebuilding() {
 
@@ -207,7 +203,6 @@ public class CoreServiceEJB implements CoreService {
         return true;
     }
 
-    @Lock(LockType.READ)
     @Override
     public void enrich() {
         throw new UnsupportedOperationException("VirusTotal enricher is handled by Clustered HA Singleton Timer Service. This API call is currently disabled.");

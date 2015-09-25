@@ -40,7 +40,7 @@ ENV WF_CONFIG /opt/sinkit/wildfly/standalone/configuration/standalone-ha.xml
 RUN awk '{ if ( $0 ~ /<inet-address value=/ ) { printf( "%s\n%s\n", $0, "        <nic name=\"@SINKITNIC@\"/>"); } else {print $0; } }' \
    ${WF_CONFIG} > ${WF_CONFIG}.tmp && mv ${WF_CONFIG}.tmp ${WF_CONFIG}
 
-RUN awk '/periodic-rotating-file-handler/ {f=1} !f; /\/periodic-rotating-file-handler/ {print "<size-rotating-file-handler name=\"FILE\"><rotate-size value=\"1G\"/><max-backup-index value=\"4\"/><level name=\"INFO\"/></size-rotating-file-handler>"; f=0}' \
+RUN awk '/periodic-rotating-file-handler/ {f=1} !f; /\/periodic-rotating-file-handler/ {print "<size-rotating-file-handler name=\"FILE\"><rotate-size value=\"500M\"/><max-backup-index value=\"4\"/><level name=\"INFO\"/></size-rotating-file-handler>"; f=0}' \
 ${WF_CONFIG} > ${WF_CONFIG}.tmp && mv ${WF_CONFIG}.tmp ${WF_CONFIG}
 
 RUN echo 'JAVA_OPTS="\

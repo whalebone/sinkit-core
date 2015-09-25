@@ -18,8 +18,7 @@ import java.util.logging.Logger;
  * <p>
  * Maintains state
  */
-@Singleton
-@AccessTimeout(value = 5, unit = TimeUnit.MINUTES)
+@Stateless
 public class CacheBuilderEJB implements CacheBuilder {
 
     private AtomicBoolean cacheRebuilding = new AtomicBoolean(false);
@@ -40,7 +39,6 @@ public class CacheBuilderEJB implements CacheBuilder {
     }
 
     @Asynchronous
-    @Lock(LockType.READ)
     @Override
     public Future<Integer> runCacheRebuilding() throws ConcurrentAccessException {
 

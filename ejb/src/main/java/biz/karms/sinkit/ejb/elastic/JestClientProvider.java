@@ -13,7 +13,7 @@ import java.util.logging.Logger;
 /**
  * Created by tkozel on 24.6.15.
  */
-@Singleton
+@ApplicationScoped
 public class JestClientProvider {
 
     @Inject

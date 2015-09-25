@@ -13,6 +13,9 @@ import javax.ejb.EJB;
 import javax.ejb.Lock;
 import javax.ejb.LockType;
 import javax.ejb.Singleton;
+import javax.ejb.Stateless;
+import javax.ejb.TransactionManagement;
+import javax.ejb.TransactionManagementType;
 import javax.inject.Inject;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -23,7 +26,7 @@ import java.util.logging.Logger;
 /**
  * Created by tkozel on 24.6.15.
  */
-@Singleton
+@Stateless
 public class ArchiveServiceEJB implements ArchiveService {
 
     public static final String ELASTIC_IOC_INDEX = "iocs";
@@ -44,7 +47,6 @@ public class ArchiveServiceEJB implements ArchiveService {
         }
     }
 
-    @Lock(LockType.READ)
     @Override
     public IoCRecord findActiveIoCRecordBySourceId(String sourceId, String classificationType, String feedName) throws ArchiveException {
 //        log.info("searching elastic [ source.id : " + sourceId.replace("\\","\\\\") + ", " +
@@ -69,7 +71,6 @@ public class ArchiveServiceEJB implements ArchiveService {
                 ELASTIC_IOC_TYPE, IoCRecord.class);
     }
 
-    @Lock(LockType.READ)
     @Override
     public List<IoCRecord> findIoCsForDeactivation(int hours) throws ArchiveException {
         //log.info("Searching archive for active IoCs with seen.last older than " + hours + " hours.");
@@ -98,13 +99,11 @@ public class ArchiveServiceEJB implements ArchiveService {
                 ELASTIC_IOC_TYPE, IoCRecord.class);
     }
 
-    @Lock(LockType.WRITE)
     @Override
     public IoCRecord archiveIoCRecord(IoCRecord ioc) throws ArchiveException {
         return elasticService.index(ioc, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE);
     }
 
-    @Lock(LockType.WRITE)
     @Override
     public IoCRecord deactivateRecord(IoCRecord ioc) throws ArchiveException {
         ioc.getTime().setDeactivated(Calendar.getInstance().getTime());
@@ -148,7 +147,6 @@ public class ArchiveServiceEJB implements ArchiveService {
         return ioc;
     }
 
-    @Lock(LockType.READ)
     @Override
     public EventLogRecord archiveEventLogRecord(EventLogRecord logRecord) throws ArchiveException {
         DateFormat df = new SimpleDateFormat("YYYY.MM.dd");
@@ -156,7 +154,6 @@ public class ArchiveServiceEJB implements ArchiveService {
         return elasticService.index(logRecord, index, ELASTIC_LOG_TYPE);
     }
 
-    @Lock(LockType.READ)
     @Override
     public List<IoCRecord> getActiveIoCs(int from, int size) throws ArchiveException {
         //log.info("Searching archive for active IoCs with seen.last older than " + hours + " hours.");
@@ -172,13 +169,11 @@ public class ArchiveServiceEJB implements ArchiveService {
                 ELASTIC_IOC_TYPE, from, size, IoCRecord.class);
     }
 
-    @Lock(LockType.READ)
     @Override
     public IoCRecord getIoCRecordById(String id) throws ArchiveException {
         return elasticService.getDocumentById(id, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, IoCRecord.class);
     }
 
-    @Lock(LockType.READ)
     @Override
     public EventLogRecord getLogRecordWaitingForVTScan() throws ArchiveException {
         String status = new GsonBuilder().create().toJson(VirusTotalRequestStatus.WAITING);
@@ -200,7 +195,6 @@ public class ArchiveServiceEJB implements ArchiveService {
         return logRecords.get(0);
     }
 
-    @Lock(LockType.READ)
     @Override
     public EventLogRecord getLogRecordWaitingForVTReport() throws ArchiveException {
         String status = new GsonBuilder().create().toJson(VirusTotalRequestStatus.WAITING_FOR_REPORT);

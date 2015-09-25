@@ -24,7 +24,7 @@ import java.util.logging.Logger;
 /**
  * Created by tkozel on 4.8.15.
  */
-@Singleton
+@Stateless
 public class ElasticServiceEJB implements ElasticService {
 
     private static final String PARAMETER_FROM = "from";
