@@ -1,14 +1,14 @@
 package biz.karms.sinkit.ejb.impl;
 
 import biz.karms.sinkit.ejb.CacheService;
+import biz.karms.sinkit.ejb.MyCacheManagerProvider;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ioc.IoCRecord;
 import org.infinispan.Cache;
-import org.infinispan.manager.DefaultCacheManager;
 
 import javax.annotation.PostConstruct;
-import javax.ejb.*;
+import javax.ejb.Stateless;
 import javax.inject.Inject;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -20,21 +20,21 @@ import java.util.logging.Logger;
  * @author Michal Karm Babacek
  */
 @Stateless
-@TransactionManagement(TransactionManagementType.BEAN)
+//@TransactionManagement(TransactionManagementType.BEAN)
 public class CacheServiceEJB implements CacheService {
 
     @Inject
     private Logger log;
 
     @Inject
-    private DefaultCacheManager m;
+    private MyCacheManagerProvider m;
 
     private Cache<String, BlacklistedRecord> blacklistCache = null;
 
     private Cache<String, Rule> ruleCache = null;
 
-    @Inject
-    private javax.transaction.UserTransaction utx;
+    //@Inject
+    //private javax.transaction.UserTransaction utx;
 
     @PostConstruct
     public void setup() {
@@ -50,7 +50,7 @@ public class CacheServiceEJB implements CacheService {
     public boolean addToCache(final IoCRecord ioCRecord) {
         if (ioCRecord == null || ioCRecord.getSource() == null || ioCRecord.getClassification() == null || ioCRecord.getFeed() == null) {
             log.log(Level.SEVERE, "addToCache: ioCRecord itself or its source, classification or feed were null. Can't process that.");
-            try {
+           /* try {
                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                     utx.rollback();
                 }
@@ -58,19 +58,20 @@ public class CacheServiceEJB implements CacheService {
                 log.log(Level.SEVERE, "addToCache: Rolling back.", e1);
                 return false; //finally?
             }
+            */
             return false;
         }
 
         if (ioCRecord.getSource().getId() == null || ioCRecord.getSource().getId().getValue() == null) {
             log.log(Level.SEVERE, "addToCache: ioCRecord can't have source id null.");
-            try {
+            /*try {
                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                     utx.rollback();
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "addToCache: Rolling back.", e1);
                 return false;
-            } //finally?
+            } //finally?*/
             return false;
         }
 
@@ -78,7 +79,7 @@ public class CacheServiceEJB implements CacheService {
         final String key = ioCRecord.getSource().getId().getValue();
         if (key != null) {
             try {
-                utx.begin();
+                //utx.begin();
                 if (key != null) {
                     if (blacklistCache.containsKey(key)) {
                         BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
@@ -92,7 +93,7 @@ public class CacheServiceEJB implements CacheService {
                         blacklistedRecord.setListed(Calendar.getInstance());
                         blacklistedRecord.setDocumentId(ioCRecord.getDocumentId());
                         blacklistCache.replace(key, blacklistedRecord);
-                        utx.commit();
+                        //utx.commit();
                     } else {
                         Map<String, String> feedToType = new HashMap<>();
                         if (ioCRecord.getFeed().getName() != null && ioCRecord.getClassification().getType() != null) {
@@ -104,19 +105,19 @@ public class CacheServiceEJB implements CacheService {
                         blacklistedRecord.setDocumentId(ioCRecord.getDocumentId());
                         log.log(Level.FINE, "Putting new key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
                         blacklistCache.put(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
-                        utx.commit();
+                        //utx.commit();
                     }
                 }
             } catch (Exception e) {
                 log.log(Level.SEVERE, "addToCache", e);
-                try {
+                /*try {
                     if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                         utx.rollback();
                     }
                 } catch (Exception e1) {
                     log.log(Level.SEVERE, "Rolling back", e1);
                     return false; //finally?
-                }
+                }*/
                 return false;
             }
         }
@@ -127,27 +128,27 @@ public class CacheServiceEJB implements CacheService {
     public boolean removeFromCache(final IoCRecord ioCRecord) {
         if (ioCRecord == null || ioCRecord.getSource() == null || ioCRecord.getFeed() == null) {
             log.log(Level.SEVERE, "removeFromCache: ioCRecord itself or its source or its feed were null. Can't process that.");
-            try {
+            /*try {
                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                     utx.rollback();
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "removeFromCache: Rolling back.", e1);
                 return false; //finally?
-            }
+            }*/
             return false;
         }
 
         if (ioCRecord.getSource().getId() == null && ioCRecord.getSource().getId().getValue() == null) {
             log.log(Level.SEVERE, "removeFromCache: ioCRecord can't have source id null.");
-            try {
+            /*try {
                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                     utx.rollback();
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "removeFromCache: Rolling back.", e1);
                 return false; //finally?
-            }
+            }*/
             return false;
         }
 
@@ -155,7 +156,7 @@ public class CacheServiceEJB implements CacheService {
         if (key != null) {
             try {
                 if (blacklistCache.containsKey(key)) {
-                    utx.begin();
+                    //utx.begin();
                     BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
                     Map<String, String> feedToTypeUpdate = blacklistedRecord.getSources();
                     if (ioCRecord.getFeed().getName() != null) {
@@ -165,24 +166,24 @@ public class CacheServiceEJB implements CacheService {
                     }
                     if (feedToTypeUpdate.isEmpty()) {
                         blacklistCache.remove(key);
-                        utx.commit();
+                        //utx.commit();
                     } else {
                         blacklistedRecord.setSources(feedToTypeUpdate);
                         blacklistedRecord.setListed(Calendar.getInstance());
                         blacklistCache.replace(key, blacklistedRecord);
-                        utx.commit();
+                        //utx.commit();
                     }
                 }
             } catch (Exception e) {
                 log.log(Level.SEVERE, "removeFromCache", e);
-                try {
+                /*try {
                     if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                         utx.rollback();
                     }
                 } catch (Exception e1) {
                     log.log(Level.SEVERE, "removeFromCache: Rolling back.", e1);
                     return false; //finally?
-                }
+                }*/
                 return false;
             }
         }
@@ -198,22 +199,22 @@ public class CacheServiceEJB implements CacheService {
     public boolean dropTheWholeCache() {
         log.log(Level.SEVERE, "dropTheWholeCache: We are dropping the cache. This has severe operational implications.");
         try {
-            utx.begin();
+            //utx.begin();
             // TODO: Clear is faster, but apparently quite ugly. Investigate clearAsync().
             //blacklistCache.clear();
             // TODO: Could this handle millions of records in a dozen node cluster? :)
             blacklistCache.keySet().forEach(key -> blacklistCache.remove(key));
-            utx.commit();
+            //utx.commit();
         } catch (Exception e) {
             log.log(Level.SEVERE, "dropTheWholeCache", e);
-            try {
+           /* try {
                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                     utx.rollback();
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "dropTheWholeCache: Rolling back.", e1);
                 return false; //finally?
-            }
+            }*/
             return false;
         }
         return true;

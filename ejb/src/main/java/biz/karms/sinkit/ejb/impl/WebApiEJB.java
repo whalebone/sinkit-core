@@ -1,5 +1,6 @@
 package biz.karms.sinkit.ejb.impl;
 
+import biz.karms.sinkit.ejb.MyCacheManagerProvider;
 import biz.karms.sinkit.ejb.WebApi;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.CustomList;
@@ -42,7 +43,7 @@ public class WebApiEJB implements WebApi {
     private Logger log;
 
     @Inject
-    private DefaultCacheManager m;
+    private MyCacheManagerProvider m;
 
     private Cache<String, BlacklistedRecord> blacklistCache = null;
 
@@ -50,8 +51,8 @@ public class WebApiEJB implements WebApi {
 
     private Cache<String, CustomList> customListsCache = null;
 
-    @Inject
-    private javax.transaction.UserTransaction utx;
+    //@Inject
+    //private javax.transaction.UserTransaction utx;
 
     @PostConstruct
     public void setup() {
@@ -84,21 +85,21 @@ public class WebApiEJB implements WebApi {
             return null;
         }
         try {
-            utx.begin();
+            //utx.begin();
             log.log(Level.FINE, "Putting key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
             blacklistCache.put(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
-            utx.commit();
+            //utx.commit();
             // TODO: Is this O.K.? Maybe we should just return the same instance.
             return blacklistCache.get(blacklistedRecord.getBlackListedDomainOrIP());
         } catch (Exception e) {
             log.log(Level.SEVERE, "putBlacklistedRecord", e);
-            try {
+            /*try {
                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                     utx.rollback();
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "putBlacklistedRecord", e1);
-            }
+            }*/
             return null;
         }
     }
@@ -117,7 +118,7 @@ public class WebApiEJB implements WebApi {
     @Override
     public String deleteBlacklistedRecord(final String key) {
         try {
-            utx.begin();
+            //utx.begin();
             String response;
             if (blacklistCache.containsKey(key)) {
                 blacklistCache.remove(key);
@@ -125,17 +126,17 @@ public class WebApiEJB implements WebApi {
             } else {
                 response = key + " DOES NOT EXIST";
             }
-            utx.commit();
+            //utx.commit();
             return response;
         } catch (Exception e) {
             log.log(Level.SEVERE, "deleteBlacklistedRecord", e);
-            try {
+            /*try {
                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                     utx.rollback();
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "deleteBlacklistedRecord", e1);
-            }
+            }*/
             return null;
         }
     }
@@ -190,7 +191,7 @@ public class WebApiEJB implements WebApi {
             cidrUtils = null;
             log.log(Level.FINE, "Deleting key [" + cidrAddress + "] which actually translates to BigInteger zero padded representation " +
                     "[" + clientIPAddressPaddedBigInt + "]");
-            utx.begin();
+            //utx.begin();
             String response;
             if (ruleCache.containsKey(clientIPAddressPaddedBigInt)) {
                 ruleCache.remove(clientIPAddressPaddedBigInt);
@@ -198,17 +199,17 @@ public class WebApiEJB implements WebApi {
             } else {
                 response = clientIPAddressPaddedBigInt + " DOES NOT EXIST";
             }
-            utx.commit();
+            //utx.commit();
             return response;
         } catch (Exception e) {
             log.log(Level.SEVERE, "deleteRule", e);
-            try {
+            /*try {
                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                     utx.rollback();
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "deleteRule", e1);
-            }
+            }*/
             return null;
         }
     }
@@ -236,19 +237,19 @@ public class WebApiEJB implements WebApi {
                     if (customerDNSSetting.containsKey(rule.getCidrAddress())) {
                         rule.setSources(customerDNSSetting.get(rule.getCidrAddress()));
                         try {
-                            utx.begin();
+                            //utx.begin();
                             ruleCache.replace(rule.getStartAddress(), rule);
-                            utx.commit();
+                            //utx.commit();
                         } catch (Exception e) {
                             log.log(Level.SEVERE, "putDNSClientSettings", e);
-                            try {
+                            /*try {
                                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                                     utx.rollback();
                                 }
                             } catch (Exception e1) {
                                 log.log(Level.SEVERE, "putDNSClientSettings", e1);
                                 return null;
-                            }
+                            }*/
                             return null;
                         }
                     }
@@ -285,19 +286,19 @@ public class WebApiEJB implements WebApi {
                 rule.setStartAddress(cidrUtils.getStartIPBigIntegerString());
                 rule.setEndAddress(cidrUtils.getEndIPBigIntegerString());
                 cidrUtils = null;
-                utx.begin();
+                //utx.begin();
                 log.log(Level.FINE, "Putting key [" + rule.getStartAddress() + "]");
                 ruleCache.put(rule.getStartAddress(), rule);
-                utx.commit();
+                //utx.commit();
             } catch (Exception e) {
                 log.log(Level.SEVERE, "postAllDNSClientSettings", e);
-                try {
+                /*try {
                     if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                         utx.rollback();
                     }
                 } catch (Exception e1) {
                     log.log(Level.SEVERE, "postAllDNSClientSettings", e1);
-                }
+                }*/
                 return null;
             }
         }
@@ -409,23 +410,23 @@ public class WebApiEJB implements WebApi {
                 final String key = customList.getClientCidrAddress() + ((customList.getFqdn() != null) ? customList.getFqdn() : customList.getListCidrAddress());
 
                 try {
-                    utx.begin();
+                    //utx.begin();
                     log.log(Level.FINE, "putCustomLists: Putting key [" + key + "]. customListsElementCounter: " + customListsElementCounter);
                     if (customListsCache.replace(key, customList) == null) {
                         customListsCache.put(key, customList);
                     }
-                    utx.commit();
+                    //utx.commit();
                     customListsElementCounter++;
                 } catch (Exception e) {
                     log.log(Level.SEVERE, "putCustomLists: customListsElementCounter: " + customListsElementCounter, e);
-                    try {
+                    /*try {
                         if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                             utx.rollback();
                         }
                     } catch (Exception e1) {
                         log.log(Level.SEVERE, "putCustomLists", e1);
                         return null; //finally?
-                    }
+                    }*/
                     return null;
                 }
             }
@@ -493,20 +494,20 @@ public class WebApiEJB implements WebApi {
                         //TODO This is certainly wrong and overengineered... Let's talk to Rattus.
                         rule.getSources().replace(feedUid, cidrMode.get(rule.getCidrAddress()));
                         try {
-                            utx.begin();
+                            //utx.begin();
                             ruleCache.replace(rule.getStartAddress(), rule);
-                            utx.commit();
+                            //utx.commit();
                             updated++;
                         } catch (Exception e) {
                             log.log(Level.SEVERE, "putFeedSettings", e);
-                            try {
+                            /*try {
                                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                                     utx.rollback();
                                 }
                             } catch (Exception e1) {
                                 log.log(Level.SEVERE, "putFeedSettings", e1);
                                 return null; //finally?
-                            }
+                            }*/
                             return null;
                         }
                     }

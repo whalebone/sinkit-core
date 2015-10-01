@@ -2,6 +2,7 @@ package biz.karms.sinkit.ejb.impl;
 
 import biz.karms.sinkit.ejb.CoreService;
 import biz.karms.sinkit.ejb.DNSApi;
+import biz.karms.sinkit.ejb.MyCacheManagerProvider;
 import biz.karms.sinkit.ejb.WebApi;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.CustomList;
@@ -42,7 +43,7 @@ public class DNSApiEJB implements DNSApi {
     private Logger log;
 
     @Inject
-    private DefaultCacheManager m;
+    private MyCacheManagerProvider m;
 
     @EJB
     private CoreService coreService;
