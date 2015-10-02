@@ -25,14 +25,18 @@ fi
 # Replace NIC
 sed -i "s/@SINKITNIC@/${SINKIT_NIC:-eth0}/g" ${WF_CONFIG}
 
+sed -i "s/<core-environment>/<core-environment node-identifier=\"${TUTUM_CONTAINER_FQDN}\">/g" ${WF_CONFIG}
+
 /opt/sinkit/wildfly/bin/standalone.sh \
  -c standalone.xml \
  -Djava.net.preferIPv4Stack=true \
  -Djboss.modules.system.pkgs=org.jboss.byteman \
  -Djava.awt.headless=true \
  -Djgroups.bind_addr=${MYIP} \
+ -Djgroups.tcp.address=${MYIP} \
  -Djboss.bind.address.management=${MYIP} \
  -Djboss.bind.address=${MYIP} \
  -Djboss.bind.address.unsecure=${MYIP} \
  -Djgroups.udp.mcast_addr=228.6.7.8 \
- -Djgroups.udp.mcast_port=46655
+ -Djgroups.udp.mcast_port=46655 \
+ -Djboss.node.name="${TUTUM_CONTAINER_FQDN}"

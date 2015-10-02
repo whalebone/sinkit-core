@@ -2,8 +2,8 @@ FROM fedora:22
 MAINTAINER Michal Karm Babacek <karm@email.com>
 LABEL description="Codename Feed: Sinkit Core POC"
 
-ENV DEPS            java-1.8.0-openjdk-devel.x86_64 unzip wget gawk
-ENV WILDFLY_VERSION 9.0.1.Final
+ENV DEPS            java-1.8.0-openjdk-devel.x86_64 unzip wget gawk sed
+ENV WILDFLY_VERSION 10.0.0.CR2
 ENV JBOSS_HOME      "/opt/sinkit/wildfly-${WILDFLY_VERSION}"
 ENV JAVA_HOME       "/usr/lib/jvm/java-1.8.0"
 
@@ -35,7 +35,6 @@ EXPOSE 7800/udp
 
 ENV WF_CONFIG /opt/sinkit/wildfly/standalone/configuration/standalone-ha.xml
 
-# Set NIC, this makes the ugly 0.0.0.0 work.
 # Yikes, editing an XML file with AWK :-)
 RUN awk '{ if ( $0 ~ /<inet-address value=/ ) { printf( "%s\n%s\n", $0, "        <nic name=\"@SINKITNIC@\"/>"); } else {print $0; } }' \
    ${WF_CONFIG} > ${WF_CONFIG}.tmp && mv ${WF_CONFIG}.tmp ${WF_CONFIG}
