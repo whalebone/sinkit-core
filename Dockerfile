@@ -35,6 +35,8 @@ EXPOSE 7800/udp
 
 ENV WF_CONFIG /opt/sinkit/wildfly/standalone/configuration/standalone-ha.xml
 
+ADD standalone-ha.xml ${WF_CONFIG}
+
 # Yikes, editing an XML file with AWK :-)
 RUN awk '{ if ( $0 ~ /<inet-address value=/ ) { printf( "%s\n%s\n", $0, "        <nic name=\"@SINKITNIC@\"/>"); } else {print $0; } }' \
    ${WF_CONFIG} > ${WF_CONFIG}.tmp && mv ${WF_CONFIG}.tmp ${WF_CONFIG}

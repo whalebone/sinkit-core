@@ -17,6 +17,7 @@ import javax.enterprise.context.Initialized;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import java.io.Serializable;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -56,6 +57,9 @@ public class MyCacheManagerProvider implements Serializable {
                         //.async().useReplQueue(true).replQueueInterval(10, TimeUnit.SECONDS)
                         //.hash()//.numOwners(2)
                         //.locking().useLockStriping(false)
+                .stateTransfer().awaitInitialTransfer(false)
+                .timeout(6, TimeUnit.MINUTES)
+                //.chunkSize(512)
                 .expiration().lifespan(ENTRY_LIFESPAN_NEVER) // Set expiration - cache entries expire after some time (given by
                         // the lifespan parameter) and are removed from the cache (cluster-wide).
                 .expiration().disableReaper()
