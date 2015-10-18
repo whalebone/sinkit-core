@@ -1,18 +1,20 @@
 package biz.karms.sinkit.ejb.impl;
 
 import biz.karms.sinkit.ejb.CacheService;
-import biz.karms.sinkit.ejb.MyCacheManagerProvider;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ioc.IoCRecord;
 import org.infinispan.Cache;
+import org.infinispan.configuration.cache.Index;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -26,20 +28,17 @@ public class CacheServiceEJB implements CacheService {
     @Inject
     private Logger log;
 
-    @Inject
-    private MyCacheManagerProvider m;
+    @Resource(lookup = "java:jboss/infinispan/cache/sinkit/RULES_CACHE")
+    private Cache<String, Rule> ruleCache;
 
-    private Cache<String, BlacklistedRecord> blacklistCache = null;
-
-    private Cache<String, Rule> ruleCache = null;
+    @Resource(lookup = "java:jboss/infinispan/cache/sinkit/BLACKLIST_CACHE")
+    private Cache<String, BlacklistedRecord> blacklistCache;
 
     //@Inject
     //private javax.transaction.UserTransaction utx;
 
     @PostConstruct
     public void setup() {
-        blacklistCache = m.getCache("BLACKLIST_CACHE");
-        ruleCache = m.getCache("RULES_CACHE");
         if (blacklistCache == null || ruleCache == null) {
             throw new IllegalStateException("Both BLACKLIST_CACHE and RULES_CACHE must not be null.");
         }
@@ -92,7 +91,8 @@ public class CacheServiceEJB implements CacheService {
                         blacklistedRecord.setSources(feedToTypeUpdate);
                         blacklistedRecord.setListed(Calendar.getInstance());
                         blacklistedRecord.setDocumentId(ioCRecord.getDocumentId());
-                        blacklistCache.replace(key, blacklistedRecord);
+                        log.log(Level.FINE, "Replacing key [" + key + "]");
+                        blacklistCache.replaceAsync(key, blacklistedRecord, 5l, TimeUnit.MINUTES);
                         //utx.commit();
                     } else {
                         Map<String, String> feedToType = new HashMap<>();
@@ -104,7 +104,8 @@ public class CacheServiceEJB implements CacheService {
                         BlacklistedRecord blacklistedRecord = new BlacklistedRecord(key, Calendar.getInstance(), feedToType);
                         blacklistedRecord.setDocumentId(ioCRecord.getDocumentId());
                         log.log(Level.FINE, "Putting new key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
-                        blacklistCache.put(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
+                        //blacklistCache.put(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
+                        blacklistCache.putAsync(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord, 5l, TimeUnit.MINUTES);
                         //utx.commit();
                     }
                 }
