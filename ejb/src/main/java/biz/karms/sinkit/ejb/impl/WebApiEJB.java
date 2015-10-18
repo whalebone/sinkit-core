@@ -1,5 +1,6 @@
 package biz.karms.sinkit.ejb.impl;
 
+import biz.karms.sinkit.ejb.MyCacheManagerProvider;
 import biz.karms.sinkit.ejb.WebApi;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.CustomList;
@@ -17,10 +18,7 @@ import org.infinispan.query.SearchManager;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
 import javax.ejb.Stateless;
-import javax.ejb.TransactionManagement;
-import javax.ejb.TransactionManagementType;
 import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -35,26 +33,29 @@ import java.util.logging.Logger;
  * @author Michal Karm Babacek
  */
 @Stateless
-@TransactionManagement(TransactionManagementType.BEAN)
+//@TransactionManagement(TransactionManagementType.BEAN)
 public class WebApiEJB implements WebApi {
 
     @Inject
     private Logger log;
 
-    @Resource(lookup = "java:jboss/infinispan/cache/sinkit/RULES_CACHE")
-    private Cache<String, Rule> ruleCache;
+    @Inject
+    private MyCacheManagerProvider m;
 
-    @Resource(lookup = "java:jboss/infinispan/cache/sinkit/BLACKLIST_CACHE")
-    private Cache<String, BlacklistedRecord> blacklistCache;
+    private Cache<String, BlacklistedRecord> blacklistCache = null;
 
-    @Resource(lookup = "java:jboss/infinispan/cache/sinkit/CUSTOM_LISTS_CACHE")
-    private Cache<String, CustomList> customListsCache;
+    private Cache<String, Rule> ruleCache = null;
+
+    private Cache<String, CustomList> customListsCache = null;
 
     //@Inject
     //private javax.transaction.UserTransaction utx;
 
     @PostConstruct
     public void setup() {
+        blacklistCache = m.getCache("BLACKLIST_CACHE");
+        ruleCache = m.getCache("RULES_CACHE");
+        customListsCache = m.getCache("CUSTOM_LISTS_CACHE");
         if (blacklistCache == null || ruleCache == null || customListsCache == null) {
             throw new IllegalStateException("Both BLACKLIST_CACHE and RULES_CACHE and CUSTOM_LISTS_CACHE must not be null.");
         }

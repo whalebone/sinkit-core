@@ -2,6 +2,7 @@ package biz.karms.sinkit.ejb.impl;
 
 import biz.karms.sinkit.ejb.CoreService;
 import biz.karms.sinkit.ejb.DNSApi;
+import biz.karms.sinkit.ejb.MyCacheManagerProvider;
 import biz.karms.sinkit.ejb.WebApi;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.CustomList;
@@ -18,7 +19,6 @@ import org.infinispan.query.CacheQuery;
 import org.infinispan.query.SearchManager;
 
 import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
@@ -39,20 +39,20 @@ public class DNSApiEJB implements DNSApi {
     @Inject
     private Logger log;
 
+    @Inject
+    private MyCacheManagerProvider m;
+
     @EJB
     private CoreService coreService;
 
     @EJB
     private WebApi webApi;
 
-    @Resource(lookup = "java:jboss/infinispan/cache/sinkit/RULES_CACHE")
-    private Cache<String, Rule> ruleCache;
+    private Cache<String, BlacklistedRecord> blacklistCache = null;
 
-    @Resource(lookup = "java:jboss/infinispan/cache/sinkit/BLACKLIST_CACHE")
-    private Cache<String, BlacklistedRecord> blacklistCache;
+    private Cache<String, Rule> ruleCache = null;
 
-    @Resource(lookup = "java:jboss/infinispan/cache/sinkit/CUSTOM_LISTS_CACHE")
-    private Cache<String, CustomList> customListsCache;
+    private Cache<String, CustomList> customListsCache = null;
 
     private static final List<String> feedTypes = Arrays.asList("c&c", "malware", "ransomware", "malware configuration", "phishing", "blacklist");
     private static final String ipv6Sinkhole = System.getenv("SINKIT_SINKHOLE_IPV6");
@@ -60,9 +60,12 @@ public class DNSApiEJB implements DNSApi {
 
     @PostConstruct
     public void setup() {
-        if (coreService == null || webApi == null) {
-            throw new IllegalArgumentException("WebApiEJB and CoreServiceEJB must be injected.");
+        if (m == null || coreService == null || webApi == null) {
+            throw new IllegalArgumentException("DefaultCacheManager, WebApiEJB and CoreServiceEJB must be injected.");
         }
+        blacklistCache = m.getCache("BLACKLIST_CACHE");
+        ruleCache = m.getCache("RULES_CACHE");
+        customListsCache = m.getCache("CUSTOM_LISTS_CACHE");
         if (blacklistCache == null || ruleCache == null || customListsCache == null) {
             throw new IllegalStateException("Both BLACKLIST_CACHE and RULES_CACHE and CUSTOM_LISTS_CACHE must not be null.");
         }

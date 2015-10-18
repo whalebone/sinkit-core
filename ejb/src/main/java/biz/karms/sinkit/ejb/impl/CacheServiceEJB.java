@@ -1,15 +1,16 @@
 package biz.karms.sinkit.ejb.impl;
 
 import biz.karms.sinkit.ejb.CacheService;
+import biz.karms.sinkit.ejb.MyCacheManagerProvider;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ioc.IoCRecord;
 import org.infinispan.Cache;
-import org.infinispan.configuration.cache.Index;
 
 import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
 import javax.ejb.Stateless;
+import javax.ejb.TransactionManagement;
+import javax.ejb.TransactionManagementType;
 import javax.inject.Inject;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -23,22 +24,26 @@ import java.util.logging.Logger;
  */
 @Stateless
 //@TransactionManagement(TransactionManagementType.BEAN)
+//@TransactionManagement(TransactionManagementType.CONTAINER)
 public class CacheServiceEJB implements CacheService {
 
     @Inject
     private Logger log;
 
-    @Resource(lookup = "java:jboss/infinispan/cache/sinkit/RULES_CACHE")
-    private Cache<String, Rule> ruleCache;
+    @Inject
+    private MyCacheManagerProvider m;
 
-    @Resource(lookup = "java:jboss/infinispan/cache/sinkit/BLACKLIST_CACHE")
-    private Cache<String, BlacklistedRecord> blacklistCache;
+    private Cache<String, BlacklistedRecord> blacklistCache = null;
+
+    private Cache<String, Rule> ruleCache = null;
 
     //@Inject
     //private javax.transaction.UserTransaction utx;
 
     @PostConstruct
     public void setup() {
+        blacklistCache = m.getCache("BLACKLIST_CACHE");
+        ruleCache = m.getCache("RULES_CACHE");
         if (blacklistCache == null || ruleCache == null) {
             throw new IllegalStateException("Both BLACKLIST_CACHE and RULES_CACHE must not be null.");
         }
@@ -166,12 +171,12 @@ public class CacheServiceEJB implements CacheService {
                         log.log(Level.FINE, "removeFromCache: ioCRecord's feed was null.");
                     }
                     if (feedToTypeUpdate.isEmpty()) {
-                        blacklistCache.remove(key);
+                        blacklistCache.removeAsync(key);
                         //utx.commit();
                     } else {
                         blacklistedRecord.setSources(feedToTypeUpdate);
                         blacklistedRecord.setListed(Calendar.getInstance());
-                        blacklistCache.replace(key, blacklistedRecord);
+                        blacklistCache.replace(key, blacklistedRecord, 5l, TimeUnit.MINUTES);
                         //utx.commit();
                     }
                 }
@@ -204,7 +209,7 @@ public class CacheServiceEJB implements CacheService {
             // TODO: Clear is faster, but apparently quite ugly. Investigate clearAsync().
             //blacklistCache.clear();
             // TODO: Could this handle millions of records in a dozen node cluster? :)
-            blacklistCache.keySet().forEach(key -> blacklistCache.remove(key));
+            blacklistCache.keySet().forEach(key -> blacklistCache.removeAsync(key));
             //utx.commit();
         } catch (Exception e) {
             log.log(Level.SEVERE, "dropTheWholeCache", e);

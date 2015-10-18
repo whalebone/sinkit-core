@@ -25,6 +25,9 @@ fi
 # Replace NIC
 sed -i "s/@SINKITNIC@/${SINKIT_NIC:-eth0}/g" ${WF_CONFIG}
 
+# Replace Logging level
+sed -i "s/@SINKITLOGGING@/${SINKIT_LOGLEVEL:-INFO}/g" ${WF_CONFIG}
+
 CONTAINER_NAME=`echo ${TUTUM_CONTAINER_FQDN}|sed 's/\([^\.]*\.[^\.]*\).*/\1/g'`
 
 sed -i "s/<core-environment>/<core-environment node-identifier=\"${CONTAINER_NAME}\">/g" ${WF_CONFIG}

@@ -89,7 +89,6 @@
             <groupId>org.infinispan</groupId>
             <artifactId>infinispan-core</artifactId>
             <version>${infinispan.core.version}</version>
-            <scope>provided</scope>
         </dependency>
 
         <dependency>
@@ -170,7 +169,6 @@
                         <addMavenDescriptor>false</addMavenDescriptor>
                         <manifestEntries>
                             <Dependencies>
-                                org.infinispan,
                                 org.jboss.msc,
                                 org.wildfly.clustering.singleton,
                                 org.jboss.as.server
