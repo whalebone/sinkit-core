@@ -5,15 +5,13 @@ import org.infinispan.configuration.cache.CacheMode;
 import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
 import org.infinispan.configuration.cache.Index;
-import org.infinispan.configuration.global.GlobalConfiguration;
-import org.infinispan.configuration.global.GlobalConfigurationBuilder;
 import org.infinispan.eviction.EvictionStrategy;
-import org.infinispan.manager.DefaultCacheManager;
-import org.infinispan.transaction.LockingMode;
+import org.infinispan.manager.EmbeddedCacheManager;
 import org.infinispan.transaction.TransactionMode;
-import org.infinispan.transaction.TransactionProtocol;
 import org.infinispan.util.concurrent.IsolationLevel;
 
+import javax.annotation.ManagedBean;
+import javax.annotation.Resource;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.context.Destroyed;
 import javax.enterprise.context.Initialized;
@@ -28,6 +26,7 @@ import java.util.logging.Logger;
  * @author Michal Karm Babacek
  */
 @ApplicationScoped
+@ManagedBean
 public class MyCacheManagerProvider implements Serializable {
 
     private static final long serialVersionUID = 452168391425257496L;
@@ -40,29 +39,23 @@ public class MyCacheManagerProvider implements Serializable {
     @Inject
     private Logger log;
 
-    private DefaultCacheManager manager;
+    @Resource(lookup="java:jboss/infinispan/container/sinkitcontainer")
+    private EmbeddedCacheManager manager;
+    //private Cache<?, ?> cache;
+
+    //private DefaultCacheManager manager;
 
     public void init(@Observes @Initialized(ApplicationScoped.class) Object init) {
-        log.info("\n\n DefaultCacheManager does not exist - constructing a new one\n\n");
-        GlobalConfiguration glob = new GlobalConfigurationBuilder().clusteredDefault() // Builds a default clustered
-                // configuration
-                //.transport().addProperty(JGroupsTransport.CONFIGURATION_FILE, System.getenv("SINKIT_JGROUPS_NETWORKING")) // provide a specific JGroups configuration
-                .transport()//.addProperty("configurationFile", "jgroups-tcp.xml")
-                        //.transport().addProperty("configurationFile", "jgroups-tcp.xml")
-                .defaultTransport()
-                .clusterName("sinkit")
-                        //.globalJmxStatistics().allowDuplicateDomains(true).enable() // This method enables the jmx statistics of
-                        // the global configuration and allows for duplicate JMX domains
-                .build(); // Builds the GlobalConfiguration object
+        log.info("\n\n Constructing caches...\n\n");
         Configuration loc = new ConfigurationBuilder().jmxStatistics().enable() // Enable JMX statistics
                 //.clustering().cacheMode(CacheMode.DIST_ASYNC)
                 .clustering().cacheMode(CacheMode.REPL_ASYNC)
                 .stateTransfer().awaitInitialTransfer(true)
                 .timeout(5, TimeUnit.MINUTES)
                         //.chunkSize(512)
-                        .async().useReplQueue(true).replQueueInterval(30, TimeUnit.SECONDS)
+                .async()//.useReplQueue(true).replQueueInterval(30, TimeUnit.SECONDS)
                         //.hash()//.numOwners(2)
-                .locking().lockAcquisitionTimeout(3, TimeUnit.MINUTES).writeSkewCheck(false).useLockStriping(false)
+                .locking().lockAcquisitionTimeout(1, TimeUnit.MINUTES)//.writeSkewCheck(false).useLockStriping(false)
                 .concurrencyLevel(3000)
                 .isolationLevel(IsolationLevel.READ_COMMITTED)
                 .expiration()
@@ -70,19 +63,20 @@ public class MyCacheManagerProvider implements Serializable {
                         // the lifespan parameter) and are removed from the cache (cluster-wide).
                 .disableReaper()
                 .indexing().index(Index.ALL)
-                .addProperty("hibernate.search.default.indexwriter.merge_factor","30")
-                .addProperty("hibernate.search.default.indexmanager","org.infinispan.query.indexmanager.InfinispanIndexManager")
-                .addProperty("hibernate.search.default.worker.execution","async")
+                .addProperty("hibernate.search.default.indexwriter.merge_factor", "30")
+                .addProperty("hibernate.search.default.indexmanager", "org.infinispan.query.indexmanager.InfinispanIndexManager")
+                .addProperty("hibernate.search.default.worker.execution", "async")
                 .eviction().strategy(EvictionStrategy.NONE)
                         //.maxEntries(MAX_ENTRIES_IOC)
                         // .transaction().lockingMode(LockingMode.OPTIMISTIC).transactionManagerLookup(tml)
                         //.transaction().transactionMode(TransactionMode.TRANSACTIONAL).lockingMode(LockingMode.OPTIMISTIC)
-                .transaction().lockingMode(LockingMode.OPTIMISTIC).transactionMode(TransactionMode.NON_TRANSACTIONAL).completedTxTimeout(300000)
+                        //.transaction().lockingMode(LockingMode.OPTIMISTIC).transactionMode(TransactionMode.NON_TRANSACTIONAL).completedTxTimeout(300000)
+                .transaction().transactionMode(TransactionMode.NON_TRANSACTIONAL)
                         //Very evil, but fast...
                 .unsafe().unreliableReturnValues(true)
                         // TODO: Really? Autocommit? -- Yes, autocommit is true by default.
                         //.transactionManagerLookup(new GenericTransactionManagerLookup()).autoCommit(true)
-                  .persistence().addSingleFileStore()
+                .persistence().addSingleFileStore()
                 /*.persistence().addStore(JdbcStringBasedStoreConfigurationBuilder.class)
                         //.persistence().addStore(JdbcBinaryStoreConfigurationBuilder.class)
                 .fetchPersistentState(true)
@@ -104,14 +98,18 @@ public class MyCacheManagerProvider implements Serializable {
                 .enabled(true)
                 .threadPoolSize(15)*/
                 .build();
-        manager = new DefaultCacheManager(glob, loc, true);
+
+        //this.manager.defineConfiguration("mycache", loc);
+        //this.cache = this.manager.getCache("mycache");
+        //this.cache.start();
+
         manager.defineConfiguration("BLACKLIST_CACHE", loc);
         manager.defineConfiguration("RULES_CACHE", loc);
         manager.defineConfiguration("CUSTOM_LISTS_CACHE", loc);
         manager.getCache("BLACKLIST_CACHE").start();
         manager.getCache("RULES_CACHE").start();
         manager.getCache("CUSTOM_LISTS_CACHE").start();
-        log.log(Level.INFO, "I'm returning DefaultCacheManager instance " + manager + ".");
+        log.log(Level.INFO, "Caches defined.");
     }
 
     public <K, V> Cache<K, V> getCache(String cacheName) {
@@ -123,6 +121,13 @@ public class MyCacheManagerProvider implements Serializable {
 
     public void destroy(@Observes @Destroyed(ApplicationScoped.class) Object init) {
         if (manager != null) {
+            //TODO
+            manager.getCache("BLACKLIST_CACHE").stop();
+            manager.getCache("RULES_CACHE").stop();
+            manager.getCache("CUSTOM_LISTS_CACHE").stop();
+            manager.undefineConfiguration("BLACKLIST_CACHE");
+            manager.undefineConfiguration("RULES_CACHE");
+            manager.undefineConfiguration("CUSTOM_LISTS_CACHE");
             manager.stop();
             manager = null;
         }

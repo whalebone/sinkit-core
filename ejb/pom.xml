@@ -109,16 +109,18 @@
             <version>${postgresql.driver.version}</version>
         </dependency>
 
+        <!--
         <dependency>
             <groupId>org.infinispan</groupId>
             <artifactId>infinispan-cachestore-jdbc</artifactId>
             <version>${infinispan.cachestore.jdbc.version}</version>
         </dependency>
-
+-->
         <dependency>
             <groupId>org.infinispan</groupId>
             <artifactId>infinispan-query</artifactId>
             <version>${infinispan.query.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
@@ -169,6 +171,11 @@
                         <addMavenDescriptor>false</addMavenDescriptor>
                         <manifestEntries>
                             <Dependencies>
+                                org.infinispan,
+                                org.infinispan.commons,
+                                org.infinispan.query,
+                                org.hibernate.search.engine,
+                                org.apache.lucene,
                                 org.jboss.msc,
                                 org.wildfly.clustering.singleton,
                                 org.jboss.as.server
