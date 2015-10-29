@@ -63,9 +63,9 @@ public class MyCacheManagerProvider implements Serializable {
                         // the lifespan parameter) and are removed from the cache (cluster-wide).
                 .disableReaper()
                 .indexing().index(Index.ALL)
-                .addProperty("hibernate.search.default.indexwriter.merge_factor", "30")
-                .addProperty("hibernate.search.default.indexmanager", "org.infinispan.query.indexmanager.InfinispanIndexManager")
-                .addProperty("hibernate.search.default.worker.execution", "async")
+                //.addProperty("hibernate.search.default.indexwriter.merge_factor", "30")
+                //.addProperty("hibernate.search.default.indexmanager", "org.infinispan.query.indexmanager.InfinispanIndexManager")
+                //.addProperty("hibernate.search.default.worker.execution", "async")
                 .eviction().strategy(EvictionStrategy.NONE)
                         //.maxEntries(MAX_ENTRIES_IOC)
                         // .transaction().lockingMode(LockingMode.OPTIMISTIC).transactionManagerLookup(tml)

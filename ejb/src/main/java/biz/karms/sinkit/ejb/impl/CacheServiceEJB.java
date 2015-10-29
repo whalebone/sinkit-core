@@ -9,8 +9,6 @@ import org.infinispan.Cache;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.Stateless;
-import javax.ejb.TransactionManagement;
-import javax.ejb.TransactionManagementType;
 import javax.inject.Inject;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -33,9 +31,9 @@ public class CacheServiceEJB implements CacheService {
     @Inject
     private MyCacheManagerProvider m;
 
-    private Cache<String, BlacklistedRecord> blacklistCache = null;
+    private Cache<String, BlacklistedRecord> blacklistCache;
 
-    private Cache<String, Rule> ruleCache = null;
+    private Cache<String, Rule> ruleCache;
 
     //@Inject
     //private javax.transaction.UserTransaction utx;
@@ -44,9 +42,11 @@ public class CacheServiceEJB implements CacheService {
     public void setup() {
         blacklistCache = m.getCache("BLACKLIST_CACHE");
         ruleCache = m.getCache("RULES_CACHE");
+
         if (blacklistCache == null || ruleCache == null) {
             throw new IllegalStateException("Both BLACKLIST_CACHE and RULES_CACHE must not be null.");
         }
+
     }
 
     //TODO: Batch mode. It is wasteful to operate for 1 single update like this for thousand times.

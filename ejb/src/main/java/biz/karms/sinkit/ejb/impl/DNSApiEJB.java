@@ -12,11 +12,10 @@ import biz.karms.sinkit.ejb.util.CIDRUtils;
 import biz.karms.sinkit.eventlog.EventLogAction;
 import biz.karms.sinkit.exception.ArchiveException;
 import org.apache.commons.validator.routines.DomainValidator;
-import org.apache.lucene.search.Query;
-import org.hibernate.search.query.dsl.QueryBuilder;
 import org.infinispan.Cache;
-import org.infinispan.query.CacheQuery;
-import org.infinispan.query.SearchManager;
+import org.infinispan.query.Search;
+import org.infinispan.query.dsl.Query;
+import org.infinispan.query.dsl.QueryFactory;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.EJB;
@@ -29,6 +28,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+//import org.infinispan.query.Search;
+//import org.infinispan.query.SearchManager;
+//import org.infinispan.query.dsl.Query;
+//import org.infinispan.query.dsl.QueryBuilder;
+//import org.infinispan.query.dsl.QueryFactory;
 
 /**
  * @author Michal Karm Babacek
@@ -74,20 +79,30 @@ public class DNSApiEJB implements DNSApi {
     // TODO: List? Array? Map with additional data? Let's think this over.
     // TODO: Replace/factor out duplicated code in .getRules out of webApiEJB
     @Override
-    public List<?> rulesLookup(final String clientIPAddressPaddedBigInt) {
+    public List<Rule> rulesLookup(final String clientIPAddressPaddedBigInt) {
         try {
             log.log(Level.FINE, "Getting key BigInteger zero padded representation " + clientIPAddressPaddedBigInt);
             // Let's try to hit it
             Rule rule = ruleCache.get(clientIPAddressPaddedBigInt);
             if (rule != null) {
-                List<Object> wrapit = new ArrayList<>();
+                List<Rule> wrapit = new ArrayList<>();
                 wrapit.add(rule);
                 return wrapit;
             }
             // Let's search subnets
-            SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
-            QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(Rule.class).get();
+            QueryFactory qf = Search.getQueryFactory(ruleCache);
+            Query query = qf.from(Rule.class)
+                    .having("startAddress").lte(clientIPAddressPaddedBigInt)
+                    .and()
+                    .having("endAddress").gte(clientIPAddressPaddedBigInt)
+                    .toBuilder().build();
+            if (query != null) {
+                return query.list();
+            }
+            return new ArrayList<>();
 
+            /*SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
+            QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(Rule.class).get();
             Query luceneQuery = queryBuilder
                     .bool()
                     .must(queryBuilder.range().onField("startAddress").below(clientIPAddressPaddedBigInt).createQuery())
@@ -96,6 +111,8 @@ public class DNSApiEJB implements DNSApi {
 
             CacheQuery query = searchManager.getQuery(luceneQuery, Rule.class);
             return query.list();
+*/
+
         } catch (Exception e) {
             log.log(Level.SEVERE, "getRules client address troubles", e);
             return null;
@@ -103,16 +120,25 @@ public class DNSApiEJB implements DNSApi {
     }
 
     @Override
-    public List<?> customListsLookup(final Integer customerId, final boolean isFQDN, final String fqdnOrIp) {
-        SearchManager searchManager = org.infinispan.query.Search.getSearchManager(customListsCache);
-        QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(CustomList.class).get();
-        Query luceneQuery;
+    public List<CustomList> customListsLookup(final Integer customerId, final boolean isFQDN, final String fqdnOrIp) {
+        //SearchManager searchManager = org.infinispan.query.Search.getSearchManager(customListsCache);
+        //QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(CustomList.class).get();
+        //Query luceneQuery;
+        QueryFactory qf = Search.getQueryFactory(customListsCache);
+        Query query = null;
         if (isFQDN) {
-            luceneQuery = queryBuilder
+        /*    luceneQuery = queryBuilder
                     .bool()
                     .must(queryBuilder.keyword().onField("customerId").matching(customerId).createQuery())
                     .must(queryBuilder.keyword().wildcard().onField("fqdn").matching(fqdnOrIp).createQuery())
-                    .createQuery();
+                    .createQuery();*/
+
+            query = qf.from(CustomList.class)
+                    .having("customerId").eq(customerId)
+                    .and()
+                    .having("fqdn").like("%" + fqdnOrIp + "%")
+                    .toBuilder().build();
+
         } else {
             final String clientIPAddressPaddedBigInt;
             try {
@@ -121,14 +147,27 @@ public class DNSApiEJB implements DNSApi {
                 log.log(Level.SEVERE, "customListsLookup: " + fqdnOrIp + " in not a valid IP address.");
                 return null;
             }
+/*
             luceneQuery = queryBuilder
                     .bool()
                     .must(queryBuilder.keyword().onField("customerId").matching(customerId).createQuery())
                     .must(queryBuilder.range().onField("startAddress").below(clientIPAddressPaddedBigInt).createQuery())
                     .must(queryBuilder.range().onField("endAddress").above(clientIPAddressPaddedBigInt).createQuery())
                     .createQuery();
+*/
+
+            query = qf.from(CustomList.class)
+                    .having("customerId").eq(customerId)
+                    .and()
+                    .having("startAddress").lte(clientIPAddressPaddedBigInt)
+                    .and()
+                    .having("endAddress").gte(clientIPAddressPaddedBigInt)
+                    .toBuilder().build();
+
         }
-        return searchManager.getQuery(luceneQuery, CustomList.class).list();
+        //return searchManager.getQuery(luceneQuery, CustomList.class).list();
+        List<CustomList> list = query.list();
+        return list;
     }
 
     @Override
@@ -169,7 +208,7 @@ public class DNSApiEJB implements DNSApi {
         // Lookup Rules (gives customerId, feeds and their settings)
         //TODO: Add test that all such found rules have the same customerId
         //TODO: factor .getRules out of webApiEJB
-        @SuppressWarnings("unchecked")
+        //@SuppressWarnings("unchecked")
         final List<Rule> rules = (List<Rule>) rulesLookup(clientIPAddressPaddedBigInt);
 
         //If there is no rule, we simply don't sinkhole anything.

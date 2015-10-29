@@ -10,11 +10,10 @@ import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
 import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
 import org.apache.commons.validator.routines.DomainValidator;
-import org.apache.lucene.search.Query;
-import org.hibernate.search.query.dsl.QueryBuilder;
 import org.infinispan.Cache;
-import org.infinispan.query.CacheQuery;
-import org.infinispan.query.SearchManager;
+import org.infinispan.query.Search;
+import org.infinispan.query.dsl.Query;
+import org.infinispan.query.dsl.QueryFactory;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.annotation.PostConstruct;
@@ -22,7 +21,6 @@ import javax.ejb.Stateless;
 import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -157,6 +155,7 @@ public class WebApiEJB implements WebApi {
             }
 
             // Let's search subnets
+            /*
             SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
             QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(Rule.class).get();
 
@@ -168,6 +167,16 @@ public class WebApiEJB implements WebApi {
 
             CacheQuery query = searchManager.getQuery(luceneQuery, Rule.class);
             return query.list();
+            */
+
+            QueryFactory qf = Search.getQueryFactory(ruleCache);
+            Query query = qf.from(Rule.class)
+                    .having("startAddress").lte(clientIPAddressPaddedBigInt)
+                    .and()
+                    .having("endAddress").gte(clientIPAddressPaddedBigInt)
+                    .toBuilder().build();
+            List<Rule> list = query.list();
+            return list;
         } catch (Exception e) {
             log.log(Level.SEVERE, "getRules client address troubles", e);
             return null;
@@ -223,14 +232,22 @@ public class WebApiEJB implements WebApi {
     @Override
     public String putDNSClientSettings(final Integer customerId, final HashMap<String, HashMap<String, String>> customerDNSSetting) {
         try {
+            /*
             SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
             QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(Rule.class).get();
             Query luceneQuery = queryBuilder.keyword().onField("customerId").matching(customerId).createQuery();
             CacheQuery query = searchManager.getQuery(luceneQuery, Rule.class);
-            if (query != null && query.list().size() > 0) {
-                Iterator itr = query.iterator();
-                while (itr.hasNext()) {
-                    Rule rule = (Rule) itr.next();
+            */
+            QueryFactory qf = Search.getQueryFactory(ruleCache);
+
+            Query query = qf.from(Rule.class)
+                    .having("customerId").eq(customerId)
+                    .toBuilder().build();
+
+            if (query != null && query.getResultSize() > 0) {
+                List<Rule> list = query.list();
+                for (Rule rule : list) {
+                    //Rule rule = (Rule) itr.next();
                     if (customerDNSSetting.containsKey(rule.getCidrAddress())) {
                         rule.setSources(customerDNSSetting.get(rule.getCidrAddress()));
                         try {
@@ -467,25 +484,35 @@ public class WebApiEJB implements WebApi {
      */
     @Override
     public String putFeedSettings(final String feedUid, final HashMap<Integer, HashMap<String, String>> feedSettings) {
-        CacheQuery query;
+        //CacheQuery query;
+        Query query;
         int updated = 0;
         try {
-            SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
+            /*SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
             QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(Rule.class).get();
             Query luceneQuery = queryBuilder
                     .phrase()
                     .onField("sources")
                     .sentence(feedUid)
                     .createQuery();
+                    */
             //.keyword() //TODO: This would need a new SettingsMapBridge and might not be faster anyway...
             //.onField("sources")
             //.matching(feedUid)
             //.createQuery();
-            query = searchManager.getQuery(luceneQuery, Rule.class);
-            if (query != null && query.list().size() > 0) {
-                Iterator itr = query.iterator();
-                while (itr.hasNext()) {
-                    Rule rule = (Rule) itr.next();
+
+            QueryFactory qf = Search.getQueryFactory(ruleCache);
+            query = qf.from(Rule.class)
+                    .having("sources").contains(feedUid)
+                    .toBuilder().build();
+
+            // query = searchManager.getQuery(luceneQuery, Rule.class);
+            if (query != null && query.getResultSize() > 0) {
+                //  Iterator itr = query.iterator();
+                // while (itr.hasNext()) {
+                //   Rule rule = (Rule) itr.next();
+                List<Rule> list = query.list();
+                for (Rule rule : list) {
                     HashMap<String, String> cidrMode = feedSettings.get(rule.getCustomerId());
                     if (cidrMode != null && cidrMode.containsKey(rule.getCidrAddress())) {
                         //TODO This is certainly wrong and overengineered... Let's talk to Rattus.
@@ -517,7 +544,7 @@ public class WebApiEJB implements WebApi {
             log.log(Level.SEVERE, "putFeedSettings troubles", e);
             return null;
         }
-        return query.list().size() + " RULES FOUND " + updated + " UPDATED";
+        return query.getResultSize() + " RULES FOUND " + updated + " UPDATED";
 
     }
 

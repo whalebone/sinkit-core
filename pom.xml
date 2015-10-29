@@ -79,6 +79,7 @@
         <infinispan.core.version>8.0.1.Final</infinispan.core.version>
         <infinispan.cachestore.jdbc.version>8.0.1.Final</infinispan.cachestore.jdbc.version>
         <infinispan.query.version>8.0.1.Final</infinispan.query.version>
+        <hibernate.infinispan.version>5.0.1.Final</hibernate.infinispan.version>
         <hibernate.search.version>5.5.0.Final</hibernate.search.version>
         <com.mchange.c3p0.version>0.9.5.1</com.mchange.c3p0.version>
         <com.google.code.gson.version>2.3.1</com.google.code.gson.version>

@@ -209,7 +209,7 @@
             <worker name="default"/>
             <buffer-pool name="default"/>
         </subsystem>
-        <subsystem xmlns="urn:jboss:domain:infinispan:4.0">
+        <subsystem xmlns="urn:jboss:domain:infinispan:3.0">
             <cache-container name="server" aliases="singleton cluster" module="org.wildfly.clustering.server" default-cache="default">
                 <transport channel="ee"/>
                 <replicated-cache name="default" mode="ASYNC">
@@ -218,15 +218,20 @@
                     <file-store/>
                     <state-transfer timeout="300000"/>
                 </replicated-cache>
-               <!--
-                <replicated-cache name="BLACKLIST_CACHE" mode="ASYNC">
+</cache-container>
+            <!-- TODO Merge cache containers...
+            <cache-container name="sinkit" module="org.infinispan.query" default-cache="BLACKLIST_CACHE">
+                <transport channel="ee"/>
+            <replicated-cache name="BLACKLIST_CACHE" mode="ASYNC">
                     <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
                     <transaction mode="NONE"/>
                     <eviction max-entries="10000000" strategy="NONE"/>
                     <expiration interval="-1" lifespan="-1" max-idle="-1"/>
                     <file-store/>
                     <state-transfer timeout="300000"/>
+                <indexing index="ALL"/>
                 </replicated-cache>
+
                 <replicated-cache name="RULES_CACHE" mode="ASYNC">
                     <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
                     <transaction mode="NONE"/>
@@ -234,7 +239,9 @@
                     <expiration interval="-1" lifespan="-1" max-idle="-1"/>
                     <file-store/>
                     <state-transfer timeout="300000"/>
+                    <indexing index="ALL"/>
                 </replicated-cache>
+
                 <replicated-cache name="CUSTOM_LISTS_CACHE" mode="ASYNC">
                     <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
                     <transaction mode="NONE"/>
@@ -242,9 +249,10 @@
                     <expiration interval="-1" lifespan="-1" max-idle="-1"/>
                     <file-store/>
                     <state-transfer timeout="300000"/>
+                    <indexing index="ALL"/>
                 </replicated-cache>
-                -->
-            </cache-container>
+
+            </cache-container>-->
 
 
             <cache-container name="sinkitcontainer" module="org.infinispan.query" default-cache="defaultsinkit">
@@ -522,7 +530,6 @@
     <interfaces>
         <interface name="management">
             <inet-address value="${jboss.bind.address.management:127.0.0.1}"/>
-            <nic name="@SINKITNIC@"/>
         </interface>
         <interface name="public">
             <inet-address value="${jboss.bind.address:127.0.0.1}"/>
