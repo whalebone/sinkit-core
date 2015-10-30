@@ -12,9 +12,9 @@ import java.util.List;
  */
 @Remote
 public interface DNSApi {
-    List<Rule> rulesLookup(final String clientIPAddressPaddedBigInt);
+    List<?> rulesLookup(final String clientIPAddressPaddedBigInt);
 
-    List<CustomList> customListsLookup(final Integer customerId, final boolean isFQDN, final String fqdnOrIp);
+    List<?> customListsLookup(final Integer customerId, final boolean isFQDN, final String fqdnOrIp);
 
     CustomList retrieveOneCustomList(final Integer customerId, final boolean isFQDN, final String fqdnOrIp);
 
