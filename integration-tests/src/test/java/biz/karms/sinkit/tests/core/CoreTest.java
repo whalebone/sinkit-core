@@ -7,23 +7,15 @@ import biz.karms.sinkit.exception.TooOldIoCException;
 import biz.karms.sinkit.ioc.IoCRecord;
 import biz.karms.sinkit.ioc.IoCSourceIdType;
 import biz.karms.sinkit.tests.util.IoCFactory;
-import org.jboss.arquillian.container.test.api.Deployer;
-import org.jboss.arquillian.container.test.api.OperateOnDeployment;
-import org.jboss.arquillian.test.api.ArquillianResource;
 import org.jboss.arquillian.testng.Arquillian;
 import org.testng.annotations.Test;
 
 import javax.ejb.EJB;
-import javax.inject.Inject;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.logging.Logger;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertNotEquals;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.*;
 
 
 /**
