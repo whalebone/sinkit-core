@@ -6,13 +6,13 @@ import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCValidationException;
 import biz.karms.sinkit.ioc.IoCRecord;
 
-import javax.ejb.Remote;
+import javax.ejb.Local;
 import java.util.concurrent.Future;
 
 /**
  * @author Michal Karm Babacek
  */
-@Remote
+@Local
 public interface CoreService {
     IoCRecord processIoCRecord(IoCRecord receivedIoc) throws ArchiveException, IoCValidationException;
 
