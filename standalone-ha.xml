@@ -218,7 +218,7 @@
                     <file-store/>
                     <state-transfer timeout="300000"/>
                 </replicated-cache>
-</cache-container>
+            </cache-container>
             <!-- TODO Merge cache containers...
             <cache-container name="sinkit" module="org.infinispan.query" default-cache="BLACKLIST_CACHE">
                 <transport channel="ee"/>
@@ -256,7 +256,7 @@
 
 
             <cache-container name="sinkitcontainer" module="org.infinispan.query" default-cache="defaultsinkit">
-                <transport channel="ee"/>
+                <transport channel="sink"/>
                 <replicated-cache name="defaultsinkit" mode="ASYNC">
                     <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
                     <transaction mode="NONE"/>
@@ -358,6 +358,7 @@
         <subsystem xmlns="urn:jboss:domain:jgroups:4.0">
             <channels default="ee">
                 <channel name="ee" stack="tcp"/>
+                <channel name="sink" stack="tcp"/>
             </channels>
             <stacks>
                 <stack name="udp">

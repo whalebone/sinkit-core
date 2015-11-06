@@ -64,7 +64,6 @@ public class MyCacheManagerProvider implements Serializable {
                 .disableReaper()
                 .indexing().index(Index.ALL)
                 //.addProperty("hibernate.search.default.indexwriter.merge_factor", "30")
-                //.addProperty("hibernate.search.default.indexmanager", "org.infinispan.query.indexmanager.InfinispanIndexManager")
                 .addProperty("hibernate.search.default.worker.execution", "async")
                 .addProperty("hibernate.search.lucene_version", "LUCENE_CURRENT")
                 .eviction().strategy(EvictionStrategy.NONE)

@@ -30,6 +30,11 @@ sed -i "s/@SINKITLOGGING@/${SINKIT_LOGLEVEL:-INFO}/g" ${WF_CONFIG}
 
 CONTAINER_NAME=`echo ${TUTUM_CONTAINER_FQDN}|sed 's/\([^\.]*\.[^\.]*\).*/\1/g'`
 
+if [ "`echo \"${CONTAINER_NAME}\" | wc -c`" -gt 24 ]; then
+    echo "ERROR: CONTAINER_NAME ${CONTAINER_NAME} must be up to 24 characters long."
+    exit 1
+fi
+
 sed -i "s/<core-environment>/<core-environment node-identifier=\"${CONTAINER_NAME}\">/g" ${WF_CONFIG}
 
 /opt/sinkit/wildfly/bin/standalone.sh \
