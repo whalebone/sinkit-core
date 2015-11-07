@@ -25,7 +25,15 @@ fi
 # Replace NIC
 sed -i "s/@SINKITNIC@/${SINKIT_NIC:-eth0}/g" ${WF_CONFIG}
 
+# Replace Logging level
+sed -i "s/@SINKITLOGGING@/${SINKIT_LOGLEVEL:-INFO}/g" ${WF_CONFIG}
+
 CONTAINER_NAME=`echo ${TUTUM_CONTAINER_FQDN}|sed 's/\([^\.]*\.[^\.]*\).*/\1/g'`
+
+if [ "`echo \"${CONTAINER_NAME}\" | wc -c`" -gt 24 ]; then
+    echo "ERROR: CONTAINER_NAME ${CONTAINER_NAME} must be up to 24 characters long."
+    exit 1
+fi
 
 sed -i "s/<core-environment>/<core-environment node-identifier=\"${CONTAINER_NAME}\">/g" ${WF_CONFIG}
 
@@ -35,13 +43,14 @@ sed -i "s/<core-environment>/<core-environment node-identifier=\"${CONTAINER_NAM
  -Djava.net.preferIPv4Stack=true \
  -Djboss.modules.system.pkgs=org.jboss.byteman \
  -Djava.awt.headless=true \
- -Djgroups.bind_addr=${MYIP} \
- -Djgroups.tcp.address=${MYIP} \
  -Djboss.bind.address.management=${MYIP} \
  -Djboss.bind.address=${MYIP} \
  -Djboss.bind.address.unsecure=${MYIP} \
  -Djgroups.udp.mcast_addr=228.6.7.8 \
  -Djgroups.udp.mcast_port=46655 \
+ -Djgroups.bind_addr=${MYIP} \
+ -Djgroups.tcp.address=${MYIP} \
+ -Djboss.default.multicast.address=230.0.0.4 \
  -Djboss.node.name="${CONTAINER_NAME}" \
  -Djboss.host.name="${TUTUM_CONTAINER_FQDN}" \
  -Djboss.qualified.host.name="${TUTUM_CONTAINER_FQDN}"

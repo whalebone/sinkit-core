@@ -15,14 +15,12 @@
         <extension module="org.jboss.as.jsf"/>
         <extension module="org.jboss.as.logging"/>
         <extension module="org.jboss.as.mail"/>
-        <extension module="org.jboss.as.modcluster"/>
         <extension module="org.jboss.as.naming"/>
         <extension module="org.jboss.as.pojo"/>
         <extension module="org.jboss.as.remoting"/>
         <extension module="org.jboss.as.sar"/>
         <extension module="org.jboss.as.security"/>
         <extension module="org.jboss.as.transactions"/>
-        <extension module="org.jboss.as.webservices"/>
         <extension module="org.jboss.as.weld"/>
         <extension module="org.wildfly.extension.batch.jberet"/>
         <extension module="org.wildfly.extension.bean-validation"/>
@@ -84,23 +82,18 @@
     <profile>
         <subsystem xmlns="urn:jboss:domain:logging:3.0">
             <console-handler name="CONSOLE">
-                <level name="DEBUG"/>
+                <level name="@SINKITLOGGING@"/>
                 <formatter>
                     <named-formatter name="COLOR-PATTERN"/>
                 </formatter>
             </console-handler>
-            <periodic-rotating-file-handler name="FILE" autoflush="true">
-                <formatter>
-                    <named-formatter name="PATTERN"/>
-                </formatter>
+            <size-rotating-file-handler name="FILE" autoflush="true">
                 <file relative-to="jboss.server.log.dir" path="server.log"/>
-                <suffix value=".yyyy-MM-dd"/>
-                <append value="true"/>
-            </periodic-rotating-file-handler>
+                <rotate-size value="500M"/>
+                <max-backup-index value="4"/>
+                <level name="@SINKITLOGGING@"/>
+            </size-rotating-file-handler>
             <logger category="com.arjuna">
-                <level name="WARN"/>
-            </logger>
-            <logger category="org.apache.tomcat.util.modeler">
                 <level name="WARN"/>
             </logger>
             <logger category="org.jboss.as.config">
@@ -110,7 +103,7 @@
                 <level name="WARN"/>
             </logger>
             <root-logger>
-                <level name="DEBUG"/>
+                <level name="@SINKITLOGGING@"/>
                 <handlers>
                     <handler name="CONSOLE"/>
                     <handler name="FILE"/>
@@ -216,14 +209,89 @@
             <worker name="default"/>
             <buffer-pool name="default"/>
         </subsystem>
-        <subsystem xmlns="urn:jboss:domain:infinispan:4.0">
-            <cache-container name="server" aliases="singleton cluster" default-cache="default" module="org.wildfly.clustering.server">
-                <transport lock-timeout="300000"/>
+        <subsystem xmlns="urn:jboss:domain:infinispan:3.0">
+            <cache-container name="server" aliases="singleton cluster" module="org.wildfly.clustering.server" default-cache="default">
+                <transport channel="ee"/>
                 <replicated-cache name="default" mode="ASYNC">
-                    <transaction mode="BATCH"/>
+                    <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
+                    <transaction mode="NONE"/>
+                    <file-store/>
+                    <state-transfer timeout="300000"/>
                 </replicated-cache>
             </cache-container>
-           <cache-container name="web" default-cache="passivation" module="org.wildfly.clustering.web.infinispan">
+            <!-- TODO Merge cache containers...
+            <cache-container name="sinkit" module="org.infinispan.query" default-cache="BLACKLIST_CACHE">
+                <transport channel="ee"/>
+            <replicated-cache name="BLACKLIST_CACHE" mode="ASYNC">
+                    <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
+                    <transaction mode="NONE"/>
+                    <eviction max-entries="10000000" strategy="NONE"/>
+                    <expiration interval="-1" lifespan="-1" max-idle="-1"/>
+                    <file-store/>
+                    <state-transfer timeout="300000"/>
+                <indexing index="ALL"/>
+                </replicated-cache>
+
+                <replicated-cache name="RULES_CACHE" mode="ASYNC">
+                    <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
+                    <transaction mode="NONE"/>
+                    <eviction max-entries="10000000" strategy="NONE"/>
+                    <expiration interval="-1" lifespan="-1" max-idle="-1"/>
+                    <file-store/>
+                    <state-transfer timeout="300000"/>
+                    <indexing index="ALL"/>
+                </replicated-cache>
+
+                <replicated-cache name="CUSTOM_LISTS_CACHE" mode="ASYNC">
+                    <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
+                    <transaction mode="NONE"/>
+                    <eviction max-entries="1000000" strategy="NONE"/>
+                    <expiration interval="-1" lifespan="-1" max-idle="-1"/>
+                    <file-store/>
+                    <state-transfer timeout="300000"/>
+                    <indexing index="ALL"/>
+                </replicated-cache>
+
+            </cache-container>-->
+
+
+            <cache-container name="sinkitcontainer" module="org.infinispan.query" default-cache="defaultsinkit">
+                <transport channel="sink"/>
+                <replicated-cache name="defaultsinkit" mode="ASYNC">
+                    <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
+                    <transaction mode="NONE"/>
+                    <file-store/>
+                    <state-transfer timeout="300000"/>
+                </replicated-cache>
+                <!--
+                 <replicated-cache name="BLACKLIST_CACHE" mode="ASYNC">
+                     <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
+                     <transaction mode="NONE"/>
+                     <eviction max-entries="10000000" strategy="NONE"/>
+                     <expiration interval="-1" lifespan="-1" max-idle="-1"/>
+                     <file-store/>
+                     <state-transfer timeout="300000"/>
+                 </replicated-cache>
+                 <replicated-cache name="RULES_CACHE" mode="ASYNC">
+                     <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
+                     <transaction mode="NONE"/>
+                     <eviction max-entries="10000000" strategy="NONE"/>
+                     <expiration interval="-1" lifespan="-1" max-idle="-1"/>
+                     <file-store/>
+                     <state-transfer timeout="300000"/>
+                 </replicated-cache>
+                 <replicated-cache name="CUSTOM_LISTS_CACHE" mode="ASYNC">
+                     <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
+                     <transaction mode="NONE"/>
+                     <eviction max-entries="1000000" strategy="NONE"/>
+                     <expiration interval="-1" lifespan="-1" max-idle="-1"/>
+                     <file-store/>
+                     <state-transfer timeout="300000"/>
+                 </replicated-cache>
+                 -->
+            </cache-container>
+
+            <cache-container name="web" module="org.wildfly.clustering.web.infinispan" default-cache="passivation">
                 <local-cache name="passivation">
                     <locking isolation="REPEATABLE_READ"/>
                     <transaction mode="BATCH"/>
@@ -235,7 +303,7 @@
                     <file-store passivation="false" purge="false"/>
                 </local-cache>
             </cache-container>
-            <cache-container name="ejb" aliases="sfsb" default-cache="passivation" module="org.wildfly.clustering.ejb.infinispan">
+            <cache-container name="ejb" aliases="sfsb" module="org.wildfly.clustering.ejb.infinispan" default-cache="passivation">
                 <local-cache name="passivation">
                     <locking isolation="REPEATABLE_READ"/>
                     <transaction mode="BATCH"/>
@@ -247,6 +315,24 @@
                     <file-store passivation="false" purge="false"/>
                 </local-cache>
             </cache-container>
+            <!--
+            <cache-container name="hibernate" module="org.hibernate" default-cache="local-query">
+                <transport lock-timeout="60000"/>
+                <local-cache name="local-query">
+                    <transaction mode="NONE"/>
+                    <eviction max-entries="10000" strategy="LRU"/>
+                    <expiration max-idle="100000"/>
+                </local-cache>
+                <invalidation-cache name="entity" mode="SYNC">
+                    <transaction mode="NON_XA"/>
+                    <eviction max-entries="10000" strategy="LRU"/>
+                    <expiration max-idle="100000"/>
+                </invalidation-cache>
+                <replicated-cache name="timestamps" mode="ASYNC">
+                    <transaction mode="NONE"/>
+                    <eviction strategy="NONE"/>
+                </replicated-cache>
+            </cache-container>-->
         </subsystem>
         <subsystem xmlns="urn:jboss:domain:jaxrs:1.0"/>
         <subsystem xmlns="urn:jboss:domain:jca:4.0">
@@ -271,7 +357,8 @@
         <subsystem xmlns="urn:jboss:domain:jdr:1.0"/>
         <subsystem xmlns="urn:jboss:domain:jgroups:4.0">
             <channels default="ee">
-                <channel name="ee" stack="udp"/>
+                <channel name="ee" stack="tcp"/>
+                <channel name="sink" stack="tcp"/>
             </channels>
             <stacks>
                 <stack name="udp">
@@ -312,7 +399,22 @@
                 </stack>
                 <stack name="tcp">
                     <transport type="TCP" socket-binding="jgroups-tcp"/>
-                    <protocol type="MPING" socket-binding="jgroups-mping"/>
+
+                    <protocol type="MPING" socket-binding="jgroups-mping">
+                        <property name="bind_interface_str">
+                            @SINKITNIC@
+                        </property>
+                        <property name="ip_ttl">
+                            64
+                        </property>
+                        <property name="receive_interfaces">
+                            @SINKITNIC@
+                        </property>
+                        <property name="send_interfaces">
+                            @SINKITNIC@
+                        </property>
+                    </protocol>
+
                     <protocol type="MERGE3"/>
                     <protocol type="FD_SOCK" socket-binding="jgroups-tcp-fd"/>
                     <protocol type="FD"/>
@@ -322,7 +424,11 @@
                     <protocol type="pbcast.STABLE"/>
                     <protocol type="pbcast.GMS"/>
                     <protocol type="MFC"/>
-                    <protocol type="FRAG2"/>
+                    <protocol type="FRAG2">
+                        <property name="frag_size">
+                            1300
+                        </property>
+                    </protocol>
                 </stack>
             </stacks>
         </subsystem>
@@ -340,13 +446,6 @@
                 <smtp-server outbound-socket-binding-ref="mail-smtp"/>
             </mail-session>
         </subsystem>
-        <subsystem xmlns="urn:jboss:domain:modcluster:2.0">
-            <mod-cluster-config advertise-socket="modcluster" connector="ajp">
-                <dynamic-load-provider>
-                    <load-metric type="cpu"/>
-                </dynamic-load-provider>
-            </mod-cluster-config>
-        </subsystem>
         <subsystem xmlns="urn:jboss:domain:naming:2.0">
             <remote-naming/>
         </subsystem>
@@ -355,7 +454,7 @@
             <endpoint/>
             <http-connector name="http-remoting-connector" connector-ref="default" security-realm="ApplicationRealm"/>
         </subsystem>
-        <subsystem xmlns="urn:jboss:domain:resource-adapters:3.0"/>
+        <subsystem xmlns="urn:jboss:domain:resource-adapters:4.0"/>
         <subsystem xmlns="urn:jboss:domain:request-controller:1.0"/>
         <subsystem xmlns="urn:jboss:domain:sar:1.0"/>
         <subsystem xmlns="urn:jboss:domain:security-manager:1.0">
@@ -427,16 +526,6 @@
                 <response-header name="x-powered-by-header" header-name="X-Powered-By" header-value="Undertow/1"/>
             </filters>
         </subsystem>
-        <subsystem xmlns="urn:jboss:domain:webservices:2.0">
-            <wsdl-host>${jboss.bind.address:127.0.0.1}</wsdl-host>
-            <endpoint-config name="Standard-Endpoint-Config"/>
-            <endpoint-config name="Recording-Endpoint-Config">
-                <pre-handler-chain name="recording-handlers" protocol-bindings="##SOAP11_HTTP ##SOAP11_HTTP_MTOM ##SOAP12_HTTP ##SOAP12_HTTP_MTOM">
-                    <handler name="RecordingHandler" class="org.jboss.ws.common.invocation.RecordingServerHandler"/>
-                </pre-handler-chain>
-            </endpoint-config>
-            <client-config name="Standard-Client-Config"/>
-        </subsystem>
         <subsystem xmlns="urn:jboss:domain:weld:3.0"/>
     </profile>
     <interfaces>
@@ -445,6 +534,7 @@
         </interface>
         <interface name="public">
             <inet-address value="${jboss.bind.address:127.0.0.1}"/>
+            <nic name="@SINKITNIC@"/>
         </interface>
         <!-- TODO - only show this if the jacorb subsystem is added  -->
         <interface name="unsecure">
@@ -453,6 +543,7 @@
               ~                  To secure IIOP connections you need to setup SSL 
               -->
             <inet-address value="${jboss.bind.address.unsecure:127.0.0.1}"/>
+            <nic name="@SINKITNIC@"/>
         </interface>
     </interfaces>
     <socket-binding-group name="standard-sockets" default-interface="public" port-offset="${jboss.socket.binding.port-offset:0}">

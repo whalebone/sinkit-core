@@ -70,10 +70,7 @@
                     <archive>
                         <addMavenDescriptor>false</addMavenDescriptor>
                         <manifestEntries>
-                            <Dependencies>org.jboss.msc,
-                                org.wildfly.clustering.singleton,
-                                org.jboss.as.server
-                            </Dependencies>
+                            <Dependencies>org.hibernate.infinispan,org.infinispan,org.infinispan.commons,org.infinispan.query,org.jboss.msc,org.wildfly.clustering.singleton,org.jboss.as.server</Dependencies>
                         </manifestEntries>
                     </archive>
                     <modules>

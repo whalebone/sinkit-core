@@ -1,6 +1,7 @@
 package biz.karms.sinkit.ejb;
 
 import biz.karms.sinkit.ejb.cache.pojo.CustomList;
+import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ejb.dto.Sinkhole;
 
 import javax.ejb.Remote;

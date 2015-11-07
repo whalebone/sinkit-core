@@ -3,8 +3,7 @@ MAINTAINER Michal Karm Babacek <karm@email.com>
 LABEL description="Codename Feed: Sinkit Core POC"
 
 ENV DEPS            java-1.8.0-openjdk-devel.x86_64 unzip wget gawk sed
-ENV WILDFLY_VERSION 10.0.0.CR2
-ENV JBOSS_HOME      "/opt/sinkit/wildfly-${WILDFLY_VERSION}"
+ENV JBOSS_HOME      "/opt/sinkit/wildfly"
 ENV JAVA_HOME       "/usr/lib/jvm/java-1.8.0"
 
 RUN dnf -y update && dnf -y install ${DEPS} && dnf clean all
@@ -14,9 +13,41 @@ RUN mkdir -p /opt/sinkit && chown sinkit /opt/sinkit && chgrp sinkit /opt/sinkit
 WORKDIR /opt/sinkit
 USER sinkit
 
+ENV WILDFLY_VERSION 10.0.0.CR5-SNAPSHOT
+ENV HIBERNATE_HQL_LUCENE_VERSION 1.3.0.Alpha2
+ENV HIBERNATE_HQL_PARSER_VERSION 1.3.0.Alpha2
+ENV STRINGTEMPLATE_VERSION 3.2.1
+ENV ANTLR_RUNTIME_VERSION 3.4
+ENV VERSION_INFINISPAN 8.0.1.Final
+ENV MAVEN_CENTRAL http://central.maven.org/maven2
+
 # ADD would run every rebuild
-RUN wget http://download.jboss.org/wildfly/${WILDFLY_VERSION}/wildfly-${WILDFLY_VERSION}.zip && \
-    unzip wildfly-${WILDFLY_VERSION}.zip && rm -rf wildfly-${WILDFLY_VERSION}.zip
+#RUN wget http://download.jboss.org/wildfly/${WILDFLY_VERSION}/wildfly-${WILDFLY_VERSION}.zip && \
+
+# For the time being, we run with latest builds
+# wget https://github.com/wildfly/wildfly/archive/master.zip
+# unzip and build with ./build.sh -DskipTests :-)
+ADD wildfly-${WILDFLY_VERSION}.zip ./wildfly-${WILDFLY_VERSION}.zip
+RUN unzip wildfly-${WILDFLY_VERSION}.zip && rm -rf wildfly-${WILDFLY_VERSION}.zip
+
+# Infinispan query module
+ENV INFINISPAN_MODULE_DIR /opt/sinkit/wildfly-${WILDFLY_VERSION}/modules/system/layers/base/org/infinispan/query/main/
+RUN mkdir -p ${INFINISPAN_MODULE_DIR}
+ADD module.xml ${INFINISPAN_MODULE_DIR}/module.xml
+RUN sed -i "s/@HIBERNATE_HQL_LUCENE_VERSION@/${HIBERNATE_HQL_LUCENE_VERSION}/g" ${INFINISPAN_MODULE_DIR}/module.xml && \
+sed -i "s/@HIBERNATE_HQL_PARSER_VERSION@/${HIBERNATE_HQL_PARSER_VERSION}/g" ${INFINISPAN_MODULE_DIR}/module.xml && \
+sed -i "s/@STRINGTEMPLATE_VERSION@/${STRINGTEMPLATE_VERSION}/g" ${INFINISPAN_MODULE_DIR}/module.xml && \
+sed -i "s/@ANTLR_RUNTIME_VERSION@/${ANTLR_RUNTIME_VERSION}/g" ${INFINISPAN_MODULE_DIR}/module.xml && \
+sed -i "s/@VERSION_INFINISPAN@/${VERSION_INFINISPAN}/g" ${INFINISPAN_MODULE_DIR}/module.xml && \
+wget ${MAVEN_CENTRAL}/org/hibernate/hql/hibernate-hql-lucene/${HIBERNATE_HQL_LUCENE_VERSION}/hibernate-hql-lucene-${HIBERNATE_HQL_LUCENE_VERSION}.jar -O ${INFINISPAN_MODULE_DIR}/hibernate-hql-lucene-${HIBERNATE_HQL_LUCENE_VERSION}.jar && \
+wget ${MAVEN_CENTRAL}/org/hibernate/hql/hibernate-hql-parser/${HIBERNATE_HQL_PARSER_VERSION}/hibernate-hql-parser-${HIBERNATE_HQL_PARSER_VERSION}.jar -O ${INFINISPAN_MODULE_DIR}/hibernate-hql-parser-${HIBERNATE_HQL_PARSER_VERSION}.jar && \
+wget ${MAVEN_CENTRAL}/org/antlr/stringtemplate/${STRINGTEMPLATE_VERSION}/stringtemplate-${STRINGTEMPLATE_VERSION}.jar -O ${INFINISPAN_MODULE_DIR}/stringtemplate-${STRINGTEMPLATE_VERSION}.jar && \
+wget ${MAVEN_CENTRAL}/org/antlr/antlr-runtime/${ANTLR_RUNTIME_VERSION}/antlr-runtime-${ANTLR_RUNTIME_VERSION}.jar -O ${INFINISPAN_MODULE_DIR}/antlr-runtime-${ANTLR_RUNTIME_VERSION}.jar && \
+wget ${MAVEN_CENTRAL}/org/infinispan/infinispan-directory-provider/${VERSION_INFINISPAN}/infinispan-directory-provider-${VERSION_INFINISPAN}.jar -O ${INFINISPAN_MODULE_DIR}/infinispan-directory-provider-${VERSION_INFINISPAN}.jar && \
+wget ${MAVEN_CENTRAL}/org/infinispan/infinispan-lucene-directory/${VERSION_INFINISPAN}/infinispan-lucene-directory-${VERSION_INFINISPAN}.jar -O ${INFINISPAN_MODULE_DIR}/infinispan-lucene-directory-${VERSION_INFINISPAN}.jar && \
+wget ${MAVEN_CENTRAL}/org/infinispan/infinispan-query-dsl/${VERSION_INFINISPAN}/infinispan-query-dsl-${VERSION_INFINISPAN}.jar -O ${INFINISPAN_MODULE_DIR}/infinispan-query-dsl-${VERSION_INFINISPAN}.jar && \
+wget ${MAVEN_CENTRAL}/org/infinispan/infinispan-objectfilter/${VERSION_INFINISPAN}/infinispan-objectfilter-${VERSION_INFINISPAN}.jar -O ${INFINISPAN_MODULE_DIR}/infinispan-objectfilter-${VERSION_INFINISPAN}.jar && \
+wget ${MAVEN_CENTRAL}/org/infinispan/infinispan-query/${VERSION_INFINISPAN}/infinispan-query-${VERSION_INFINISPAN}.jar -O ${INFINISPAN_MODULE_DIR}/infinispan-query-${VERSION_INFINISPAN}.jar
 
 # Circle CI builds and tests the archive, so no need for additional checks here.
 ADD ear/target/sinkit-ear.ear /opt/sinkit/wildfly-${WILDFLY_VERSION}/standalone/deployments/
@@ -31,6 +62,7 @@ EXPOSE 7500/udp
 EXPOSE 55200/udp
 EXPOSE 54200/udp
 EXPOSE 45688/udp
+EXPOSE 45700/udp
 EXPOSE 7800/udp
 
 ENV WF_CONFIG /opt/sinkit/wildfly/standalone/configuration/standalone-ha.xml
@@ -38,11 +70,11 @@ ENV WF_CONFIG /opt/sinkit/wildfly/standalone/configuration/standalone-ha.xml
 ADD standalone-ha.xml ${WF_CONFIG}
 
 # Yikes, editing an XML file with AWK :-)
-RUN awk '{ if ( $0 ~ /<inet-address value=/ ) { printf( "%s\n%s\n", $0, "        <nic name=\"@SINKITNIC@\"/>"); } else {print $0; } }' \
-   ${WF_CONFIG} > ${WF_CONFIG}.tmp && mv ${WF_CONFIG}.tmp ${WF_CONFIG}
+#RUN awk '{ if ( $0 ~ /<inet-address value=/ ) { printf( "%s\n%s\n", $0, "        <nic name=\"@SINKITNIC@\"/>"); } else {print $0; } }' \
+#   ${WF_CONFIG} > ${WF_CONFIG}.tmp && mv ${WF_CONFIG}.tmp ${WF_CONFIG}
 
-RUN awk '/periodic-rotating-file-handler/ {f=1} !f; /\/periodic-rotating-file-handler/ {print "<size-rotating-file-handler name=\"FILE\" autoflush=\"true\"><file relative-to=\"jboss.server.log.dir\" path=\"server.log\"/><rotate-size value=\"500M\"/><max-backup-index value=\"4\"/><level name=\"INFO\"/></size-rotating-file-handler>"; f=0}' \
-${WF_CONFIG} > ${WF_CONFIG}.tmp && mv ${WF_CONFIG}.tmp ${WF_CONFIG}
+#RUN awk '/periodic-rotating-file-handler/ {f=1} !f; /\/periodic-rotating-file-handler/ {print "<size-rotating-file-handler name=\"FILE\" autoflush=\"true\"><file relative-to=\"jboss.server.log.dir\" path=\"server.log\"/><rotate-size value=\"500M\"/><max-backup-index value=\"4\"/><level name=\"DEBUG\"/></size-rotating-file-handler>"; f=0}' \
+#${WF_CONFIG} > ${WF_CONFIG}.tmp && mv ${WF_CONFIG}.tmp ${WF_CONFIG}
 
 RUN echo 'JAVA_OPTS="\
  -server \

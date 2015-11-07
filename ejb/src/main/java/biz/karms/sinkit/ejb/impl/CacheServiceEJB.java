@@ -13,6 +13,7 @@ import javax.inject.Inject;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -21,6 +22,7 @@ import java.util.logging.Logger;
  */
 @Stateless
 //@TransactionManagement(TransactionManagementType.BEAN)
+//@TransactionManagement(TransactionManagementType.CONTAINER)
 public class CacheServiceEJB implements CacheService {
 
     @Inject
@@ -29,9 +31,9 @@ public class CacheServiceEJB implements CacheService {
     @Inject
     private MyCacheManagerProvider m;
 
-    private Cache<String, BlacklistedRecord> blacklistCache = null;
+    private Cache<String, BlacklistedRecord> blacklistCache;
 
-    private Cache<String, Rule> ruleCache = null;
+    private Cache<String, Rule> ruleCache;
 
     //@Inject
     //private javax.transaction.UserTransaction utx;
@@ -40,9 +42,11 @@ public class CacheServiceEJB implements CacheService {
     public void setup() {
         blacklistCache = m.getCache("BLACKLIST_CACHE");
         ruleCache = m.getCache("RULES_CACHE");
+
         if (blacklistCache == null || ruleCache == null) {
             throw new IllegalStateException("Both BLACKLIST_CACHE and RULES_CACHE must not be null.");
         }
+
     }
 
     //TODO: Batch mode. It is wasteful to operate for 1 single update like this for thousand times.
@@ -92,7 +96,8 @@ public class CacheServiceEJB implements CacheService {
                         blacklistedRecord.setSources(feedToTypeUpdate);
                         blacklistedRecord.setListed(Calendar.getInstance());
                         blacklistedRecord.setDocumentId(ioCRecord.getDocumentId());
-                        blacklistCache.replace(key, blacklistedRecord);
+                        log.log(Level.FINE, "Replacing key [" + key + "]");
+                        blacklistCache.replaceAsync(key, blacklistedRecord, 5l, TimeUnit.MINUTES);
                         //utx.commit();
                     } else {
                         Map<String, String> feedToType = new HashMap<>();
@@ -104,7 +109,8 @@ public class CacheServiceEJB implements CacheService {
                         BlacklistedRecord blacklistedRecord = new BlacklistedRecord(key, Calendar.getInstance(), feedToType);
                         blacklistedRecord.setDocumentId(ioCRecord.getDocumentId());
                         log.log(Level.FINE, "Putting new key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
-                        blacklistCache.put(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
+                        //blacklistCache.put(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
+                        blacklistCache.putAsync(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord, 5l, TimeUnit.MINUTES);
                         //utx.commit();
                     }
                 }
@@ -165,12 +171,12 @@ public class CacheServiceEJB implements CacheService {
                         log.log(Level.FINE, "removeFromCache: ioCRecord's feed was null.");
                     }
                     if (feedToTypeUpdate.isEmpty()) {
-                        blacklistCache.remove(key);
+                        blacklistCache.removeAsync(key);
                         //utx.commit();
                     } else {
                         blacklistedRecord.setSources(feedToTypeUpdate);
                         blacklistedRecord.setListed(Calendar.getInstance());
-                        blacklistCache.replace(key, blacklistedRecord);
+                        blacklistCache.replace(key, blacklistedRecord, 5l, TimeUnit.MINUTES);
                         //utx.commit();
                     }
                 }
@@ -203,7 +209,7 @@ public class CacheServiceEJB implements CacheService {
             // TODO: Clear is faster, but apparently quite ugly. Investigate clearAsync().
             //blacklistCache.clear();
             // TODO: Could this handle millions of records in a dozen node cluster? :)
-            blacklistCache.keySet().forEach(key -> blacklistCache.remove(key));
+            blacklistCache.keySet().forEach(key -> blacklistCache.removeAsync(key));
             //utx.commit();
         } catch (Exception e) {
             log.log(Level.SEVERE, "dropTheWholeCache", e);

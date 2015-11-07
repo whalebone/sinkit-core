@@ -10,3 +10,5 @@ biz.karms.sinkit.org.jboss.as.quickstarts.cluster.hasingleton.service.ejb.cache.
 log.log
 biz.karms.sinkit.org.jboss.as.quickstarts.cluster.hasingleton.service.ejb.Rule
 integration-tests/biz.karms.sinkit.org.jboss.as.quickstarts.cluster.hasingleton.service.ejb.cache.pojo.CustomList
+wildfly-10.0.0.CR3-SNAPSHOT.zip
+wildfly-*-SNAPSHOT/
