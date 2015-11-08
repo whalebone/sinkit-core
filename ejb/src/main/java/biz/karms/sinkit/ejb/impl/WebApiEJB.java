@@ -10,8 +10,11 @@ import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
 import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
 import org.apache.commons.validator.routines.DomainValidator;
+import org.hibernate.search.query.dsl.QueryBuilder;
 import org.infinispan.Cache;
+import org.infinispan.query.CacheQuery;
 import org.infinispan.query.Search;
+import org.infinispan.query.SearchManager;
 import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
@@ -155,7 +158,7 @@ public class WebApiEJB implements WebApi {
             }
 
             // Let's search subnets
-            /*
+/*
             SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
             QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(Rule.class).get();
 
@@ -167,7 +170,7 @@ public class WebApiEJB implements WebApi {
 
             CacheQuery query = searchManager.getQuery(luceneQuery, Rule.class);
             return query.list();
-            */
+*/
 
             QueryFactory qf = Search.getQueryFactory(ruleCache);
             Query query = qf.from(Rule.class)

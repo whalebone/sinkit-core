@@ -1,20 +1,24 @@
 package biz.karms.sinkit.ejb.cache.pojo;
 
+import biz.karms.sinkit.ejb.util.SettingsMapBridge;
 import org.hibernate.search.annotations.*;
 
+import javax.persistence.Entity;
 import java.io.Serializable;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
  * @author Michal Karm Babacek
  */
-@Indexed
+@Indexed(index = "BlacklistedRecord")
+@Entity
 public class BlacklistedRecord implements Serializable {
 
-    private static final long serialVersionUID = 2184999923047755671L;
+    private static final long serialVersionUID = 2184999923427771L;
 
-    @Field(analyze = Analyze.YES)
+    @Field(index = Index.YES, analyze = Analyze.NO)
     private String blackListedDomainOrIP;
 
     @Field
@@ -27,10 +31,11 @@ public class BlacklistedRecord implements Serializable {
     /**
      * Feed : Type
      */
-    @IndexedEmbedded
-    private Map<String, String> sources;
+    @FieldBridge(impl = SettingsMapBridge.class)
+    @Field(index = Index.YES, analyze = Analyze.YES)
+    private HashMap<String, String> sources;
 
-    public BlacklistedRecord(String blackListedDomainOrIP, Calendar listed, Map<String, String> sources) {
+    public BlacklistedRecord(String blackListedDomainOrIP, Calendar listed, HashMap<String, String> sources) {
         this.blackListedDomainOrIP = blackListedDomainOrIP;
         this.listed = listed;
         this.sources = sources;
@@ -73,11 +78,11 @@ public class BlacklistedRecord implements Serializable {
         this.listed = listed;
     }
 
-    public Map<String, String> getSources() {
+    public HashMap<String, String> getSources() {
         return sources;
     }
 
-    public void setSources(Map<String, String> sources) {
+    public void setSources(HashMap<String, String> sources) {
         this.sources = sources;
     }
 }

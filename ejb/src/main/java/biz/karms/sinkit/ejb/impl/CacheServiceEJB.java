@@ -12,7 +12,6 @@ import javax.ejb.Stateless;
 import javax.inject.Inject;
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -87,7 +86,7 @@ public class CacheServiceEJB implements CacheService {
                 if (key != null) {
                     if (blacklistCache.containsKey(key)) {
                         BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
-                        Map<String, String> feedToTypeUpdate = blacklistedRecord.getSources();
+                        HashMap<String, String> feedToTypeUpdate = blacklistedRecord.getSources();
                         if (ioCRecord.getFeed().getName() != null && ioCRecord.getClassification().getType() != null) {
                             feedToTypeUpdate.putIfAbsent(ioCRecord.getFeed().getName(), ioCRecord.getClassification().getType());
                         } else {
@@ -97,10 +96,10 @@ public class CacheServiceEJB implements CacheService {
                         blacklistedRecord.setListed(Calendar.getInstance());
                         blacklistedRecord.setDocumentId(ioCRecord.getDocumentId());
                         log.log(Level.FINE, "Replacing key [" + key + "]");
-                        blacklistCache.replaceAsync(key, blacklistedRecord, 5l, TimeUnit.MINUTES);
+                        blacklistCache.replaceAsync(key, blacklistedRecord);
                         //utx.commit();
                     } else {
-                        Map<String, String> feedToType = new HashMap<>();
+                        HashMap<String, String> feedToType = new HashMap<>();
                         if (ioCRecord.getFeed().getName() != null && ioCRecord.getClassification().getType() != null) {
                             feedToType.put(ioCRecord.getFeed().getName(), ioCRecord.getClassification().getType());
                         } else {
@@ -110,7 +109,7 @@ public class CacheServiceEJB implements CacheService {
                         blacklistedRecord.setDocumentId(ioCRecord.getDocumentId());
                         log.log(Level.FINE, "Putting new key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
                         //blacklistCache.put(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
-                        blacklistCache.putAsync(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord, 5l, TimeUnit.MINUTES);
+                        blacklistCache.putAsync(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
                         //utx.commit();
                     }
                 }
@@ -164,7 +163,7 @@ public class CacheServiceEJB implements CacheService {
                 if (blacklistCache.containsKey(key)) {
                     //utx.begin();
                     BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
-                    Map<String, String> feedToTypeUpdate = blacklistedRecord.getSources();
+                    HashMap<String, String> feedToTypeUpdate = blacklistedRecord.getSources();
                     if (ioCRecord.getFeed().getName() != null) {
                         feedToTypeUpdate.remove(ioCRecord.getFeed().getName());
                     } else {

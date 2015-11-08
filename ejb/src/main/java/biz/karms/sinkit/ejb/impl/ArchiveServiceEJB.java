@@ -21,6 +21,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -151,6 +152,7 @@ public class ArchiveServiceEJB implements ArchiveService {
     public EventLogRecord archiveEventLogRecord(EventLogRecord logRecord) throws ArchiveException {
         DateFormat df = new SimpleDateFormat("YYYY.MM.dd");
         String index = ELASTIC_LOG_INDEX + "-" + df.format(logRecord.getLogged());
+        log.log(Level.FINE, "elasticService.index logging logrecord, index="+index);
         return elasticService.index(logRecord, index, ELASTIC_LOG_TYPE);
     }
 
@@ -171,6 +173,7 @@ public class ArchiveServiceEJB implements ArchiveService {
 
     @Override
     public IoCRecord getIoCRecordById(String id) throws ArchiveException {
+        log.log(Level.WARNING, "getIoCRecordById: id: "+id+", ELASTIC_IOC_INDEX: "+ELASTIC_IOC_INDEX+", ELASTIC_IOC_TYPE: "+ELASTIC_IOC_TYPE);
         return elasticService.getDocumentById(id, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, IoCRecord.class);
     }
 

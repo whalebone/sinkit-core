@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.Future;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -120,6 +120,7 @@ public class CoreServiceEJB implements CoreService {
             iocs = archiveService.findIoCsForDeactivation(CoreServiceEJB.IOC_ACTIVE_HOURS);
             if (!iocs.isEmpty()) {
                 for (IoCRecord ioc : iocs) {
+                    log.log(Level.FINE, "IoCDeactivator: Deactivating IoC, FQDN: " + ioc.getSource().getFQDN() + ", IP: "+ ioc.getSource().getIp());
                     archiveService.deactivateRecord(ioc);
                     cacheService.removeFromCache(ioc);
                 }
@@ -133,62 +134,6 @@ public class CoreServiceEJB implements CoreService {
             log.info("IoCs deactivated: " + deactivated);
         }
         return deactivated;
-    }
-
-    @Asynchronous
-    @Override
-    public Future<EventLogRecord> logEvent(
-            EventLogAction action,
-            String clientUid,
-            String requestIp,
-            String requestRaw,
-            String reasonFqdn,
-            String reasonIp,
-            String[] matchedIoCs
-    ) throws ArchiveException {
-        EventLogRecord logRecord = new EventLogRecord();
-
-        EventDNSRequest request = new EventDNSRequest();
-        request.setIp(requestIp);
-        request.setRaw(requestRaw);
-        logRecord.setRequest(request);
-
-        EventReason reason = new EventReason();
-        reason.setIp(reasonIp);
-        reason.setFqdn(reasonFqdn);
-        logRecord.setReason(reason);
-
-        logRecord.setAction(action);
-        logRecord.setClient(clientUid);
-        logRecord.setLogged(Calendar.getInstance().getTime());
-        //logRecord.setMatchedIocs(matchedIoCs);
-
-        List<MatchedIoC> matchedIoCsList = new ArrayList<>();
-        for (String iocId : matchedIoCs) {
-            IoCRecord ioc = archiveService.getIoCRecordById(iocId);
-            if (ioc == null) {
-                log.warning("Match IoC with id " + iocId + " was not found -> skipping.");
-            }
-            ioc.setVirusTotalReports(null);
-            ioc.getSeen().setLast(null);
-            ioc.setRaw(null);
-            ioc.setActive(null);
-
-            MatchedIoC matchedIoc = new MatchedIoC();
-            matchedIoc.setDocumentId(iocId);
-            matchedIoc.setIoc(ioc);
-            matchedIoCsList.add(matchedIoc);
-        }
-        MatchedIoC[] matchedIoCsArray = matchedIoCsList.toArray(new MatchedIoC[matchedIoCsList.size()]);
-        logRecord.setMatchedIocs(matchedIoCsArray);
-
-        VirusTotalRequest vtReq = new VirusTotalRequest();
-        vtReq.setStatus(VirusTotalRequestStatus.WAITING);
-        logRecord.setVirusTotalRequest(vtReq);
-
-        archiveService.archiveEventLogRecord(logRecord);
-
-        return new AsyncResult<>(logRecord);
     }
 
     @Override

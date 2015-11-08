@@ -1,34 +1,38 @@
 package biz.karms.sinkit.ejb.cache.pojo;
 
+import org.hibernate.search.annotations.Analyze;
 import org.hibernate.search.annotations.Field;
+import org.hibernate.search.annotations.Index;
 import org.hibernate.search.annotations.Indexed;
 
+import javax.persistence.Entity;
 import java.io.Serializable;
 
 /**
  * @author Michal Karm Babacek
  */
-@Indexed
+@Indexed(index = "CustomList")
+@Entity
 public class CustomList implements Serializable {
 
-    private static final long serialVersionUID = 11111111111111111L;
+    private static final long serialVersionUID = 14123411141111L;
 
     /**
      * Client DNS server identification
      */
-    @Field
+    @Field(index = Index.YES, analyze = Analyze.NO)
     private String clientStartAddress;
 
-    @Field
+    @Field(index = Index.YES, analyze = Analyze.NO)
     private String clientEndAddress;
 
-    @Field
+    @Field(index = Index.YES, analyze = Analyze.NO)
     private String clientCidrAddress;
 
     /**
      * Customer identification
      */
-    @Field
+    @Field(index = Index.YES, analyze = Analyze.NO)
     private int customerId;
 
 
@@ -37,23 +41,23 @@ public class CustomList implements Serializable {
      *
      * While, Black, Log, defined as either CIDR or FQDN
      */
-    @Field
+    @Field(index = Index.YES, analyze = Analyze.NO)
     private String fqdn;
 
-    @Field
+    @Field(index = Index.YES, analyze = Analyze.NO)
     private String listStartAddress;
 
-    @Field
+    @Field(index = Index.YES, analyze = Analyze.NO)
     private String listEndAddress;
 
-    @Field
+    @Field(index = Index.YES, analyze = Analyze.NO)
     private String listCidrAddress;
 
 
     /**
      * ```<B|W|L>``` stands for Black White Log
      */
-    @Field
+    @Field(index = Index.YES, analyze = Analyze.NO)
     private String whiteBlackLog;
 
     public String getClientStartAddress() {

@@ -17,14 +17,12 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 import javax.ejb.EJB;
-import javax.enterprise.context.RequestScoped;
 import javax.enterprise.context.SessionScoped;
 import javax.inject.Inject;
-import javax.inject.Named;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -204,20 +202,18 @@ public class SinkitService implements Serializable {
 
     void addEventLogRecord(final String json) throws ArchiveException {
         EventLogRecord logRec = new GsonBuilder().create().fromJson(json, EventLogRecord.class);
-        List<String> ids = new ArrayList<>();
+        Set<String> ids = new HashSet<>();
         for (MatchedIoC ioc : logRec.getMatchedIocs()) {
             ids.add(ioc.getDocumentId());
         }
-        String[] idss = ids.toArray(new String[ids.size()]);
-
-        coreService.logEvent(
+        dnsApi.logDNSEvent(
                 logRec.getAction(),
                 logRec.getClient(),
                 logRec.getRequest().getIp(),
                 logRec.getRequest().getRaw(),
                 logRec.getReason().getFqdn(),
                 logRec.getReason().getIp(),
-                idss);
+                ids);
     }
 
     public void enrich() {

@@ -19,6 +19,7 @@ import javax.inject.Inject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -72,9 +73,8 @@ public class ElasticServiceEJB implements ElasticService {
     public <T extends Indexable> T getDocumentById(String id, String index, String type, Class<T> clazz) throws ArchiveException {
         JestResult result;
         T document;
-
-        Get get = new Get.Builder(index, id)
-                .type(type).build();
+        log.log(Level.FINE, "getDocumentById called: id:" + id);
+        Get get = new Get.Builder(index, id).type(type).build();
         try {
 
             result = elasticClient.execute(get);
@@ -85,11 +85,10 @@ public class ElasticServiceEJB implements ElasticService {
         }
 
         if (!result.isSucceeded()) {
-            log.warning("Can't get document with id:  " + id + ". Elastic returned: " + result.getResponseCode() +
-                    ", response code: " + result.getResponseCode());
+            log.log(Level.WARNING, "Can't get document with id:  " + id + ". Elastic returned: " + result.getResponseCode() + ", response code: " + result.getResponseCode());
             return null;
         }
-
+        log.log(Level.FINE, "getDocumentById returning document id: " + document.getDocumentId());
         return document;
     }
 
@@ -156,7 +155,7 @@ public class ElasticServiceEJB implements ElasticService {
 
         //log.info(result.getJsonString());
         if (result.getTotal() < 1) return new ArrayList<>();
-
+        //TODO: Kozel, use something that ain't deprecated.
         return result.getSourceAsObjectList(clazz);
     }
 
@@ -177,7 +176,7 @@ public class ElasticServiceEJB implements ElasticService {
                 .type(type)
                 .setParameter(Parameters.REFRESH, true)
                 .build();
-        //log.info("Indexing ioc [" + ioc.toString() + "]");
+        log.log(Level.FINE, "Indexing ioc [" + document.toString() + "]");
 
         JestResult result;
         try {
@@ -189,7 +188,7 @@ public class ElasticServiceEJB implements ElasticService {
         if (result.isSucceeded()) {
             String docId = result.getJsonObject().getAsJsonPrimitive("_id").getAsString();
             document.setDocumentId(docId);
-            //log.info("Indexed ioc: [" + ioc.toString() + "]");
+            log.log(Level.FINE, "Indexed ioc: [" + document.toString() + "]");
         } else {
             log.severe("Archive returned error: " + result.getErrorMessage());
             throw new ArchiveException(result.getErrorMessage());
