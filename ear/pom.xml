@@ -95,6 +95,7 @@
                 <artifactId>wildfly-maven-plugin</artifactId>
                 <version>${version.wildfly.maven.plugin}</version>
                 <configuration>
+                    <server-config>standalone-ha.xml</server-config>
                     <execute-commands>
                         <batch>true</batch>
                         <commands>

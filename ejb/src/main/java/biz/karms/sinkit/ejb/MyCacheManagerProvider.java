@@ -29,7 +29,7 @@ import java.util.logging.Logger;
 @ManagedBean
 public class MyCacheManagerProvider implements Serializable {
 
-    private static final long serialVersionUID = 452168391425257496L;
+    private static final long serialVersionUID = 45216839143257496L;
 
     private static final long ENTRY_LIFESPAN = 4 * 24 * 60 * 60 * 1000; //ms
     private static final long ENTRY_LIFESPAN_NEVER = -1;
@@ -39,7 +39,7 @@ public class MyCacheManagerProvider implements Serializable {
     @Inject
     private Logger log;
 
-    @Resource(lookup="java:jboss/infinispan/container/sinkitcontainer")
+    @Resource(lookup = "java:jboss/infinispan/container/sinkitcontainer")
     private EmbeddedCacheManager manager;
     //private Cache<?, ?> cache;
 
@@ -63,7 +63,7 @@ public class MyCacheManagerProvider implements Serializable {
                         // the lifespan parameter) and are removed from the cache (cluster-wide).
                 .disableReaper()
                 .indexing().index(Index.ALL)
-                //.addProperty("hibernate.search.default.indexwriter.merge_factor", "30")
+                        //.addProperty("hibernate.search.default.indexwriter.merge_factor", "30")
                 .addProperty("hibernate.search.default.worker.execution", "async")
                 .addProperty("hibernate.search.lucene_version", "LUCENE_CURRENT")
                 .eviction().strategy(EvictionStrategy.NONE)
@@ -73,7 +73,7 @@ public class MyCacheManagerProvider implements Serializable {
                         //.transaction().lockingMode(LockingMode.OPTIMISTIC).transactionMode(TransactionMode.NON_TRANSACTIONAL).completedTxTimeout(300000)
                 .transaction().transactionMode(TransactionMode.NON_TRANSACTIONAL)
                         //Very evil, but fast...
-                .unsafe().unreliableReturnValues(true)
+                        //.unsafe().unreliableReturnValues(true)
                         // TODO: Really? Autocommit? -- Yes, autocommit is true by default.
                         //.transactionManagerLookup(new GenericTransactionManagerLookup()).autoCommit(true)
                 .persistence().addSingleFileStore()
@@ -109,6 +109,7 @@ public class MyCacheManagerProvider implements Serializable {
         manager.getCache("BLACKLIST_CACHE").start();
         manager.getCache("RULES_CACHE").start();
         manager.getCache("CUSTOM_LISTS_CACHE").start();
+
         log.log(Level.INFO, "Caches defined.");
     }
 

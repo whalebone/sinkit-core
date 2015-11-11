@@ -62,7 +62,7 @@ public class CoreTest extends Arquillian {
         Calendar c = Calendar.getInstance();
         c.set(Calendar.MILLISECOND, 0);
         Date timeObservation = c.getTime();
-        c.add(Calendar.HOUR, -CoreServiceEJB.IOC_ACTIVE_HOURS);
+        c.add(Calendar.HOUR, -coreService.getIocActiveHours());
         Date timeSource = c.getTime();
 
         IoCRecord ioc = IoCFactory.getIoCRecordAsRecieved("tooOldIoc", "phishing", "phishing.ru", IoCSourceIdType.FQDN, timeObservation, timeSource);
@@ -73,7 +73,7 @@ public class CoreTest extends Arquillian {
     public void tooOldObservationTimeTest() throws Exception {
         Calendar c = Calendar.getInstance();
         c.set(Calendar.MILLISECOND, 0);
-        c.add(Calendar.HOUR, -CoreServiceEJB.IOC_ACTIVE_HOURS);
+        c.add(Calendar.HOUR, -coreService.getIocActiveHours());
         Date timeObservation = c.getTime();
         IoCRecord ioc = IoCFactory.getIoCRecordAsRecieved("tooOldIoc", "phishing", "phishing.ru", IoCSourceIdType.FQDN, timeObservation, null);
         coreService.processIoCRecord(ioc);
@@ -84,7 +84,7 @@ public class CoreTest extends Arquillian {
         Calendar c = Calendar.getInstance();
         c.set(Calendar.MILLISECOND, 0);
         Date timeObservation = c.getTime();
-        c.add(Calendar.HOUR, -CoreServiceEJB.IOC_ACTIVE_HOURS);
+        c.add(Calendar.HOUR, -coreService.getIocActiveHours());
         c.add(Calendar.SECOND, 1);
         Date timeSource = c.getTime();
         Date receivedByCore = Calendar.getInstance().getTime();
@@ -107,7 +107,7 @@ public class CoreTest extends Arquillian {
     public void deactivationTest() throws Exception {
         Calendar c = Calendar.getInstance();
         Date deactivationTime = c.getTime();
-        c.add(Calendar.HOUR, -CoreServiceEJB.IOC_ACTIVE_HOURS);
+        c.add(Calendar.HOUR, -coreService.getIocActiveHours());
         c.add(Calendar.SECOND, 1);
         Date inactiveDate = c.getTime();
         c.add(Calendar.SECOND, 5);
@@ -123,7 +123,7 @@ public class CoreTest extends Arquillian {
         Thread.sleep(1100);
         c = Calendar.getInstance();
         Date now = c.getTime();
-        c.add(Calendar.HOUR, -CoreServiceEJB.IOC_ACTIVE_HOURS);
+        c.add(Calendar.HOUR, -coreService.getIocActiveHours());
         Date deactivationLimit = c.getTime();
         assertTrue(deactivationLimit.after(willNotBeActive.getSeen().getLast()), "Expected seen.last to be before: " + deactivationLimit + ", but was: " + willNotBeActive.getSeen().getLast());
 

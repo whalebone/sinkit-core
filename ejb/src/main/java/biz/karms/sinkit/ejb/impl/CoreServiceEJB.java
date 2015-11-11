@@ -4,6 +4,7 @@ import biz.karms.sinkit.ejb.ArchiveService;
 import biz.karms.sinkit.ejb.CacheBuilder;
 import biz.karms.sinkit.ejb.CacheService;
 import biz.karms.sinkit.ejb.CoreService;
+import biz.karms.sinkit.ejb.util.IoCIdentificationUtils;
 import biz.karms.sinkit.ejb.util.IoCValidator;
 import biz.karms.sinkit.eventlog.*;
 import biz.karms.sinkit.exception.ArchiveException;
@@ -30,7 +31,9 @@ import java.util.logging.Logger;
 @Stateless
 public class CoreServiceEJB implements CoreService {
 
-    public static final int IOC_ACTIVE_HOURS = 72;
+    //public static final int IOC_ACTIVE_HOURS = Integer.parseInt(System.getenv("SINKIT_IOC_ACTIVE_HOURS"));
+    private static final String IOC_ACTIVE_HOURS_ENV = "SINKIT_IOC_ACTIVE_HOURS";
+    private int iocActiveHours;
 
     @Inject
     private Logger log;
@@ -49,58 +52,51 @@ public class CoreServiceEJB implements CoreService {
         if (log == null || archiveService == null || cacheService == null || cacheBuilder == null) {
             throw new IllegalArgumentException("Logger, ArchiveServiceEJB, CacheServiceEJB, CacheBuilderEJB must be injected.");
         }
+
+        try {
+            iocActiveHours = Integer.parseInt(System.getenv(IOC_ACTIVE_HOURS_ENV));
+        } catch (RuntimeException re) {
+            throw new IllegalArgumentException("System env " + IOC_ACTIVE_HOURS_ENV + " is invalid: " + System.getenv(IOC_ACTIVE_HOURS_ENV));
+        }
+
+        if (iocActiveHours < 0) {
+            throw new IllegalArgumentException("System env " + IOC_ACTIVE_HOURS_ENV + " is mandatory and must be integer bigger than zero.");
+        }
+    }
+
+    public int getIocActiveHours() {
+        return iocActiveHours;
     }
 
     @Override
-    public IoCRecord processIoCRecord(IoCRecord receivedIoc) throws ArchiveException, IoCValidationException {
+    public IoCRecord processIoCRecord(IoCRecord ioc) throws ArchiveException, IoCValidationException {
         // validate ioc
-        IoCValidator.validateIoCRecord(receivedIoc, IOC_ACTIVE_HOURS);
+        IoCValidator.validateIoCRecord(ioc, iocActiveHours);
 
         // try to construct source ID
-        IoCSourceId sid = IoCSourceIdBuilder.build(receivedIoc);
-        receivedIoc.getSource().setId(sid);
+        IoCSourceId sid = IoCSourceIdBuilder.build(ioc);
+        ioc.getSource().setId(sid);
 
-        IoCRecord ioc = archiveService.findActiveIoCRecordBySourceId(
-                receivedIoc.getSource().getId().getValue(),
-                receivedIoc.getClassification().getType(),
-                receivedIoc.getFeed().getName());
+        ioc.setActive(true);
 
-        //active not found in archive
-        if (ioc == null) {
-            ioc = receivedIoc;
-            ioc.setActive(true);
-
-            Date seenFirst;
-            Date seenLast;
-            if (ioc.getTime().getSource() == null) {
-                seenFirst = ioc.getTime().getObservation();
-                seenLast = ioc.getTime().getObservation();
-            } else {
-                seenFirst = ioc.getTime().getSource();
-                seenLast =  ioc.getTime().getSource();
-            }
-            IoCSeen seen = new IoCSeen();
-            seen.setLast(seenLast);
-            seen.setFirst(seenFirst);
-            ioc.setSeen(seen);
-            ioc.getTime().setReceivedByCore(Calendar.getInstance().getTime());
+        Date seenFirst;
+        Date seenLast;
+        if (ioc.getTime().getSource() == null) {
+            seenFirst = ioc.getTime().getObservation();
+            seenLast = ioc.getTime().getObservation();
         } else {
-            //active already in archive
-
-            Date seenLast;
-            if (receivedIoc.getTime().getSource() == null) {
-                seenLast = receivedIoc.getTime().getObservation();
-            } else {
-                seenLast = receivedIoc.getTime().getSource();
-            }
-            if (ioc.getSeen().getLast().before(seenLast) ) {
-                ioc.getSeen().setLast(seenLast);
-            }
+            seenFirst = ioc.getTime().getSource();
+            seenLast =  ioc.getTime().getSource();
         }
+        IoCSeen seen = new IoCSeen();
+        seen.setLast(seenLast);
+        seen.setFirst(seenFirst);
+        ioc.setSeen(seen);
+        ioc.getTime().setReceivedByCore(Calendar.getInstance().getTime());
 
-        ioc = archiveService.archiveIoCRecord(ioc);
+        // ioc is inserted as is if does not exist or last.seen is updated
+        archiveService.archiveReceivedIoCRecord(ioc);
 
-        //always add to cache
         if (ioc.getSource().getId().getType() == IoCSourceIdType.FQDN || ioc.getSource().getId().getType() == IoCSourceIdType.IP) {
             cacheService.addToCache(ioc);
         }
@@ -117,11 +113,11 @@ public class CoreServiceEJB implements CoreService {
         // due to archiveService.findIoCsForDeactivation has limit for single search (i.e. max 1000 records)
         // this has to be done in multiple runs until search returns 0 results
         do {
-            iocs = archiveService.findIoCsForDeactivation(CoreServiceEJB.IOC_ACTIVE_HOURS);
+            iocs = archiveService.findIoCsForDeactivation(iocActiveHours);
             if (!iocs.isEmpty()) {
                 for (IoCRecord ioc : iocs) {
-                    archiveService.deactivateRecord(ioc);
                     cacheService.removeFromCache(ioc);
+                    archiveService.deactivateRecord(ioc);
                 }
                 deactivated += iocs.size();
             }
@@ -133,62 +129,6 @@ public class CoreServiceEJB implements CoreService {
             log.info("IoCs deactivated: " + deactivated);
         }
         return deactivated;
-    }
-
-    @Asynchronous
-    @Override
-    public Future<EventLogRecord> logEvent(
-            EventLogAction action,
-            String clientUid,
-            String requestIp,
-            String requestRaw,
-            String reasonFqdn,
-            String reasonIp,
-            String[] matchedIoCs
-    ) throws ArchiveException {
-        EventLogRecord logRecord = new EventLogRecord();
-
-        EventDNSRequest request = new EventDNSRequest();
-        request.setIp(requestIp);
-        request.setRaw(requestRaw);
-        logRecord.setRequest(request);
-
-        EventReason reason = new EventReason();
-        reason.setIp(reasonIp);
-        reason.setFqdn(reasonFqdn);
-        logRecord.setReason(reason);
-
-        logRecord.setAction(action);
-        logRecord.setClient(clientUid);
-        logRecord.setLogged(Calendar.getInstance().getTime());
-        //logRecord.setMatchedIocs(matchedIoCs);
-
-        List<MatchedIoC> matchedIoCsList = new ArrayList<>();
-        for (String iocId : matchedIoCs) {
-            IoCRecord ioc = archiveService.getIoCRecordById(iocId);
-            if (ioc == null) {
-                log.warning("Match IoC with id " + iocId + " was not found -> skipping.");
-            }
-            ioc.setVirusTotalReports(null);
-            ioc.getSeen().setLast(null);
-            ioc.setRaw(null);
-            ioc.setActive(null);
-
-            MatchedIoC matchedIoc = new MatchedIoC();
-            matchedIoc.setDocumentId(iocId);
-            matchedIoc.setIoc(ioc);
-            matchedIoCsList.add(matchedIoc);
-        }
-        MatchedIoC[] matchedIoCsArray = matchedIoCsList.toArray(new MatchedIoC[matchedIoCsList.size()]);
-        logRecord.setMatchedIocs(matchedIoCsArray);
-
-        VirusTotalRequest vtReq = new VirusTotalRequest();
-        vtReq.setStatus(VirusTotalRequestStatus.WAITING);
-        logRecord.setVirusTotalRequest(vtReq);
-
-        archiveService.archiveEventLogRecord(logRecord);
-
-        return new AsyncResult<>(logRecord);
     }
 
     @Override

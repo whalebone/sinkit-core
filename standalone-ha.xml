@@ -219,76 +219,15 @@
                     <state-transfer timeout="300000"/>
                 </replicated-cache>
             </cache-container>
-            <!-- TODO Merge cache containers...
-            <cache-container name="sinkit" module="org.infinispan.query" default-cache="BLACKLIST_CACHE">
-                <transport channel="ee"/>
-            <replicated-cache name="BLACKLIST_CACHE" mode="ASYNC">
-                    <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
-                    <transaction mode="NONE"/>
-                    <eviction max-entries="10000000" strategy="NONE"/>
-                    <expiration interval="-1" lifespan="-1" max-idle="-1"/>
-                    <file-store/>
-                    <state-transfer timeout="300000"/>
-                <indexing index="ALL"/>
-                </replicated-cache>
-
-                <replicated-cache name="RULES_CACHE" mode="ASYNC">
-                    <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
-                    <transaction mode="NONE"/>
-                    <eviction max-entries="10000000" strategy="NONE"/>
-                    <expiration interval="-1" lifespan="-1" max-idle="-1"/>
-                    <file-store/>
-                    <state-transfer timeout="300000"/>
-                    <indexing index="ALL"/>
-                </replicated-cache>
-
-                <replicated-cache name="CUSTOM_LISTS_CACHE" mode="ASYNC">
-                    <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
-                    <transaction mode="NONE"/>
-                    <eviction max-entries="1000000" strategy="NONE"/>
-                    <expiration interval="-1" lifespan="-1" max-idle="-1"/>
-                    <file-store/>
-                    <state-transfer timeout="300000"/>
-                    <indexing index="ALL"/>
-                </replicated-cache>
-
-            </cache-container>-->
-
 
             <cache-container name="sinkitcontainer" module="org.infinispan.query" default-cache="defaultsinkit">
-                <transport channel="sink"/>
+                <transport channel="ee"/>
                 <replicated-cache name="defaultsinkit" mode="ASYNC">
                     <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
                     <transaction mode="NONE"/>
                     <file-store/>
                     <state-transfer timeout="300000"/>
                 </replicated-cache>
-                <!--
-                 <replicated-cache name="BLACKLIST_CACHE" mode="ASYNC">
-                     <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
-                     <transaction mode="NONE"/>
-                     <eviction max-entries="10000000" strategy="NONE"/>
-                     <expiration interval="-1" lifespan="-1" max-idle="-1"/>
-                     <file-store/>
-                     <state-transfer timeout="300000"/>
-                 </replicated-cache>
-                 <replicated-cache name="RULES_CACHE" mode="ASYNC">
-                     <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
-                     <transaction mode="NONE"/>
-                     <eviction max-entries="10000000" strategy="NONE"/>
-                     <expiration interval="-1" lifespan="-1" max-idle="-1"/>
-                     <file-store/>
-                     <state-transfer timeout="300000"/>
-                 </replicated-cache>
-                 <replicated-cache name="CUSTOM_LISTS_CACHE" mode="ASYNC">
-                     <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
-                     <transaction mode="NONE"/>
-                     <eviction max-entries="1000000" strategy="NONE"/>
-                     <expiration interval="-1" lifespan="-1" max-idle="-1"/>
-                     <file-store/>
-                     <state-transfer timeout="300000"/>
-                 </replicated-cache>
-                 -->
             </cache-container>
 
             <cache-container name="web" module="org.wildfly.clustering.web.infinispan" default-cache="passivation">
@@ -303,6 +242,7 @@
                     <file-store passivation="false" purge="false"/>
                 </local-cache>
             </cache-container>
+
             <cache-container name="ejb" aliases="sfsb" module="org.wildfly.clustering.ejb.infinispan" default-cache="passivation">
                 <local-cache name="passivation">
                     <locking isolation="REPEATABLE_READ"/>
@@ -315,7 +255,7 @@
                     <file-store passivation="false" purge="false"/>
                 </local-cache>
             </cache-container>
-            <!--
+
             <cache-container name="hibernate" module="org.hibernate" default-cache="local-query">
                 <transport lock-timeout="60000"/>
                 <local-cache name="local-query">
@@ -332,7 +272,7 @@
                     <transaction mode="NONE"/>
                     <eviction strategy="NONE"/>
                 </replicated-cache>
-            </cache-container>-->
+            </cache-container>
         </subsystem>
         <subsystem xmlns="urn:jboss:domain:jaxrs:1.0"/>
         <subsystem xmlns="urn:jboss:domain:jca:4.0">
@@ -358,7 +298,6 @@
         <subsystem xmlns="urn:jboss:domain:jgroups:4.0">
             <channels default="ee">
                 <channel name="ee" stack="tcp"/>
-                <channel name="sink" stack="tcp"/>
             </channels>
             <stacks>
                 <stack name="udp">

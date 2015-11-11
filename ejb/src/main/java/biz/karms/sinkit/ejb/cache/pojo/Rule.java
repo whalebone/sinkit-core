@@ -3,34 +3,36 @@ package biz.karms.sinkit.ejb.cache.pojo;
 import biz.karms.sinkit.ejb.util.SettingsMapBridge;
 import org.hibernate.search.annotations.*;
 
+import javax.persistence.Entity;
 import java.io.Serializable;
 import java.util.HashMap;
 
 /**
  * @author Michal Karm Babacek
  */
-@Indexed
+@Indexed(index = "Rule")
+@Entity
 public class Rule implements Serializable {
 
-    private static final long serialVersionUID = 821232233347691L;
+    private static final long serialVersionUID = 827732233347691L;
 
-    @Field
+    @Field(index = Index.YES, analyze = Analyze.NO)
     private String startAddress;
 
-    @Field
+    @Field(index = Index.YES, analyze = Analyze.NO)
     private String endAddress;
 
-    @Field
+    @Field(index = Index.YES, analyze = Analyze.NO)
     private String cidrAddress;
 
-    @Field
+    @Field(index = Index.YES, analyze = Analyze.NO)
     private int customerId;
 
     /**
      * Feed UID : Mode <L|S|D>
      */
     @FieldBridge(impl = SettingsMapBridge.class)
-    @Field(analyze = Analyze.YES, index = Index.YES)
+    @Field(index = Index.YES, analyze = Analyze.YES)
     private HashMap<String, String> sources;
 
     public String getStartAddress() {

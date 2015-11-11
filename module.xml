@@ -26,6 +26,7 @@
         <module name="org.hibernate.commons-annotations"/>
         <module name="org.hibernate.search.engine"/>
         <module name="org.hibernate.search.serialization-avro"/>
+        <module name="org.hibernate.search.orm"/>
         <module name="org.infinispan"/>
         <module name="org.infinispan.client.hotrod"/>
         <module name="org.infinispan.commons"/>

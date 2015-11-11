@@ -3,6 +3,7 @@ package biz.karms.sinkit.tests.api;
 
 import biz.karms.sinkit.ejb.ArchiveService;
 import biz.karms.sinkit.ejb.CacheService;
+import biz.karms.sinkit.ejb.CoreService;
 import biz.karms.sinkit.ejb.impl.ArchiveServiceEJB;
 import biz.karms.sinkit.ejb.impl.CoreServiceEJB;
 import biz.karms.sinkit.ioc.IoCRecord;
@@ -42,6 +43,9 @@ public class ApiIntegrationTest extends Arquillian {
 
     @EJB
     ArchiveService archiveService;
+
+    @EJB
+    CoreService coreService;
 
     @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 1)
     @OperateOnDeployment("ear")
@@ -277,8 +281,8 @@ public class ApiIntegrationTest extends Arquillian {
         assertNotNull(ioc.getSeen().getFirst(), "Expected seen.first but got null");
         assertNotNull(ioc.getSeen().getLast(), "Expected seen.last but got null");
         Calendar c = Calendar.getInstance();
-        c.add(Calendar.HOUR, -CoreServiceEJB.IOC_ACTIVE_HOURS);
-        assertTrue(ioc.getSeen().getLast().after(c.getTime()), "Expected seen.last is not older than " + CoreServiceEJB.IOC_ACTIVE_HOURS + " hours, but got " + ioc.getSeen().getLast());
+        c.add(Calendar.HOUR, -coreService.getIocActiveHours());
+        assertTrue(ioc.getSeen().getLast().after(c.getTime()), "Expected seen.last is not older than " + coreService.getIocActiveHours() + " hours, but got " + ioc.getSeen().getLast());
         assertTrue(ioc.isActive(), "Expected ioc to be active, but got active: false");
         assertNotNull(ioc.getTime().getObservation(), "Expecting time.observation, but got null");
     }

@@ -14,7 +14,6 @@ import java.util.logging.Logger;
 /**
  * Created by tkozel on 29.6.15.
  */
-//TODO
 @Stateless
 @AccessTimeout(value = 40, unit = TimeUnit.MINUTES)
 public class IoCDeactivatorEJB implements IoCDeactivator {
@@ -34,7 +33,7 @@ public class IoCDeactivatorEJB implements IoCDeactivator {
     public void initialize(String info) {
         ScheduleExpression sexpr = new ScheduleExpression();
         // Every hour
-        sexpr.hour("*").minute("0").second("0");
+        sexpr.hour("*").minute("*").second("0/15");
         timerService.createCalendarTimer(sexpr, new TimerConfig(info, false));
     }
 
@@ -57,7 +56,12 @@ public class IoCDeactivatorEJB implements IoCDeactivator {
         }
 
         try {
-            coreService.deactivateIocs();
+            if (Boolean.parseBoolean(System.getenv("SINKIT_IOC_DEACTIVATOR_SKIP"))) {
+                log.fine("IoCDeactivator: Skipping deactivation, SINKIT_IOC_DEACTIVATOR_SKIP is true.");
+            } else {
+                log.fine("IoCDeactivator: Running deactivation, SINKIT_IOC_DEACTIVATOR_SKIP is false or null.");
+                coreService.deactivateIocs();
+            }
         } finally {
             busy.set(false);
         }
