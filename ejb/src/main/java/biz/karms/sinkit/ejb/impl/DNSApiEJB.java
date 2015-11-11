@@ -200,9 +200,9 @@ public class DNSApiEJB implements DNSApi {
     public CustomList retrieveOneCustomList(final Integer customerId, final boolean isFQDN, final String fqdnOrIp) {
         //TODO logic about B|W lists
         //TODO logic about *something.foo.com being less important then bar.something.foo.com
-        // This is just a stupid dummy/mock
+        //TODO This is just a stupid dummy/mock
         List customLists = customListsLookup(customerId, isFQDN, fqdnOrIp);
-        return (customLists.isEmpty()) ? null : (CustomList) customLists.get(0);
+        return (customLists == null || customLists.isEmpty()) ? null : (CustomList) customLists.get(0);
     }
 
     /**
