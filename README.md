@@ -16,6 +16,7 @@ A prototype of a toy project featuring Infinispan dist cache.
     export SINKIT_VIRUS_TOTAL_API_KEY=
     export SINKIT_SINKHOLE_IPV6=
     export SINKIT_IOC_DEACTIVATOR_SKIP=
+    export SINKIT_IOC_ACTIVE_HOURS=
 
 ## Basic config
 ###Feeds configurations

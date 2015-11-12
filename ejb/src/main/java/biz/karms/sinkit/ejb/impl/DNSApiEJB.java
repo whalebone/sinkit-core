@@ -1,32 +1,18 @@
 package biz.karms.sinkit.ejb.impl;
 
-import biz.karms.sinkit.ejb.ArchiveService;
-import biz.karms.sinkit.ejb.CoreService;
-import biz.karms.sinkit.ejb.DNSApi;
-import biz.karms.sinkit.ejb.MyCacheManagerProvider;
-import biz.karms.sinkit.ejb.WebApi;
+import biz.karms.sinkit.ejb.*;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.CustomList;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ejb.dto.Sinkhole;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
-import biz.karms.sinkit.eventlog.EventDNSRequest;
-import biz.karms.sinkit.eventlog.EventLogAction;
-import biz.karms.sinkit.eventlog.EventLogRecord;
-import biz.karms.sinkit.eventlog.EventReason;
-import biz.karms.sinkit.eventlog.MatchedIoC;
-import biz.karms.sinkit.eventlog.VirusTotalRequest;
-import biz.karms.sinkit.eventlog.VirusTotalRequestStatus;
+import biz.karms.sinkit.eventlog.*;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.ioc.IoCRecord;
 import org.apache.commons.validator.routines.DomainValidator;
-//import org.apache.lucene.search.Query;
-//import org.hibernate.search.query.dsl.QueryBuilder;
 import org.infinispan.Cache;
-import org.infinispan.commons.hash.Hash;
 import org.infinispan.query.Search;
-//import org.infinispan.query.SearchManager;
-//import org.infinispan.query.dsl.Query;
+import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
 
 import javax.annotation.PostConstruct;
@@ -36,19 +22,15 @@ import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.infinispan.query.dsl.Query;
+//import org.apache.lucene.search.Query;
+//import org.hibernate.search.query.dsl.QueryBuilder;
+//import org.infinispan.query.SearchManager;
+//import org.infinispan.query.dsl.Query;
 
 /**
  * @author Michal Karm Babacek
@@ -378,25 +360,23 @@ public class DNSApiEJB implements DNSApi {
         logRecord.setClient(clientUid);
         logRecord.setLogged(Calendar.getInstance().getTime());
 
-        List<MatchedIoC> matchedIoCsList = new ArrayList<>();
+        List<IoCRecord> matchedIoCsList = new ArrayList<>();
         log.log(Level.FINE, "Iterating matchedIoCs...");
         for (String iocId : matchedIoCs) {
             IoCRecord ioc = archiveService.getIoCRecordById(iocId);
             if (ioc == null) {
-                log.log(Level.WARNING, "Match IoC with id " + iocId + " was not found -> skipping.");
+                log.warning("Match IoC with id " + iocId + " was not found (deactivated??) -> skipping.");
                 continue;
             }
             ioc.setVirusTotalReports(null);
             ioc.getSeen().setLast(null);
             ioc.setRaw(null);
             ioc.setActive(null);
+            ioc.setDocumentId(null); //documentId will changed whe ioc is deactivated so it's useless to have it here. Ioc.uniqueRef will be used for referencing ioc
 
-            MatchedIoC matchedIoc = new MatchedIoC();
-            matchedIoc.setDocumentId(iocId);
-            matchedIoc.setIoc(ioc);
-            matchedIoCsList.add(matchedIoc);
+            matchedIoCsList.add(ioc);
         }
-        MatchedIoC[] matchedIoCsArray = matchedIoCsList.toArray(new MatchedIoC[matchedIoCsList.size()]);
+        IoCRecord[] matchedIoCsArray = matchedIoCsList.toArray(new IoCRecord[matchedIoCsList.size()]);
         logRecord.setMatchedIocs(matchedIoCsArray);
 
         VirusTotalRequest vtReq = new VirusTotalRequest();

@@ -13,11 +13,8 @@ import java.util.List;
  */
 @Local
 public interface ArchiveService {
-    IoCRecord findActiveIoCRecordBySourceId(String sourceId, String classificationType, String feedName) throws ArchiveException;
 
     List<IoCRecord> findIoCsForDeactivation(int hours) throws ArchiveException;
-
-    //IoCRecord archiveIoCRecord(IoCRecord ioc) throws ArchiveException;
 
     boolean archiveReceivedIoCRecord(IoCRecord ioc) throws ArchiveException;
 

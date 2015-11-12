@@ -33,7 +33,7 @@ public class IoCDeactivatorEJB implements IoCDeactivator {
     public void initialize(String info) {
         ScheduleExpression sexpr = new ScheduleExpression();
         // Every hour
-        sexpr.hour("*").minute("*").second("0/15");
+        sexpr.hour("*").minute("0").second("0");
         timerService.createCalendarTimer(sexpr, new TimerConfig(info, false));
     }
 
