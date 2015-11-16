@@ -1,28 +1,26 @@
-package biz.karms.sinkit.ejb.elastic;
+package biz.karms.sinkit.ejb.elastic.impl;
 
+import biz.karms.sinkit.ejb.elastic.ElasticService;
+import biz.karms.sinkit.ejb.elastic.Indexable;
 import biz.karms.sinkit.exception.ArchiveException;
 import io.searchbox.client.JestClient;
 import io.searchbox.client.JestResult;
-import io.searchbox.core.Get;
-import io.searchbox.core.Index;
-import io.searchbox.core.Search;
-import io.searchbox.core.SearchResult;
-import io.searchbox.indices.CreateIndex;
+import io.searchbox.core.*;
 import io.searchbox.params.Parameters;
 
 import javax.annotation.PostConstruct;
-import javax.ejb.Singleton;
+import javax.ejb.Stateless;
 import javax.inject.Inject;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * Created by tkozel on 4.8.15.
  */
-@Singleton
-public class ElasticServiceEJB {
+@Stateless
+public class ElasticServiceEJB implements ElasticService {
 
     private static final String PARAMETER_FROM = "from";
     private static final int DEF_LIMIT = 1000;
@@ -42,10 +40,6 @@ public class ElasticServiceEJB {
         }
     }
 
-    public JestClient getElasticClient() {
-        return elasticClient;
-    }
-
     /**
      * Searches index of given type using query for single object of class T
      *
@@ -57,9 +51,8 @@ public class ElasticServiceEJB {
      * @return Found object of class T
      * @throws ArchiveException when communication with elastic went wrong or more than single hit is found
      */
-    public <T extends Indexable> T searchForSingleHit(
-            String query, String index, String type, Class<T> clazz) throws ArchiveException {
-
+    @Override
+    public <T extends Indexable> T searchForSingleHit(String query, String index, String type, Class<T> clazz) throws ArchiveException {
         List<T> hits = this.search(query, index, type, clazz);
 
         if (hits.isEmpty()) return null;
@@ -70,14 +63,12 @@ public class ElasticServiceEJB {
         return hits.get(0);
     }
 
-    public <T extends Indexable> T getDocumentById(
-            String id, String index, String type, Class<T> clazz) throws ArchiveException {
-
+    @Override
+    public <T extends Indexable> T getDocumentById(String id, String index, String type, Class<T> clazz) throws ArchiveException {
         JestResult result;
         T document;
-
-        Get get = new Get.Builder(index, id)
-                .type(type).build();
+        log.log(Level.FINE, "getDocumentById called: id:" + id);
+        Get get = new Get.Builder(index, id).type(type).build();
         try {
 
             result = elasticClient.execute(get);
@@ -88,11 +79,10 @@ public class ElasticServiceEJB {
         }
 
         if (!result.isSucceeded()) {
-            log.warning("Can't get document with id:  " + id + ". Elastic returned: " + result.getResponseCode() +
-                    ", response code: " + result.getResponseCode());
+            log.log(Level.WARNING, "Can't get document with id:  " + id + ". Elastic returned: " + result.getResponseCode() + ", response code: " + result.getResponseCode());
             return null;
         }
-
+        log.log(Level.FINE, "getDocumentById returning document id: " + document.getDocumentId());
         return document;
     }
 
@@ -107,9 +97,8 @@ public class ElasticServiceEJB {
      * @return Found objects of class T
      * @throws ArchiveException when communication with elastic went wrong
      */
-    public <T extends Indexable> List<T> search(String query, String index, String type, Class<T> clazz)
-            throws ArchiveException {
-
+    @Override
+    public <T extends Indexable> List<T> search(String query, String index, String type, Class<T> clazz) throws ArchiveException {
         return search(query, index, type, 0, DEF_LIMIT, clazz);
     }
 
@@ -127,9 +116,8 @@ public class ElasticServiceEJB {
      * @return Found objects of class T
      * @throws ArchiveException when communication with elastic went wrong
      */
-    public <T extends Indexable> List<T> search(
-            String query, String index, String type, int from, int size, Class<T> clazz) throws ArchiveException {
-
+    @Override
+    public <T extends Indexable> List<T> search(String query, String index, String type, int from, int size, Class<T> clazz) throws ArchiveException {
         Search search = new Search.Builder(query)
                 .addIndex(index)
                 .addType(type)
@@ -161,7 +149,7 @@ public class ElasticServiceEJB {
 
         //log.info(result.getJsonString());
         if (result.getTotal() < 1) return new ArrayList<>();
-
+        //TODO: Kozel, use something that ain't deprecated.
         return result.getSourceAsObjectList(clazz);
     }
 
@@ -175,15 +163,14 @@ public class ElasticServiceEJB {
      * @return indexed object
      * @throws ArchiveException when communication with Elastic Search server went wrong
      */
-    public <T extends Indexable> T index(T document, String index, String type)
-            throws ArchiveException {
-
+    @Override
+    public <T extends Indexable> T index(T document, String index, String type) throws ArchiveException {
         Index indexRequest = new Index.Builder(document)
                 .index(index)
                 .type(type)
                 .setParameter(Parameters.REFRESH, true)
                 .build();
-        //log.info("Indexing ioc [" + ioc.toString() + "]");
+        log.log(Level.FINE, "Indexing ioc [" + document.toString() + "]");
 
         JestResult result;
         try {
@@ -195,11 +182,87 @@ public class ElasticServiceEJB {
         if (result.isSucceeded()) {
             String docId = result.getJsonObject().getAsJsonPrimitive("_id").getAsString();
             document.setDocumentId(docId);
-            //log.info("Indexed ioc: [" + ioc.toString() + "]");
+            log.log(Level.FINE, "Indexed ioc: [" + document.toString() + "]");
         } else {
             log.severe("Archive returned error: " + result.getErrorMessage());
             throw new ArchiveException(result.getErrorMessage());
         }
         return document;
+    }
+
+    /**
+     * Stores object that implements Indexable interface
+     *
+     * @param documentId object being stored
+     * @param index    Document index
+     * @param type     Document type
+     * //@param <T>      Class of object being stored
+     * @return indexed object
+     * @throws ArchiveException when communication with Elastic Search server went wrong
+     */
+    @Override
+    public boolean update(String documentId, String script, String index, String type) throws ArchiveException {
+
+        Update updateRequest = new Update.Builder(script)
+                .index(index)
+                .type(type)
+                .id(documentId)
+                .setParameter(Parameters.REFRESH, true)         // immediate refresh
+                .setParameter(Parameters.RETRY_ON_CONFLICT, 5)  // 5 tries in case of conflict
+                .build();
+
+        JestResult result;
+        try {
+            result = elasticClient.execute(updateRequest);
+        } catch (Exception e) {
+            String message;
+            if (e.getCause() != null) {
+                message = e.getCause().getMessage();
+            } else {
+                message = e.getMessage();
+            }
+            throw new ArchiveException("Elastic upsert went wrong: " + message, e);
+        }
+
+        if (result.isSucceeded()) {
+            String docId = result.getJsonObject().getAsJsonPrimitive("_id").getAsString();
+            log.info("Indexed docId [" + docId + "]");
+        } else {
+            log.severe("Archive returned error: " + result.getErrorMessage());
+            throw new ArchiveException(result.getErrorMessage());
+        }
+        return result.isSucceeded();
+    }
+
+    @Override
+    public <T extends Indexable> boolean delete(T document, String index, String type) throws ArchiveException {
+
+        JestResult result;
+        try {
+            result = elasticClient.execute(new Delete.Builder(document.getDocumentId())
+                    .index(index)
+                    .type(type)
+                    .setParameter(Parameters.REFRESH, true)         // immediate refresh
+                    .build());
+        } catch (Exception e) {
+
+            String message;
+            if (e.getCause() != null) {
+                message = e.getCause().getMessage();
+            } else {
+                message = e.getMessage();
+            }
+            throw new ArchiveException("Elastic delete went wrong: " + message, e);
+        }
+
+        if (result.isSucceeded()) {
+            String docId = result.getJsonObject().getAsJsonPrimitive("_id").getAsString();
+            log.info("Deleted docId [" + docId + "]");
+        } else {
+            log.severe("Archive returned error: " + result.getErrorMessage());
+            throw new ArchiveException(result.getErrorMessage());
+        }
+
+        return result.isSucceeded();
     }
 }

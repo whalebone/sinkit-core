@@ -38,14 +38,14 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- JBoss dependency versions -->
         <version.wildfly.maven.plugin>1.0.2.Final</version.wildfly.maven.plugin>
-        <version.wildfly>9.0.1.Final</version.wildfly>
-        <version.jboss.bom>9.0.1.Final</version.jboss.bom>
+        <version.wildfly>10.0.0.CR2</version.wildfly>
+        <version.jboss.bom>10.0.0.CR2</version.jboss.bom>
         <version.jboss.spec.javaee.7.0>1.0.0.Final</version.jboss.spec.javaee.7.0>
         <version.ejb>3.2</version.ejb>
         <version.jboss.msc>1.2.6.Final</version.jboss.msc>
 
         <!-- other plugin versions -->
-        <version.compiler.plugin>3.1</version.compiler.plugin>
+        <version.compiler.plugin>3.2</version.compiler.plugin>
         <version.surefire.plugin>2.16</version.surefire.plugin>
         <version.ear.plugin>2.6</version.ear.plugin>
         <version.ejb.plugin>2.3</version.ejb.plugin>
@@ -59,9 +59,11 @@
         <arquillian.bom.version>1.1.7.Final</arquillian.bom.version>
         <arquillian.container.managed.version>1.0.0.Final</arquillian.container.managed.version>
         <!-- 1.0.0.Final for remote brings up https://issues.jboss.org/browse/JBTM-2414 :-( with WildFly 9.0.1 -->
+        <!-- Not tested with 10.0.0.CR2 :-( -->
         <arquillian.container.remote>1.0.0.Alpha5</arquillian.container.remote>
         <org.testng.version>6.9.6</org.testng.version>
         <htmlunit.version>2.18</htmlunit.version>
+        <arquillian.extension.version>1.1.2</arquillian.extension.version>
 
         <!-- Documentation, JavaDoc in Markdown -->
         <maven.javadoc.plugin.version>2.9</maven.javadoc.plugin.version>
@@ -74,10 +76,11 @@
         <com.kanishka.api.VirustotalPublicV2.0.version>1.1.GA-SNAPSHOT</com.kanishka.api.VirustotalPublicV2.0.version>
 
         <!-- Infinispan and business core deps-->
-        <infinispan.core.version>7.2.3.Final</infinispan.core.version>
-        <infinispan.cachestore.jdbc.version>7.2.3.Final</infinispan.cachestore.jdbc.version>
-        <infinispan.query.version>7.2.3.Final</infinispan.query.version>
-        <hibernate.search.version>5.3.0.Final</hibernate.search.version>
+        <infinispan.core.version>8.0.1.Final</infinispan.core.version>
+        <infinispan.cachestore.jdbc.version>8.0.1.Final</infinispan.cachestore.jdbc.version>
+        <infinispan.query.version>8.0.1.Final</infinispan.query.version>
+        <hibernate.infinispan.version>5.0.1.Final</hibernate.infinispan.version>
+        <hibernate.search.version>5.5.0.Final</hibernate.search.version>
         <com.mchange.c3p0.version>0.9.5.1</com.mchange.c3p0.version>
         <com.google.code.gson.version>2.3.1</com.google.code.gson.version>
         <postgresql.driver.version>9.2-1004-jdbc41</postgresql.driver.version>

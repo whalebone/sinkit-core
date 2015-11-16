@@ -1,7 +1,10 @@
 package biz.karms.sinkit.tests.util;
 
+import biz.karms.sinkit.ejb.impl.ArchiveServiceEJB;
 import biz.karms.sinkit.ioc.*;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -87,5 +90,10 @@ public class IoCFactory {
         ioc.setTime(time);
 
         return ioc;
+    }
+
+    public static String getLogIndex() {
+        DateFormat df = new SimpleDateFormat("YYYY-MM-dd");
+        return ArchiveServiceEJB.ELASTIC_LOG_INDEX + "-" + df.format(new Date());
     }
 }

@@ -16,7 +16,10 @@ public class IoCRecord implements Indexable {
     private static final long serialVersionUID = -595246622767555283L;
 
     @JestId
-    private transient String documentId;
+    @SerializedName("document_id")
+    private String documentId;
+    @SerializedName("unique_ref")
+    private String uniqueRef;
     private IoCFeed feed;
     private IoCDescription description;
     private IoCClassification classification;
@@ -38,6 +41,14 @@ public class IoCRecord implements Indexable {
 
     public void setDocumentId(String documentId) {
         this.documentId = documentId;
+    }
+
+    public String getUniqueRef() {
+        return uniqueRef;
+    }
+
+    public void setUniqueRef(String uniqueRef) {
+        this.uniqueRef = uniqueRef;
     }
 
     public IoCFeed getFeed() {

@@ -1,11 +1,10 @@
 package biz.karms.sinkit.ejb.virustotal.impl;
 
-import biz.karms.sinkit.ejb.ArchiveServiceEJB;
+import biz.karms.sinkit.ejb.ArchiveService;
 import biz.karms.sinkit.ejb.virustotal.VirusTotalEnricher;
-import biz.karms.sinkit.ejb.virustotal.VirusTotalServiceEJB;
+import biz.karms.sinkit.ejb.virustotal.VirusTotalService;
 import biz.karms.sinkit.ejb.virustotal.exception.VirusTotalException;
 import biz.karms.sinkit.eventlog.EventLogRecord;
-import biz.karms.sinkit.eventlog.MatchedIoC;
 import biz.karms.sinkit.eventlog.VirusTotalRequestStatus;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.ioc.IoCRecord;
@@ -27,8 +26,8 @@ import java.util.logging.Logger;
 /**
  * Created by tkozel on 31.7.15.
  */
-@Singleton
-@TransactionManagement(TransactionManagementType.BEAN)
+//TODO
+@Stateless
 public class VirusTotalEnricherEJB implements VirusTotalEnricher {
 
     // we can call the Virus Total API only 4 times per minute
@@ -37,11 +36,11 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
     @Inject
     private Logger log;
 
-    @Inject
-    private ArchiveServiceEJB archiveService;
+    @EJB
+    private ArchiveService archiveService;
 
-    @Inject
-    private VirusTotalServiceEJB virusTotalService;
+    @EJB
+    private VirusTotalService virusTotalService;
 
     @Resource
     private TimerService timerService;
@@ -122,13 +121,13 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
         boolean needEnrichment = false;
 
         iocsLoop:
-        for (MatchedIoC matchedIoC : enrichmentRequest.getMatchedIocs()) {
+        for (IoCRecord matchedIoC : enrichmentRequest.getMatchedIocs()) {
 
-            String iocId = matchedIoC.getDocumentId();
+            String uniqueRef = matchedIoC.getUniqueRef();
 
-            IoCRecord ioc = archiveService.getIoCRecordById(iocId);
+            IoCRecord ioc = archiveService.getIoCRecordByUniqueRef(uniqueRef);
             if (ioc == null) {
-                log.warning("VirusTotal: IoC with id: " + iocId + " does not exist -> skipping scan request.");
+                log.warning("VirusTotal: IoC with uniqueRef: " + uniqueRef + " does not exist -> skipping scan request.");
                 continue;
             } else {
                 log.finest("IoC found: " + ioc.toString());
@@ -199,27 +198,32 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
             throw new VirusTotalException("Cannot parse scan date of report: " + report.getScanDate(), e);
         }
 
-        for (MatchedIoC matchedIoC : enrichmentRequest.getMatchedIocs()) {
+        for (IoCRecord matchedIoC : enrichmentRequest.getMatchedIocs()) {
 
-            String iocId = matchedIoC.getDocumentId();
+            //String iocId = matchedIoC.getDocumentId();
+            String uniqueRef = matchedIoC.getUniqueRef();
 
-            IoCRecord ioc = archiveService.getIoCRecordById(iocId);
+            IoCRecord ioc = archiveService.getIoCRecordByUniqueRef(uniqueRef);
             if (ioc == null) {
-                log.warning("VirusTotal - IoC with id: " + iocId + " does not exist -> can't be enriched.");
+                log.warning("VirusTotal - IoC with uniqueRef: " + uniqueRef + " does not exist -> can't be enriched.");
                 continue;
             }
 
             if (ioc.getVirusTotalReports() == null || ioc.getVirusTotalReports().length == 0) {
-                ioc.setVirusTotalReports(new IoCVirusTotalReport[]{total});
+                //ioc.setVirusTotalReports(new IoCVirusTotalReport[]{total});
                 log.finest("IoC does not have any report yet -> adding new one");
+                archiveService.setVirusTotalReportToIoCRecord(ioc, new IoCVirusTotalReport[]{total});
             } else {
-                List<IoCVirusTotalReport> reportsList = new ArrayList<IoCVirusTotalReport>(Arrays.asList(ioc.getVirusTotalReports()));
+                List<IoCVirusTotalReport> reportsList = new ArrayList<>(Arrays.asList(ioc.getVirusTotalReports()));
                 reportsList.add(total);
-                ioc.setVirusTotalReports(reportsList.toArray(new IoCVirusTotalReport[reportsList.size()]));
-
+                //ioc.setVirusTotalReports(reportsList.toArray(new IoCVirusTotalReport[reportsList.size()]));
+                archiveService.setVirusTotalReportToIoCRecord(ioc,reportsList.toArray(new IoCVirusTotalReport[reportsList.size()]));
                 log.finest("IoC does have some reports already -> adding new one");
             }
-            archiveService.archiveIoCRecord(ioc);
+
+            //archiveService.archiveVirusTotalReports(ioc);
+
+            //archiveService.archiveIoCRecord(ioc);
         }
     }
 }

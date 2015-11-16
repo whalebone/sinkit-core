@@ -17,14 +17,15 @@ machine:
     SINKIT_SINKHOLE_IPV6: ::1
     SINKIT_ELASTIC_HOST: localhost
     SINKIT_ELASTIC_PORT: 9200
+    SINKIT_IOC_ACTIVE_HOURS: 72
 dependencies:
   cache_directories:
     - elasticsearch-1.7.1 # relative to the build directory
   pre:
-    - if [[ ! -e elasticsearch-1.7.1 ]]; then wget https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-1.7.1.tar.gz && tar -xvf elasticsearch-1.7.1.tar.gz; fi
+    - if [[ ! -e elasticsearch-1.7.1 ]]; then wget https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-1.7.1.tar.gz && tar -xvf elasticsearch-1.7.1.tar.gz && cp elasticsearch.yml elasticsearch-1.7.1/config/elasticsearch.yml; fi
     - elasticsearch-1.7.1/bin/elasticsearch: {background: true}
   override:
-    - git clone https://github.com/kdkanishka/Virustotal-Public-API-V2.0-Client.git && pushd Virustotal-Public-API-V2.0-Client/ && mvn install -DskipTests && popd
+    - git clone https://github.com/kdkanishka/Virustotal-Public-API-V2.0-Client.git && pushd Virustotal-Public-API-V2.0-Client/ && git reset --hard 58542f20961e77fe9a17128750ceb0582ced32ed && mvn install -DskipTests && popd
     - curl -XPUT localhost:9200/_template/iocs -d @integration-tests/src/test/resources/elastic_iocs.json
     - curl -XPUT localhost:9200/_template/logs -d @integration-tests/src/test/resources/elastic_logs.json
 test:

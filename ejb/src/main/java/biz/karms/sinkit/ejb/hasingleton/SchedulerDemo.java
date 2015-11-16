@@ -16,12 +16,16 @@
  */
 package biz.karms.sinkit.ejb.hasingleton;
 
+import javax.ejb.Local;
+import javax.ejb.Remote;
+
 /**
  * Source: WildFly Examples, Quickstarts
  * A simple example to demonstrate a implementation of a cluster-wide singleton timer.
  *
  * @author Wolf-Dieter Fink
  */
+@Remote
 public interface SchedulerDemo {
     void initialize(String info);
 

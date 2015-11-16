@@ -1,36 +1,46 @@
 package biz.karms.sinkit.ejb.cache.pojo;
 
-import org.hibernate.search.annotations.*;
+import biz.karms.sinkit.ejb.util.SettingsMapBridge;
+import com.google.gson.FieldNamingPolicy;
+import com.google.gson.GsonBuilder;
+import org.hibernate.search.annotations.Analyze;
+import org.hibernate.search.annotations.CalendarBridge;
+import org.hibernate.search.annotations.Field;
+import org.hibernate.search.annotations.FieldBridge;
+import org.hibernate.search.annotations.Index;
+import org.hibernate.search.annotations.Indexed;
+import org.hibernate.search.annotations.Resolution;
+import org.jboss.marshalling.Pair;
 
+import javax.persistence.Entity;
 import java.io.Serializable;
 import java.util.Calendar;
-import java.util.Map;
+import java.util.HashMap;
 
 /**
  * @author Michal Karm Babacek
  */
-@Indexed
+@Indexed(index = "BlacklistedRecord")
+@Entity
 public class BlacklistedRecord implements Serializable {
 
-    private static final long serialVersionUID = 2184999923047755671L;
+    private static final long serialVersionUID = 2184999923427771L;
 
-    @Field(analyze = Analyze.YES)
+    @Field(index = Index.YES, analyze = Analyze.NO)
     private String blackListedDomainOrIP;
 
     @Field
     @CalendarBridge(resolution = Resolution.HOUR)
     private Calendar listed;
 
-    //Intentionally not annotated.
-    private String documentId;
-
     /**
-     * Feed : Type
+     * Feed : {Type, IoCID}
      */
-    @IndexedEmbedded
-    private Map<String, String> sources;
+    @FieldBridge(impl = SettingsMapBridge.class)
+    @Field(index = Index.YES, analyze = Analyze.YES)
+    private HashMap<String, Pair<String, String>> sources;
 
-    public BlacklistedRecord(String blackListedDomainOrIP, Calendar listed, Map<String, String> sources) {
+    public BlacklistedRecord(String blackListedDomainOrIP, Calendar listed, HashMap<String, Pair<String, String>> sources) {
         this.blackListedDomainOrIP = blackListedDomainOrIP;
         this.listed = listed;
         this.sources = sources;
@@ -49,14 +59,6 @@ public class BlacklistedRecord implements Serializable {
         return blackListedDomainOrIP.hashCode();
     }
 
-    public String getDocumentId() {
-        return documentId;
-    }
-
-    public void setDocumentId(String documentId) {
-        this.documentId = documentId;
-    }
-
     public String getBlackListedDomainOrIP() {
         return blackListedDomainOrIP;
     }
@@ -73,11 +75,12 @@ public class BlacklistedRecord implements Serializable {
         this.listed = listed;
     }
 
-    public Map<String, String> getSources() {
+    public HashMap<String, Pair<String, String>> getSources() {
         return sources;
     }
 
-    public void setSources(Map<String, String> sources) {
+    public void setSources(HashMap<String, Pair<String, String>> sources) {
         this.sources = sources;
     }
+
 }

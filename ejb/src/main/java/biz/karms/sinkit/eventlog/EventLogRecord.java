@@ -28,7 +28,7 @@ public class EventLogRecord implements Indexable {
     private VirusTotalRequest virusTotalRequest;
 
     @SerializedName("matched_iocs")
-    private MatchedIoC[] matchedIocs;
+    private IoCRecord[] matchedIocs;
 
     @Override
     public String getDocumentId() {
@@ -88,11 +88,11 @@ public class EventLogRecord implements Indexable {
         this.virusTotalRequest = virusTotalRequest;
     }
 
-    public MatchedIoC[] getMatchedIocs() {
+    public IoCRecord[] getMatchedIocs() {
         return matchedIocs;
     }
 
-    public void setMatchedIocs(MatchedIoC[] matchedIocs) {
+    public void setMatchedIocs(IoCRecord[] matchedIocs) {
         this.matchedIocs = matchedIocs;
     }
 

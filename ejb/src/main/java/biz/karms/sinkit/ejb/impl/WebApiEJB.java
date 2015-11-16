@@ -1,5 +1,7 @@
-package biz.karms.sinkit.ejb;
+package biz.karms.sinkit.ejb.impl;
 
+import biz.karms.sinkit.ejb.MyCacheManagerProvider;
+import biz.karms.sinkit.ejb.WebApi;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.CustomList;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
@@ -8,21 +10,23 @@ import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
 import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
 import org.apache.commons.validator.routines.DomainValidator;
-import org.apache.lucene.search.Query;
 import org.hibernate.search.query.dsl.QueryBuilder;
 import org.infinispan.Cache;
-import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.query.CacheQuery;
+import org.infinispan.query.Search;
 import org.infinispan.query.SearchManager;
+import org.infinispan.query.dsl.Query;
+import org.infinispan.query.dsl.QueryFactory;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.Stateless;
-import javax.ejb.TransactionManagement;
-import javax.ejb.TransactionManagementType;
-import javax.enterprise.context.Dependent;
 import javax.inject.Inject;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -30,15 +34,14 @@ import java.util.logging.Logger;
  * @author Michal Karm Babacek
  */
 @Stateless
-@TransactionManagement(TransactionManagementType.BEAN)
-@Dependent
-public class WebApiEJB {
+//@TransactionManagement(TransactionManagementType.BEAN)
+public class WebApiEJB implements WebApi {
 
     @Inject
     private Logger log;
 
     @Inject
-    private DefaultCacheManager m;
+    private MyCacheManagerProvider m;
 
     private Cache<String, BlacklistedRecord> blacklistCache = null;
 
@@ -46,8 +49,8 @@ public class WebApiEJB {
 
     private Cache<String, CustomList> customListsCache = null;
 
-    @Inject
-    private javax.transaction.UserTransaction utx;
+    //@Inject
+    //private javax.transaction.UserTransaction utx;
 
     @PostConstruct
     public void setup() {
@@ -60,10 +63,12 @@ public class WebApiEJB {
     }
 
     // Testing purposes
+    @Override
     public String sayHello(final String queryString) {
         return "Hello there." + queryString;
     }
 
+    @Override
     public Map<String, Integer> getStats() {
         Map<String, Integer> info = new HashMap<String, Integer>();
         info.put("ioc", blacklistCache.size());
@@ -71,43 +76,47 @@ public class WebApiEJB {
         return info;
     }
 
+    @Override
     public BlacklistedRecord putBlacklistedRecord(final BlacklistedRecord blacklistedRecord) {
         if (blacklistedRecord == null || blacklistedRecord.getBlackListedDomainOrIP() == null) {
             log.log(Level.SEVERE, "putBlacklistedRecord: Got null record or IoC. Can't process this.");
             return null;
         }
         try {
-            utx.begin();
+            //utx.begin();
             log.log(Level.FINE, "Putting key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
             blacklistCache.put(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
-            utx.commit();
+            //utx.commit();
             // TODO: Is this O.K.? Maybe we should just return the same instance.
             return blacklistCache.get(blacklistedRecord.getBlackListedDomainOrIP());
         } catch (Exception e) {
             log.log(Level.SEVERE, "putBlacklistedRecord", e);
-            try {
+            /*try {
                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                     utx.rollback();
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "putBlacklistedRecord", e1);
-            }
+            }*/
             return null;
         }
     }
 
+    @Override
     public BlacklistedRecord getBlacklistedRecord(final String key) {
         log.log(Level.FINE, "getting key [" + key + "]");
         return blacklistCache.get(key);
     }
 
-    public Set<String> getBlacklistedRecordKeys() {
-        return blacklistCache.keySet();
+    @Override
+    public Object[] getBlacklistedRecordKeys() {
+        return blacklistCache.keySet().toArray();
     }
 
+    @Override
     public String deleteBlacklistedRecord(final String key) {
         try {
-            utx.begin();
+            //utx.begin();
             String response;
             if (blacklistCache.containsKey(key)) {
                 blacklistCache.remove(key);
@@ -115,22 +124,23 @@ public class WebApiEJB {
             } else {
                 response = key + " DOES NOT EXIST";
             }
-            utx.commit();
+            //utx.commit();
             return response;
         } catch (Exception e) {
             log.log(Level.SEVERE, "deleteBlacklistedRecord", e);
-            try {
+            /*try {
                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                     utx.rollback();
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "deleteBlacklistedRecord", e1);
-            }
+            }*/
             return null;
         }
     }
 
     // TODO: List? Array? Map with additional data? Let's think this over.
+    @Override
     public List<?> getRules(final String clientIPAddress) {
         try {
             //TODO: It is very wasteful to calculate the whole thing for just the one /32 or /128 masked client IP.
@@ -148,6 +158,7 @@ public class WebApiEJB {
             }
 
             // Let's search subnets
+/*
             SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
             QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(Rule.class).get();
 
@@ -159,16 +170,28 @@ public class WebApiEJB {
 
             CacheQuery query = searchManager.getQuery(luceneQuery, Rule.class);
             return query.list();
+*/
+
+            QueryFactory qf = Search.getQueryFactory(ruleCache);
+            Query query = qf.from(Rule.class)
+                    .having("startAddress").lte(clientIPAddressPaddedBigInt)
+                    .and()
+                    .having("endAddress").gte(clientIPAddressPaddedBigInt)
+                    .toBuilder().build();
+            List<Rule> list = query.list();
+            return list;
         } catch (Exception e) {
             log.log(Level.SEVERE, "getRules client address troubles", e);
             return null;
         }
     }
 
+    @Override
     public Set<String> getRuleKeys() {
         return ruleCache.keySet();
     }
 
+    @Override
     public String deleteRule(final String cidrAddress) {
         try {
             //TODO: It is very wasteful to calculate the whole thing for just the one /32 or /128 masked client IP.
@@ -177,7 +200,7 @@ public class WebApiEJB {
             cidrUtils = null;
             log.log(Level.FINE, "Deleting key [" + cidrAddress + "] which actually translates to BigInteger zero padded representation " +
                     "[" + clientIPAddressPaddedBigInt + "]");
-            utx.begin();
+            //utx.begin();
             String response;
             if (ruleCache.containsKey(clientIPAddressPaddedBigInt)) {
                 ruleCache.remove(clientIPAddressPaddedBigInt);
@@ -185,17 +208,17 @@ public class WebApiEJB {
             } else {
                 response = clientIPAddressPaddedBigInt + " DOES NOT EXIST";
             }
-            utx.commit();
+            //utx.commit();
             return response;
         } catch (Exception e) {
             log.log(Level.SEVERE, "deleteRule", e);
-            try {
+            /*try {
                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                     utx.rollback();
                 }
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "deleteRule", e1);
-            }
+            }*/
             return null;
         }
     }
@@ -209,32 +232,41 @@ public class WebApiEJB {
      * @param customerDNSSetting Map K(dnsClient in CIDR) : V(HashMap<String, String>), where HashMap<String, String> stands for: "feedUID" : "<L|S|D>"
      * @return
      */
+    @Override
     public String putDNSClientSettings(final Integer customerId, final HashMap<String, HashMap<String, String>> customerDNSSetting) {
         try {
+            /*
             SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
             QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(Rule.class).get();
             Query luceneQuery = queryBuilder.keyword().onField("customerId").matching(customerId).createQuery();
             CacheQuery query = searchManager.getQuery(luceneQuery, Rule.class);
-            if (query != null && query.list().size() > 0) {
-                Iterator itr = query.iterator();
-                while (itr.hasNext()) {
-                    Rule rule = (Rule) itr.next();
+            */
+            QueryFactory qf = Search.getQueryFactory(ruleCache);
+
+            Query query = qf.from(Rule.class)
+                    .having("customerId").eq(customerId)
+                    .toBuilder().build();
+
+            if (query != null && query.getResultSize() > 0) {
+                List<Rule> list = query.list();
+                for (Rule rule : list) {
+                    //Rule rule = (Rule) itr.next();
                     if (customerDNSSetting.containsKey(rule.getCidrAddress())) {
                         rule.setSources(customerDNSSetting.get(rule.getCidrAddress()));
                         try {
-                            utx.begin();
+                            //utx.begin();
                             ruleCache.replace(rule.getStartAddress(), rule);
-                            utx.commit();
+                            //utx.commit();
                         } catch (Exception e) {
                             log.log(Level.SEVERE, "putDNSClientSettings", e);
-                            try {
+                            /*try {
                                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                                     utx.rollback();
                                 }
                             } catch (Exception e1) {
                                 log.log(Level.SEVERE, "putDNSClientSettings", e1);
                                 return null;
-                            }
+                            }*/
                             return null;
                         }
                     }
@@ -250,6 +282,7 @@ public class WebApiEJB {
         return customerId + " SETTINGS UPDATED";
     }
 
+    @Override
     public String postAllDNSClientSettings(final AllDNSSettingDTO[] allDNSSetting) {
         //TODO: Perhaps invert the flow: create 1 utx.begin();-utx.commit(); block and loop inside...
         for (AllDNSSettingDTO allDNSSettingDTO : allDNSSetting) {
@@ -270,19 +303,19 @@ public class WebApiEJB {
                 rule.setStartAddress(cidrUtils.getStartIPBigIntegerString());
                 rule.setEndAddress(cidrUtils.getEndIPBigIntegerString());
                 cidrUtils = null;
-                utx.begin();
+                //utx.begin();
                 log.log(Level.FINE, "Putting key [" + rule.getStartAddress() + "]");
                 ruleCache.put(rule.getStartAddress(), rule);
-                utx.commit();
+                //utx.commit();
             } catch (Exception e) {
                 log.log(Level.SEVERE, "postAllDNSClientSettings", e);
-                try {
+                /*try {
                     if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                         utx.rollback();
                     }
                 } catch (Exception e1) {
                     log.log(Level.SEVERE, "postAllDNSClientSettings", e1);
-                }
+                }*/
                 return null;
             }
         }
@@ -304,6 +337,7 @@ public class WebApiEJB {
      * @param customerCustomLists
      * @return
      */
+    @Override
     public String putCustomLists(final Integer customerId, final CustomerCustomListDTO[] customerCustomLists) {
         if (customerId == null || customerCustomLists == null) {
             log.log(Level.SEVERE, "putCustomLists: customerId and customerCustomLists cannot be null.");
@@ -393,23 +427,23 @@ public class WebApiEJB {
                 final String key = customList.getClientCidrAddress() + ((customList.getFqdn() != null) ? customList.getFqdn() : customList.getListCidrAddress());
 
                 try {
-                    utx.begin();
+                    //utx.begin();
                     log.log(Level.FINE, "putCustomLists: Putting key [" + key + "]. customListsElementCounter: " + customListsElementCounter);
                     if (customListsCache.replace(key, customList) == null) {
                         customListsCache.put(key, customList);
                     }
-                    utx.commit();
+                    //utx.commit();
                     customListsElementCounter++;
                 } catch (Exception e) {
                     log.log(Level.SEVERE, "putCustomLists: customListsElementCounter: " + customListsElementCounter, e);
-                    try {
+                    /*try {
                         if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                             utx.rollback();
                         }
                     } catch (Exception e1) {
                         log.log(Level.SEVERE, "putCustomLists", e1);
                         return null; //finally?
-                    }
+                    }*/
                     return null;
                 }
             }
@@ -451,45 +485,56 @@ public class WebApiEJB {
      * @param feedSettings
      * @return null or result message
      */
+    @Override
     public String putFeedSettings(final String feedUid, final HashMap<Integer, HashMap<String, String>> feedSettings) {
-        CacheQuery query;
+        //CacheQuery query;
+        Query query;
         int updated = 0;
         try {
-            SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
+            /*SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
             QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(Rule.class).get();
             Query luceneQuery = queryBuilder
                     .phrase()
                     .onField("sources")
                     .sentence(feedUid)
                     .createQuery();
+                    */
             //.keyword() //TODO: This would need a new SettingsMapBridge and might not be faster anyway...
             //.onField("sources")
             //.matching(feedUid)
             //.createQuery();
-            query = searchManager.getQuery(luceneQuery, Rule.class);
-            if (query != null && query.list().size() > 0) {
-                Iterator itr = query.iterator();
-                while (itr.hasNext()) {
-                    Rule rule = (Rule) itr.next();
+
+            QueryFactory qf = Search.getQueryFactory(ruleCache);
+            query = qf.from(Rule.class)
+                    .having("sources").contains(feedUid)
+                    .toBuilder().build();
+
+            // query = searchManager.getQuery(luceneQuery, Rule.class);
+            if (query != null && query.getResultSize() > 0) {
+                //  Iterator itr = query.iterator();
+                // while (itr.hasNext()) {
+                //   Rule rule = (Rule) itr.next();
+                List<Rule> list = query.list();
+                for (Rule rule : list) {
                     HashMap<String, String> cidrMode = feedSettings.get(rule.getCustomerId());
                     if (cidrMode != null && cidrMode.containsKey(rule.getCidrAddress())) {
                         //TODO This is certainly wrong and overengineered... Let's talk to Rattus.
                         rule.getSources().replace(feedUid, cidrMode.get(rule.getCidrAddress()));
                         try {
-                            utx.begin();
+                            //utx.begin();
                             ruleCache.replace(rule.getStartAddress(), rule);
-                            utx.commit();
+                            //utx.commit();
                             updated++;
                         } catch (Exception e) {
                             log.log(Level.SEVERE, "putFeedSettings", e);
-                            try {
+                            /*try {
                                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
                                     utx.rollback();
                                 }
                             } catch (Exception e1) {
                                 log.log(Level.SEVERE, "putFeedSettings", e1);
                                 return null; //finally?
-                            }
+                            }*/
                             return null;
                         }
                     }
@@ -502,10 +547,11 @@ public class WebApiEJB {
             log.log(Level.SEVERE, "putFeedSettings troubles", e);
             return null;
         }
-        return query.list().size() + " RULES FOUND " + updated + " UPDATED";
+        return query.getResultSize() + " RULES FOUND " + updated + " UPDATED";
 
     }
 
+    @Override
     public String postCreateFeedSettings(FeedSettingCreateDTO feedSettingCreate) {
         //TODO
         throw new NotImplementedException();
