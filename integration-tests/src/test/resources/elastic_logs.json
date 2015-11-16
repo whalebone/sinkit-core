@@ -67,10 +67,6 @@
             }
           }
         },
-        "matched_iocs": {
-          "index": "not_analyzed",
-          "type": "string"
-        },
         "action": {
           "index": "not_analyzed",
           "type": "string"
