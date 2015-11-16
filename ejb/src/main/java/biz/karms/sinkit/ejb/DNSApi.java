@@ -7,6 +7,7 @@ import biz.karms.sinkit.eventlog.EventLogRecord;
 import biz.karms.sinkit.exception.ArchiveException;
 
 import javax.ejb.Remote;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Future;

@@ -1,12 +1,21 @@
 package biz.karms.sinkit.ejb.impl;
 
-import biz.karms.sinkit.ejb.*;
+import biz.karms.sinkit.ejb.ArchiveService;
+import biz.karms.sinkit.ejb.CoreService;
+import biz.karms.sinkit.ejb.DNSApi;
+import biz.karms.sinkit.ejb.MyCacheManagerProvider;
+import biz.karms.sinkit.ejb.WebApi;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.CustomList;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ejb.dto.Sinkhole;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
-import biz.karms.sinkit.eventlog.*;
+import biz.karms.sinkit.eventlog.EventDNSRequest;
+import biz.karms.sinkit.eventlog.EventLogAction;
+import biz.karms.sinkit.eventlog.EventLogRecord;
+import biz.karms.sinkit.eventlog.EventReason;
+import biz.karms.sinkit.eventlog.VirusTotalRequest;
+import biz.karms.sinkit.eventlog.VirusTotalRequestStatus;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.ioc.IoCRecord;
 import org.apache.commons.validator.routines.DomainValidator;
@@ -14,6 +23,7 @@ import org.infinispan.Cache;
 import org.infinispan.query.Search;
 import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
+import org.jboss.marshalling.Pair;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.AsyncResult;
@@ -22,10 +32,18 @@ import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
 import java.net.UnknownHostException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 //import org.apache.lucene.search.Query;
 //import org.hibernate.search.query.dsl.QueryBuilder;
@@ -150,7 +168,7 @@ public class DNSApiEJB implements DNSApi {
             try {
                 clientIPAddressPaddedBigInt = new CIDRUtils(fqdnOrIp).getStartIPBigIntegerString();
             } catch (UnknownHostException e) {
-                log.log(Level.SEVERE, "customListsLookup: " + fqdnOrIp + " in not a valid IP address.");
+                log.log(Level.SEVERE, "customListsLookup: " + fqdnOrIp + " in not a valid IP address nor a valid FQDN.");
                 return null;
             }
             /*
@@ -225,6 +243,7 @@ public class DNSApiEJB implements DNSApi {
             return null;
         }
 
+        //TODO: regarding get(0): Solve overlapping customer settings.
         // Customer ID for this whole method context
         final int customerId = rules.get(0).getCustomerId();
         // To determine whether key is a FQDN or an IP address
@@ -264,8 +283,9 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.FINE, "No hit. The requested fqdnOrIp: " + fqdnOrIp + " is clean.");
             return null;
         }
+
         // Feed UID : Type
-        final Map<String, String> feedTypeMap = blacklistedRecord.getSources();
+        final Map<String, Pair<String, String>> feedTypeMap = blacklistedRecord.getSources();
         //If there is no feed, we simply don't sinkhole anything. It is weird though.
         if (feedTypeMap == null || feedTypeMap.isEmpty()) {
             log.log(Level.WARNING, "getSinkHole: IoC without feed settings.");
@@ -275,15 +295,20 @@ public class DNSApiEJB implements DNSApi {
         // Feed UID, Mode <L|S|D>. In the end, we operate on a one selected Feed:mode pair only.
         String mode = null;
         String feedUUID = null;
+        //TODO: Nested cycles, worth profiling.
         for (Rule rule : rules) {
             for (String uuid : rule.getSources().keySet()) {
-                if (feedTypes.contains(feedTypeMap.get(uuid))) {
+                // feed uuid : [type , docID], so "getA()" means get type
+                Pair<String, String> typeDocId = feedTypeMap.get(uuid);
+                if (typeDocId != null && feedTypes.contains(typeDocId.getA())) {
                     String tmpMode = rule.getSources().get(uuid);
                     if (mode == null || ("S".equals(tmpMode) && !"D".equals(mode)) || "D".equals(tmpMode)) {
                         //D >= S >= L >= null, i.e. if a feed is Disabled, we don't switch to Sinkhole.
                         mode = tmpMode;
                         feedUUID = uuid;
                     }
+                } else {
+                    log.log(Level.FINE, "getSinkHole: BlacklistedRecord " + blacklistedRecord.getBlackListedDomainOrIP() + " for feed " + uuid + " does not have Type nor DocID.");
                 }
             }
         }
@@ -297,7 +322,7 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.WARNING, "getSinkHole: Sinkhole.");
             try {
                 log.log(Level.FINE, "getSinkHole: Calling coreService.logDNSEvent(EventLogAction.BLOCK,...");
-                logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, feedTypeMap.keySet());
+                logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()));
                 log.log(Level.FINE, "getSinkHole: coreService.logDNSEvent returned.");
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging BLOCK failed: ", e);
@@ -308,7 +333,7 @@ public class DNSApiEJB implements DNSApi {
             //Log it for customer
             log.log(Level.WARNING, "getSinkHole: Log.");
             try {
-                logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, feedTypeMap.keySet());
+                logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()));
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging AUDIT failed: ", e);
             } finally {
@@ -319,7 +344,7 @@ public class DNSApiEJB implements DNSApi {
             //Log it for us
             log.log(Level.WARNING, "getSinkHole: Log internally.");
             try {
-                logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, feedTypeMap.keySet());
+                logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()));
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging INTERNAL failed: ", e);
             } finally {
@@ -330,6 +355,10 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.SEVERE, "getSinkHole: Feed mode must be one of L,S,D, null but was: " + mode);
             return null;
         }
+    }
+
+    private Set<String> unwrapDocumentIds(Collection<Pair<String, String>> pairs) {
+        return pairs.stream().map(Pair::getB).collect(Collectors.toCollection(HashSet::new));
     }
 
     @Asynchronous
@@ -343,7 +372,7 @@ public class DNSApiEJB implements DNSApi {
             String reasonIp,
             Set<String> matchedIoCs
     ) throws ArchiveException {
-        log.log(Level.FINE, "Logging DNS event. clientUid: "+clientUid+", requestIp: "+requestIp+", requestRaw: "+requestRaw+", reasonFqdn: "+reasonFqdn+", reasonIp: "+reasonIp);
+        log.log(Level.FINE, "Logging DNS event. clientUid: " + clientUid + ", requestIp: " + requestIp + ", requestRaw: " + requestRaw + ", reasonFqdn: " + reasonFqdn + ", reasonIp: " + reasonIp);
         EventLogRecord logRecord = new EventLogRecord();
 
         EventDNSRequest request = new EventDNSRequest();
