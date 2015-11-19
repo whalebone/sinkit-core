@@ -194,7 +194,8 @@ public class CoreTest extends Arquillian {
         Future a = dnsApi.logDNSEvent(EventLogAction.BLOCK,
                 "10.1.1.1",
                 "10.1.1.2",
-                "requestRaw",
+                "requestFqdn",
+                "requestType",
                 "seznam.cz",
                 "10.1.1.3",
                 new HashSet<String>(Arrays.asList(iocId1,iocId2))
@@ -224,7 +225,8 @@ public class CoreTest extends Arquillian {
                         "                   \"query\": \"action : \\\"block\\\" AND " +
                         "                       client : \\\"10.1.1.1\\\" AND " +
                         "                       request.ip : \\\"10.1.1.2\\\" AND " +
-                        "                       request.raw : \\\"requestRaw\\\" AND " +
+                        "                       request.fqdn : \\\"requestFqdn\\\" AND " +
+                        "                       request.type : \\\"requestType\\\" AND " +
                         "                       reason.fqdn : \\\"seznam.cz\\\" AND " +
                         "                       reason.ip : \\\"10.1.1.3\\\"\"\n" +
                         "               }\n" +
@@ -247,7 +249,8 @@ public class CoreTest extends Arquillian {
         assertEquals(logRecord.get("action").getAsString(), "block");
         assertEquals(logRecord.get("client").getAsString(), "10.1.1.1");
         assertEquals(logRecord.get("request").getAsJsonObject().get("ip").getAsString(), "10.1.1.2");
-        assertEquals(logRecord.get("request").getAsJsonObject().get("raw").getAsString(), "requestRaw");
+        assertEquals(logRecord.get("request").getAsJsonObject().get("fqdn").getAsString(), "requestFqdn");
+        assertEquals(logRecord.get("request").getAsJsonObject().get("type").getAsString(), "requestType");
         assertEquals(logRecord.get("reason").getAsJsonObject().get("fqdn").getAsString(), "seznam.cz");
         assertEquals(logRecord.get("reason").getAsJsonObject().get("ip").getAsString(), "10.1.1.3");
         assertNotNull(logRecord.get("logged").getAsString());

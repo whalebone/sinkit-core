@@ -322,7 +322,7 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.WARNING, "getSinkHole: Sinkhole.");
             try {
                 log.log(Level.FINE, "getSinkHole: Calling coreService.logDNSEvent(EventLogAction.BLOCK,...");
-                logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()));
+                logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, null, (isFQDN) ? fqdnOrIp : null, null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()));
                 log.log(Level.FINE, "getSinkHole: coreService.logDNSEvent returned.");
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging BLOCK failed: ", e);
@@ -333,7 +333,7 @@ public class DNSApiEJB implements DNSApi {
             //Log it for customer
             log.log(Level.WARNING, "getSinkHole: Log.");
             try {
-                logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()));
+                logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, null, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()));
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging AUDIT failed: ", e);
             } finally {
@@ -344,7 +344,7 @@ public class DNSApiEJB implements DNSApi {
             //Log it for us
             log.log(Level.WARNING, "getSinkHole: Log internally.");
             try {
-                logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()));
+                logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, null, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()));
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging INTERNAL failed: ", e);
             } finally {
@@ -367,17 +367,19 @@ public class DNSApiEJB implements DNSApi {
             EventLogAction action,
             String clientUid,
             String requestIp,
-            String requestRaw,
+            String requestFqdn,
+            String requestType,
             String reasonFqdn,
             String reasonIp,
             Set<String> matchedIoCs
     ) throws ArchiveException {
-        log.log(Level.FINE, "Logging DNS event. clientUid: " + clientUid + ", requestIp: " + requestIp + ", requestRaw: " + requestRaw + ", reasonFqdn: " + reasonFqdn + ", reasonIp: " + reasonIp);
+        log.log(Level.FINE, "Logging DNS event. clientUid: " + clientUid + ", requestIp: " + requestIp + ", requestFqdn: " + requestFqdn + ", requestType: " + requestType + ", reasonFqdn: " + reasonFqdn + ", reasonIp: " + reasonIp);
         EventLogRecord logRecord = new EventLogRecord();
 
         EventDNSRequest request = new EventDNSRequest();
         request.setIp(requestIp);
-        request.setRaw(requestRaw);
+        request.setFqdn(requestFqdn);
+        request.setType(requestType);
         logRecord.setRequest(request);
 
         EventReason reason = new EventReason();

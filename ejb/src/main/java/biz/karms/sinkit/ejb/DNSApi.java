@@ -29,7 +29,8 @@ public interface DNSApi {
             EventLogAction action,
             String clientUid,
             String requestIp,
-            String requestRaw,
+            String requestFqdn,
+            String requestType,
             String reasonFqdn,
             String reasonIp,
             Set<String> matchedIoCs
