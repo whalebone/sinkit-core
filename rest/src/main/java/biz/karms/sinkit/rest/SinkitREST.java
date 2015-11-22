@@ -2,19 +2,23 @@ package biz.karms.sinkit.rest;
 
 import biz.karms.sinkit.exception.IoCValidationException;
 import com.google.gson.JsonSyntaxException;
-import com.kanishka.virustotal.exception.InvalidArguentsException;
-import com.kanishka.virustotal.exception.QuotaExceededException;
-import com.kanishka.virustotal.exception.UnauthorizedAccessException;
 
 import javax.inject.Inject;
-import javax.ws.rs.*;
+import javax.ws.rs.DELETE;
+import javax.ws.rs.FormParam;
+import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
+import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
 import javax.ws.rs.core.Response;
-import java.io.IOException;
 import java.util.logging.Logger;
 
 /**
  * @author Michal Karm Babacek
- *         <p/>
+ *         <p>
  *         TODO: Validation :-)
  *         TODO: OAuth
  */
@@ -120,7 +124,7 @@ public class SinkitREST {
             String response = sinkitService.processIoCRecord(ioc);
             return Response.status(Response.Status.OK).entity(response).build();
         } catch (IoCValidationException | JsonSyntaxException ex) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(ex.getMessage()+" JSON was:"+ioc).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(ex.getMessage() + " JSON was:" + ioc).build();
         } catch (Exception ex) {
             log.severe("Processiong IoC went wrong: " + ex.getMessage());
             log.severe("IoC: " + ioc);
@@ -153,6 +157,17 @@ public class SinkitREST {
         }
     }
 
+    @GET
+    @Path("/rules/all")
+    @Produces({"application/json;charset=UTF-8"})
+    public String getAllRules(@HeaderParam(AUTH_HEADER_PARAM) String token) {
+        if (StupidAuthenticator.isAuthenticated(token)) {
+            return sinkitService.getAllRules();
+        } else {
+            return AUTH_FAIL;
+        }
+    }
+
     /**
      * Rattus - PORTAL --> CORE
      */
@@ -163,6 +178,18 @@ public class SinkitREST {
     public String putDNSClientSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("customerId") Integer customerId, String settings) {
         if (StupidAuthenticator.isAuthenticated(token)) {
             return sinkitService.putDNSClientSettings(customerId, settings);
+        } else {
+            return AUTH_FAIL;
+        }
+    }
+
+    @DELETE
+    @Path("/rules/customer/{customerId}")
+    @Produces({"application/json;charset=UTF-8"})
+    //@Consumes({"application/json;charset=UTF-8"})
+    public String deleteDNSClientSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("customerId") Integer customerId) {
+        if (StupidAuthenticator.isAuthenticated(token)) {
+            return sinkitService.deleteRulesByCustomer(customerId);
         } else {
             return AUTH_FAIL;
         }
