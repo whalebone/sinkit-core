@@ -6,6 +6,15 @@ machine:
     - postgresql
     - docker
   environment:
+    JBOSS_HOME: ${HOME}/wildfly
+    WILDFLY_VERSION: 10.0.0.CR4
+    HIBERNATE_HQL_LUCENE_VERSION: 1.3.0.Alpha2
+    HIBERNATE_HQL_PARSER_VERSION: 1.3.0.Alpha2
+    STRINGTEMPLATE_VERSION: 3.2.1
+    ANTLR_RUNTIME_VERSION: 3.4
+    VERSION_INFINISPAN: 8.0.1.Final
+    MAVEN_CENTRAL: http://central.maven.org/maven2
+    ELASTICSEARCH_VERSION: 1.7.1
     SINKIT_ACCESS_TOKEN: blablabla
     SINKIT_POSTGRESQL_DB_HOST: localhost
     SINKIT_POSTGRESQL_DB_PORT: 5432
@@ -18,19 +27,22 @@ machine:
     SINKIT_ELASTIC_HOST: localhost
     SINKIT_ELASTIC_PORT: 9200
     SINKIT_IOC_ACTIVE_HOURS: 72
+    JAVA_HOME:
 dependencies:
   cache_directories:
-    - elasticsearch-1.7.1 # relative to the build directory
+    - elasticsearch-${ELASTICSEARCH_VERSION} # relative to the build directory
   pre:
-    - if [[ ! -e elasticsearch-1.7.1 ]]; then wget https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-1.7.1.tar.gz && tar -xvf elasticsearch-1.7.1.tar.gz && cp elasticsearch.yml elasticsearch-1.7.1/config/elasticsearch.yml; fi
-    - elasticsearch-1.7.1/bin/elasticsearch: {background: true}
+    - if [[ ! -e ${JBOSS_HOME} ]]; then chmod 755 circle-wildfly.sh && ./circle-wildfly.sh; fi
+    - ${JBOSS_HOME}/bin/standalone.sh -c standalone-ha.xml: {background: true}
+    - if [[ ! -e elasticsearch-${ELASTICSEARCH_VERSION} ]]; then wget https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-${ELASTICSEARCH_VERSION}.tar.gz && tar -xvf elasticsearch-${ELASTICSEARCH_VERSION}.tar.gz && cp elasticsearch.yml elasticsearch-${ELASTICSEARCH_VERSION}/config/elasticsearch.yml; fi
+    - elasticsearch-${ELASTICSEARCH_VERSION}/bin/elasticsearch: {background: true}
   override:
     - git clone https://github.com/kdkanishka/Virustotal-Public-API-V2.0-Client.git && pushd Virustotal-Public-API-V2.0-Client/ && git reset --hard 58542f20961e77fe9a17128750ceb0582ced32ed && mvn install -DskipTests && popd
     - curl -XPUT localhost:9200/_template/iocs -d @integration-tests/src/test/resources/elastic_iocs.json
     - curl -XPUT localhost:9200/_template/logs -d @integration-tests/src/test/resources/elastic_logs.json
 test:
   override:
-    - mvn clean install -Parq-wildfly-managed
+    - mvn clean install -Parq-wildfly-remote
 deployment:
   hub:
     branch: master
