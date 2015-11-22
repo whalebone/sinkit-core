@@ -219,4 +219,12 @@ public class SinkitService implements Serializable {
     public void enrich() {
         coreService.enrich();
     }
+
+    public String getAllRules() {
+        return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapi.getAllRules());
+    }
+
+    public String deleteRulesByCustomer(Integer customerId) {
+        return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapi.deleteRulesByCustomer(customerId));
+    }
 }

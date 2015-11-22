@@ -9,12 +9,10 @@ import biz.karms.sinkit.ejb.dto.AllDNSSettingDTO;
 import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
 import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
+import com.google.common.collect.Lists;
 import org.apache.commons.validator.routines.DomainValidator;
-import org.hibernate.search.query.dsl.QueryBuilder;
 import org.infinispan.Cache;
-import org.infinispan.query.CacheQuery;
 import org.infinispan.query.Search;
-import org.infinispan.query.SearchManager;
 import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
@@ -24,6 +22,7 @@ import javax.ejb.Stateless;
 import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -80,6 +79,7 @@ public class WebApiEJB implements WebApi {
     public BlacklistedRecord putBlacklistedRecord(final BlacklistedRecord blacklistedRecord) {
         if (blacklistedRecord == null || blacklistedRecord.getBlackListedDomainOrIP() == null) {
             log.log(Level.SEVERE, "putBlacklistedRecord: Got null record or IoC. Can't process this.");
+            // TODO: Proper Error codes.
             return null;
         }
         try {
@@ -98,6 +98,7 @@ public class WebApiEJB implements WebApi {
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "putBlacklistedRecord", e1);
             }*/
+            // TODO: Proper Error codes.
             return null;
         }
     }
@@ -135,6 +136,7 @@ public class WebApiEJB implements WebApi {
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "deleteBlacklistedRecord", e1);
             }*/
+            // TODO: Proper Error codes.
             return null;
         }
     }
@@ -182,6 +184,20 @@ public class WebApiEJB implements WebApi {
             return list;
         } catch (Exception e) {
             log.log(Level.SEVERE, "getRules client address troubles", e);
+            // TODO: Proper Error codes.
+            return null;
+        }
+    }
+
+    // TODO: List? Array? Map with additional data? Let's think this over.
+    @Override
+    public List<?> getAllRules() {
+        try {
+            log.log(Level.SEVERE, "getAllRules: This is a very expensive operation.");
+            return Lists.newArrayList(ruleCache.values());
+        } catch (Exception e) {
+            log.log(Level.SEVERE, "getRules client address troubles", e);
+            // TODO: Proper Error codes.
             return null;
         }
     }
@@ -189,6 +205,28 @@ public class WebApiEJB implements WebApi {
     @Override
     public Set<String> getRuleKeys() {
         return ruleCache.keySet();
+    }
+
+    @Override
+    public String deleteRulesByCustomer(Integer customerId) {
+        int counter = 0;
+        //TODO: Shouldn't this be done by a one Infinispan DSL removal call?
+        try {
+            QueryFactory qf = Search.getQueryFactory(ruleCache);
+            Query query = qf.from(Rule.class)
+                    .having("customerId").eq(customerId)
+                    .toBuilder().build();
+            Iterator iterator = query.list().iterator();
+            while (iterator.hasNext()) {
+                ruleCache.removeAsync(((Rule) iterator.next()).getStartAddress());
+                counter++;
+            }
+            return counter + " RULES DELETED FOR CUSTOMER ID: " + customerId;
+        } catch (Exception e) {
+            log.log(Level.SEVERE, "deleteRulesByCustomer", e);
+            // TODO: Proper Error codes.
+            return null;
+        }
     }
 
     @Override
@@ -219,6 +257,7 @@ public class WebApiEJB implements WebApi {
             } catch (Exception e1) {
                 log.log(Level.SEVERE, "deleteRule", e1);
             }*/
+            // TODO: Proper Error codes.
             return null;
         }
     }
@@ -235,7 +274,7 @@ public class WebApiEJB implements WebApi {
     @Override
     public String putDNSClientSettings(final Integer customerId, final HashMap<String, HashMap<String, String>> customerDNSSetting) {
         try {
-            /*
+            /*.
             SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
             QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(Rule.class).get();
             Query luceneQuery = queryBuilder.keyword().onField("customerId").matching(customerId).createQuery();
@@ -267,16 +306,35 @@ public class WebApiEJB implements WebApi {
                                 log.log(Level.SEVERE, "putDNSClientSettings", e1);
                                 return null;
                             }*/
+                            // TODO: Proper Error codes.
                             return null;
                         }
                     }
                 }
             } else {
-                log.log(Level.SEVERE, "putDNSClientSettings: customerId " + customerId + " does not exist, query result is either null or empty.");
-                return customerId + " DOES NOT EXIST";
+                for (String cidr : customerDNSSetting.keySet()) {
+                    CIDRUtils cidrUtils = new CIDRUtils(cidr);
+                    if (cidrUtils == null) {
+                        log.log(Level.SEVERE, "putDNSClientSettings: We have failed to construct CIDRUtils instance.");
+                        // TODO: Proper Error codes.
+                        return null;
+                    }
+                    Rule rule = new Rule();
+                    rule.setCidrAddress(cidr);
+                    rule.setCustomerId(customerId);
+                    rule.setSources(customerDNSSetting.get(cidr));
+                    rule.setStartAddress(cidrUtils.getStartIPBigIntegerString());
+                    rule.setEndAddress(cidrUtils.getEndIPBigIntegerString());
+                    cidrUtils = null;
+                    log.log(Level.FINE, "Putting key [" + rule.getStartAddress() + "]");
+                    ruleCache.put(rule.getStartAddress(), rule);
+                }
+                log.log(Level.FINE, "putDNSClientSettings: customerId " + customerId + " does not exist, query result is either null or empty. We inserted it.");
+                return customerId + " INSERTED";
             }
         } catch (Exception e) {
             log.log(Level.SEVERE, "putDNSClientSettings troubles", e);
+            // TODO: Proper Error codes.
             return null;
         }
         return customerId + " SETTINGS UPDATED";
@@ -289,11 +347,13 @@ public class WebApiEJB implements WebApi {
             try {
                 if (allDNSSettingDTO == null || allDNSSettingDTO.getDnsClient() == null || allDNSSettingDTO.getDnsClient().length() < 7) {
                     log.log(Level.SEVERE, "postAllDNSClientSettings: Got an invalid or null record. Can't process this.");
+                    // TODO: Proper Error codes.
                     return null;
                 }
                 CIDRUtils cidrUtils = new CIDRUtils(allDNSSettingDTO.getDnsClient());
                 if (cidrUtils == null) {
                     log.log(Level.SEVERE, "postAllDNSClientSettings: We have failed to construct CIDRUtils instance.");
+                    // TODO: Proper Error codes.
                     return null;
                 }
                 Rule rule = new Rule();
@@ -316,6 +376,7 @@ public class WebApiEJB implements WebApi {
                 } catch (Exception e1) {
                     log.log(Level.SEVERE, "postAllDNSClientSettings", e1);
                 }*/
+                // TODO: Proper Error codes.
                 return null;
             }
         }
@@ -341,6 +402,7 @@ public class WebApiEJB implements WebApi {
     public String putCustomLists(final Integer customerId, final CustomerCustomListDTO[] customerCustomLists) {
         if (customerId == null || customerCustomLists == null) {
             log.log(Level.SEVERE, "putCustomLists: customerId and customerCustomLists cannot be null.");
+            // TODO: Proper Error codes.
             return null;
         }
         //TODO: If customerCustomLists is empty - should we clear/delete all customerId's lists? Ask Rattus.
@@ -355,18 +417,21 @@ public class WebApiEJB implements WebApi {
                 cidrUtils = new CIDRUtils(customerCustomList.getDnsClient());
                 if (cidrUtils == null) {
                     log.log(Level.SEVERE, "putCustomLists: We have failed to construct CIDRUtils instance from " + customerCustomList.getDnsClient());
+                    // TODO: Proper Error codes.
                     return null;
                 }
                 dnsClientStartAddress = cidrUtils.getStartIPBigIntegerString();
                 dnsClientEndAddress = cidrUtils.getEndIPBigIntegerString();
                 if (dnsClientStartAddress == null || dnsClientEndAddress == null) {
                     log.log(Level.SEVERE, "putCustomLists: dnsClientStartAddress or dnsClientEndAddress were null. This cannot happen.");
+                    // TODO: Proper Error codes.
                     return null;
                 }
             } catch (Exception e) {
                 // TODO: More robust approach would be break();, but it could violate consistency...
                 // Furthermore, with validation in Portal, this really shouldn't happen, hence return null;
                 log.log(Level.SEVERE, "putCustomLists: Invalid CIDR " + customerCustomList.getDnsClient(), e);
+                // TODO: Proper Error codes.
                 return null;
             } finally {
                 cidrUtils = null;
@@ -383,6 +448,7 @@ public class WebApiEJB implements WebApi {
                 String blacklistWhitelistLog = customerCustomList.getLists().get(fqdnOrCIDR);
                 if (!(blacklistWhitelistLog != null && (blacklistWhitelistLog.equals("B") || blacklistWhitelistLog.equals("W") || blacklistWhitelistLog.equals("L")))) {
                     log.log(Level.SEVERE, "putCustomLists: Expected one of <B|W|L> but got: " + blacklistWhitelistLog + ". customListsElementCounter: " + customListsElementCounter);
+                    // TODO: Proper Error codes.
                     return null;
                 }
                 customList.setWhiteBlackLog(blacklistWhitelistLog);
@@ -395,12 +461,14 @@ public class WebApiEJB implements WebApi {
                         cidrUtils = new CIDRUtils(fqdnOrCIDR);
                         if (cidrUtils == null) {
                             log.log(Level.SEVERE, "putCustomLists: We have failed to construct CIDRUtils instance from " + fqdnOrCIDR + ". customListsElementCounter: " + customListsElementCounter);
+                            // TODO: Proper Error codes.
                             return null;
                         }
                         final String startAddress = cidrUtils.getStartIPBigIntegerString();
                         final String endAddress = cidrUtils.getEndIPBigIntegerString();
                         if (startAddress == null || endAddress == null) {
                             log.log(Level.SEVERE, "putCustomLists: endAddress or startAddress were null for CIDR " + fqdnOrCIDR + ". This cannot happen. customListsElementCounter: " + customListsElementCounter);
+                            // TODO: Proper Error codes.
                             return null;
                         }
                         customList.setListCidrAddress(fqdnOrCIDR);
@@ -410,6 +478,7 @@ public class WebApiEJB implements WebApi {
                         // TODO: More robust approach would be break();, but it could violate consistency...
                         // Furthermore, with validation in Portal, this really shouldn't happen, hence return null;
                         log.log(Level.SEVERE, "putCustomLists: Invalid CIDR " + customerCustomList.getDnsClient() + ", customListsElementCounter: " + customListsElementCounter, e);
+                        // TODO: Proper Error codes.
                         return null;
                     } finally {
                         cidrUtils = null;
@@ -420,6 +489,7 @@ public class WebApiEJB implements WebApi {
                 // Sanity check
                 if ((customList.getFqdn() != null && customList.getListCidrAddress() != null) || (customList.getFqdn() == null && customList.getListCidrAddress() == null)) {
                     log.log(Level.SEVERE, "putCustomLists: Sanity violation, customList has exactly one of [FQDN,CIDR] set, not both, not none. customListsElementCounter: " + customListsElementCounter);
+                    // TODO: Proper Error codes.
                     return null;
                 }
 
@@ -444,6 +514,7 @@ public class WebApiEJB implements WebApi {
                         log.log(Level.SEVERE, "putCustomLists", e1);
                         return null; //finally?
                     }*/
+                    // TODO: Proper Error codes.
                     return null;
                 }
             }
@@ -535,6 +606,7 @@ public class WebApiEJB implements WebApi {
                                 log.log(Level.SEVERE, "putFeedSettings", e1);
                                 return null; //finally?
                             }*/
+                            // TODO: Proper Error codes.
                             return null;
                         }
                     }
@@ -545,6 +617,7 @@ public class WebApiEJB implements WebApi {
             }
         } catch (Exception e) {
             log.log(Level.SEVERE, "putFeedSettings troubles", e);
+            // TODO: Proper Error codes.
             return null;
         }
         return query.getResultSize() + " RULES FOUND " + updated + " UPDATED";

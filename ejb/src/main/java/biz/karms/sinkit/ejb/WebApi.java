@@ -44,4 +44,7 @@ public interface WebApi {
 
     String postCreateFeedSettings(FeedSettingCreateDTO feedSettingCreate);
 
+    List<?> getAllRules();
+
+    String deleteRulesByCustomer(Integer customerId);
 }
