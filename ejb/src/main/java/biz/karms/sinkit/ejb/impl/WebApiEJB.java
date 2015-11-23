@@ -12,6 +12,7 @@ import biz.karms.sinkit.ejb.util.CIDRUtils;
 import com.google.common.collect.Lists;
 import org.apache.commons.validator.routines.DomainValidator;
 import org.infinispan.Cache;
+import org.infinispan.commons.util.concurrent.NotifyingFuture;
 import org.infinispan.query.Search;
 import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
@@ -26,6 +27,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -287,51 +291,42 @@ public class WebApiEJB implements WebApi {
                     .toBuilder().build();
 
             if (query != null && query.getResultSize() > 0) {
-                List<Rule> list = query.list();
-                for (Rule rule : list) {
-                    //Rule rule = (Rule) itr.next();
-                    if (customerDNSSetting.containsKey(rule.getCidrAddress())) {
-                        rule.setSources(customerDNSSetting.get(rule.getCidrAddress()));
-                        try {
-                            //utx.begin();
-                            ruleCache.replace(rule.getStartAddress(), rule);
-                            //utx.commit();
-                        } catch (Exception e) {
-                            log.log(Level.SEVERE, "putDNSClientSettings", e);
-                            /*try {
-                                if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
-                                    utx.rollback();
-                                }
-                            } catch (Exception e1) {
-                                log.log(Level.SEVERE, "putDNSClientSettings", e1);
-                                return null;
-                            }*/
-                            // TODO: Proper Error codes.
-                            return null;
-                        }
+                // Remove all found rules
+                List<NotifyingFuture> futures = new ArrayList<>();
+                query.list().forEach(rule -> futures.add(ruleCache.removeAsync(((Rule) rule).getStartAddress())));
+                futures.forEach(future -> {
+                    try {
+                        // TODO: Tweak.
+                        future.get(30, TimeUnit.SECONDS);
+                    } catch (InterruptedException e) {
+                        log.log(Level.SEVERE, "putDNSClientSettings: Removing obsolete rules error.", e);
+                    } catch (ExecutionException e) {
+                        log.log(Level.SEVERE, "putDNSClientSettings: Removing obsolete rules error.", e);
+                    } catch (TimeoutException e) {
+                        log.log(Level.SEVERE, "putDNSClientSettings: Removing obsolete rules error. Timeout.", e);
                     }
-                }
-            } else {
-                for (String cidr : customerDNSSetting.keySet()) {
-                    CIDRUtils cidrUtils = new CIDRUtils(cidr);
-                    if (cidrUtils == null) {
-                        log.log(Level.SEVERE, "putDNSClientSettings: We have failed to construct CIDRUtils instance.");
-                        // TODO: Proper Error codes.
-                        return null;
-                    }
-                    Rule rule = new Rule();
-                    rule.setCidrAddress(cidr);
-                    rule.setCustomerId(customerId);
-                    rule.setSources(customerDNSSetting.get(cidr));
-                    rule.setStartAddress(cidrUtils.getStartIPBigIntegerString());
-                    rule.setEndAddress(cidrUtils.getEndIPBigIntegerString());
-                    cidrUtils = null;
-                    log.log(Level.FINE, "Putting key [" + rule.getStartAddress() + "]");
-                    ruleCache.put(rule.getStartAddress(), rule);
-                }
-                log.log(Level.FINE, "putDNSClientSettings: customerId " + customerId + " does not exist, query result is either null or empty. We inserted it.");
-                return customerId + " INSERTED";
+                });
+
             }
+
+            for (String cidr : customerDNSSetting.keySet()) {
+                CIDRUtils cidrUtils = new CIDRUtils(cidr);
+                if (cidrUtils == null) {
+                    log.log(Level.SEVERE, "putDNSClientSettings: We have failed to construct CIDRUtils instance.");
+                    // TODO: Proper Error codes.
+                    return null;
+                }
+                Rule rule = new Rule();
+                rule.setCidrAddress(cidr);
+                rule.setCustomerId(customerId);
+                rule.setSources(customerDNSSetting.get(cidr));
+                rule.setStartAddress(cidrUtils.getStartIPBigIntegerString());
+                rule.setEndAddress(cidrUtils.getEndIPBigIntegerString());
+                cidrUtils = null;
+                log.log(Level.FINE, "Putting key [" + rule.getStartAddress() + "]");
+                ruleCache.put(rule.getStartAddress(), rule);
+            }
+
         } catch (Exception e) {
             log.log(Level.SEVERE, "putDNSClientSettings troubles", e);
             // TODO: Proper Error codes.
