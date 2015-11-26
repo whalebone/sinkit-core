@@ -56,12 +56,20 @@ public class SinkitREST {
         }
     }
 
+    /**
+     *
+     * @param token     Access token
+     * @param client    IP address of the DNS client that queried resolver
+     * @param key       IP address or FQDN that is to be checked for IoC match
+     * @param fqdn      FQDN DNS client wanted to have resolved
+     * @return
+     */
     @GET
-    @Path("/blacklist/dns/{client}/{key}")
+    @Path("/blacklist/dns/{client}/{key}/{fqdn}")
     @Produces({"application/json;charset=UTF-8"})
-    public String getSinkHole(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("client") String client, @PathParam("key") String key) {
+    public String getSinkHole(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("client") String client, @PathParam("key") String key, @PathParam("fqdn") String fqdn) {
         if (StupidAuthenticator.isAuthenticated(token)) {
-            return sinkitService.getSinkHole(client, key);
+            return sinkitService.getSinkHole(client, key, fqdn);
         } else {
             return AUTH_FAIL;
         }

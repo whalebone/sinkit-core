@@ -23,7 +23,7 @@ public interface DNSApi {
 
     CustomList retrieveOneCustomList(final Integer customerId, final boolean isFQDN, final String fqdnOrIp);
 
-    Sinkhole getSinkHole(final String clientIPAddress, final String fqdnOrIp);
+    Sinkhole getSinkHole(final String clientIPAddress, final String fqdnOrIp, String fqdn);
 
     Future<EventLogRecord> logDNSEvent(
             EventLogAction action,

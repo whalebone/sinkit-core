@@ -76,8 +76,8 @@ public class SinkitService implements Serializable {
         return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapi.getBlacklistedRecord(key));
     }
 
-    String getSinkHole(final String client, final String key) {
-        return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(dnsApi.getSinkHole(client, key));
+    String getSinkHole(final String client, final String key, String fqdn) {
+        return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(dnsApi.getSinkHole(client, key, fqdn));
     }
 
     String getBlacklistedRecordKeys() {

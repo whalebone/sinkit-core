@@ -192,8 +192,7 @@ public class DNSApiEJB implements DNSApi {
 
         }
         //return searchManager.getQuery(luceneQuery, CustomList.class).list();
-        List<CustomList> list = query.list();
-        return list;
+        return query.list();
     }
 
     @Override
@@ -210,10 +209,11 @@ public class DNSApiEJB implements DNSApi {
      *
      * @param clientIPAddress - DNS server IP
      * @param fqdnOrIp        - FQDN DNS is trying to resolve or resolved IP (v6 or v4)
+     * @param fqdn
      * @return null if there is an error and/or there is no reason to sinkhole or Sinkhole instance on positive hit
      */
     @Override
-    public Sinkhole getSinkHole(final String clientIPAddress, final String fqdnOrIp) {
+    public Sinkhole getSinkHole(final String clientIPAddress, final String fqdnOrIp, String fqdn) {
 
         /**
          * At first, we lookup Rules
