@@ -210,7 +210,8 @@ public class SinkitService implements Serializable {
                 logRec.getAction(),
                 logRec.getClient(),
                 logRec.getRequest().getIp(),
-                logRec.getRequest().getRaw(),
+                logRec.getRequest().getFqdn(),
+                logRec.getRequest().getType(),
                 logRec.getReason().getFqdn(),
                 logRec.getReason().getIp(),
                 ids);

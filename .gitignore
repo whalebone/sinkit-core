@@ -13,3 +13,4 @@ integration-tests/biz.karms.sinkit.org.jboss.as.quickstarts.cluster.hasingleton.
 wildfly-10.0.0.CR3-SNAPSHOT.zip
 wildfly-*-SNAPSHOT/
 wildfly-10.0.0.CR5-SNAPSHOT.zip
+integration-tests/biz.karms.sinkit.ejb.cache.pojo.*
