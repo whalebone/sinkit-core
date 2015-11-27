@@ -53,9 +53,9 @@ public class WebApiEJB implements WebApi {
 
     @PostConstruct
     public void setup() {
-        blacklistCache = m.getCache("BLACKLIST_CACHE");
-        ruleCache = m.getCache("RULES_CACHE");
-        customListsCache = m.getCache("CUSTOM_LISTS_CACHE");
+        blacklistCache = m.getCache(MyCacheManagerProvider.BLACKLIST_CACHE);
+        ruleCache = m.getCache(MyCacheManagerProvider.RULES_CACHE);
+        customListsCache = m.getCache(MyCacheManagerProvider.CUSTOM_LISTS_CACHE);
         if (blacklistCache == null || ruleCache == null || customListsCache == null) {
             throw new IllegalStateException("Both BLACKLIST_CACHE and RULES_CACHE and CUSTOM_LISTS_CACHE must not be null.");
         }

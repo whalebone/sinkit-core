@@ -86,9 +86,9 @@ public class DNSApiEJB implements DNSApi {
         if (m == null || coreService == null || webApi == null || archiveService == null) {
             throw new IllegalArgumentException("DefaultCacheManager, ArchiveService, WebApiEJB and CoreServiceEJB must be injected.");
         }
-        blacklistCache = m.getCache("BLACKLIST_CACHE");
-        ruleCache = m.getCache("RULES_CACHE");
-        customListsCache = m.getCache("CUSTOM_LISTS_CACHE");
+        blacklistCache = m.getCache(MyCacheManagerProvider.BLACKLIST_CACHE);
+        ruleCache = m.getCache(MyCacheManagerProvider.RULES_CACHE);
+        customListsCache = m.getCache(MyCacheManagerProvider.CUSTOM_LISTS_CACHE);
         if (blacklistCache == null || ruleCache == null || customListsCache == null) {
             throw new IllegalStateException("Both BLACKLIST_CACHE and RULES_CACHE and CUSTOM_LISTS_CACHE must not be null.");
         }
