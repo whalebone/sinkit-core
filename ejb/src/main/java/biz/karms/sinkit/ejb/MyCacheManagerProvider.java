@@ -36,6 +36,10 @@ public class MyCacheManagerProvider implements Serializable {
     private static final long MAX_ENTRIES_IOC = 10000000;
     private static final long MAX_ENTRIES_RULES = 5000;
 
+    public static final String BLACKLIST_CACHE = "BLACKLIST_CACHE";
+    public static final String RULES_CACHE = "RULES_CACHE";
+    public static final String CUSTOM_LISTS_CACHE = "CUSTOM_LISTS_CACHE";
+
     @Inject
     private Logger log;
 
@@ -103,12 +107,12 @@ public class MyCacheManagerProvider implements Serializable {
         //this.cache = this.manager.getCache("mycache");
         //this.cache.start();
 
-        manager.defineConfiguration("BLACKLIST_CACHE", loc);
-        manager.defineConfiguration("RULES_CACHE", loc);
-        manager.defineConfiguration("CUSTOM_LISTS_CACHE", loc);
-        manager.getCache("BLACKLIST_CACHE").start();
-        manager.getCache("RULES_CACHE").start();
-        manager.getCache("CUSTOM_LISTS_CACHE").start();
+        manager.defineConfiguration(BLACKLIST_CACHE, loc);
+        manager.defineConfiguration(RULES_CACHE, loc);
+        manager.defineConfiguration(CUSTOM_LISTS_CACHE, loc);
+        manager.getCache(BLACKLIST_CACHE).start();
+        manager.getCache(RULES_CACHE).start();
+        manager.getCache(CUSTOM_LISTS_CACHE).start();
 
         log.log(Level.INFO, "Caches defined.");
     }
@@ -123,12 +127,12 @@ public class MyCacheManagerProvider implements Serializable {
     public void destroy(@Observes @Destroyed(ApplicationScoped.class) Object init) {
         if (manager != null) {
             //TODO
-            manager.getCache("BLACKLIST_CACHE").stop();
-            manager.getCache("RULES_CACHE").stop();
-            manager.getCache("CUSTOM_LISTS_CACHE").stop();
-            manager.undefineConfiguration("BLACKLIST_CACHE");
-            manager.undefineConfiguration("RULES_CACHE");
-            manager.undefineConfiguration("CUSTOM_LISTS_CACHE");
+            manager.getCache(BLACKLIST_CACHE).stop();
+            manager.getCache(RULES_CACHE).stop();
+            manager.getCache(CUSTOM_LISTS_CACHE).stop();
+            manager.undefineConfiguration(BLACKLIST_CACHE);
+            manager.undefineConfiguration(RULES_CACHE);
+            manager.undefineConfiguration(CUSTOM_LISTS_CACHE);
             manager.stop();
             manager = null;
         }

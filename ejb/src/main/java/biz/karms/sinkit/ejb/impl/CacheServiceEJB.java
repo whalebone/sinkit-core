@@ -40,8 +40,8 @@ public class CacheServiceEJB implements CacheService {
 
     @PostConstruct
     public void setup() {
-        blacklistCache = m.getCache("BLACKLIST_CACHE");
-        ruleCache = m.getCache("RULES_CACHE");
+        blacklistCache = m.getCache(MyCacheManagerProvider.BLACKLIST_CACHE);
+        ruleCache = m.getCache(MyCacheManagerProvider.RULES_CACHE);
 
         if (blacklistCache == null || ruleCache == null) {
             throw new IllegalStateException("Both BLACKLIST_CACHE and RULES_CACHE must not be null.");
