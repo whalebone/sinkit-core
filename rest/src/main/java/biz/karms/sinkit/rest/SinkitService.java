@@ -16,7 +16,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 import javax.ejb.EJB;
-import javax.enterprise.context.SessionScoped;
+import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
 import java.io.Serializable;
 import java.util.HashMap;
@@ -30,7 +30,7 @@ import java.util.logging.Logger;
  *         <p>
  *         TODO: Validation and filtering :-)
  */
-@SessionScoped
+@RequestScoped
 public class SinkitService implements Serializable {
 
     public static final String ERR_MSG = "Error, please, check your input.";
@@ -74,10 +74,6 @@ public class SinkitService implements Serializable {
 
     String getBlacklistedRecord(final String key) {
         return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapi.getBlacklistedRecord(key));
-    }
-
-    String getSinkHole(final String client, final String key, String fqdn) {
-        return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(dnsApi.getSinkHole(client, key, fqdn));
     }
 
     String getBlacklistedRecordKeys() {
