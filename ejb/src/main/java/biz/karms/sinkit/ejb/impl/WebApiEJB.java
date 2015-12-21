@@ -16,6 +16,7 @@ import org.infinispan.commons.util.concurrent.NotifyingFuture;
 import org.infinispan.query.Search;
 import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
+import org.jboss.marshalling.Pair;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.annotation.PostConstruct;
@@ -149,12 +150,9 @@ public class WebApiEJB implements WebApi {
     @Override
     public List<?> getRules(final String clientIPAddress) {
         try {
-            //TODO: It is very wasteful to calculate the whole thing for just the one /32 or /128 masked client IP.
-            CIDRUtils cidrUtils = new CIDRUtils(clientIPAddress);
-            final String clientIPAddressPaddedBigInt = cidrUtils.getStartIPBigIntegerString();
-            cidrUtils = null;
-            log.log(Level.FINE, "Getting key [" + clientIPAddress + "] which actually translates to BigInteger zero padded representation " +
-                    "[" + clientIPAddressPaddedBigInt + "]");
+            final Pair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(clientIPAddress);
+            final String clientIPAddressPaddedBigInt = startEndAddresses.getA();
+            log.log(Level.FINE, "Getting key [" + clientIPAddress + "] which actually translates to BigInteger zero padded representation " + "[" + clientIPAddressPaddedBigInt + "]");
             // Let's try to hit it
             Rule rule = ruleCache.get(clientIPAddressPaddedBigInt);
             if (rule != null) {
@@ -236,10 +234,8 @@ public class WebApiEJB implements WebApi {
     @Override
     public String deleteRule(final String cidrAddress) {
         try {
-            //TODO: It is very wasteful to calculate the whole thing for just the one /32 or /128 masked client IP.
-            CIDRUtils cidrUtils = new CIDRUtils(cidrAddress);
-            String clientIPAddressPaddedBigInt = cidrUtils.getStartIPBigIntegerString();
-            cidrUtils = null;
+            final Pair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(cidrAddress);
+            final String clientIPAddressPaddedBigInt = startEndAddresses.getA();
             log.log(Level.FINE, "Deleting key [" + cidrAddress + "] which actually translates to BigInteger zero padded representation " +
                     "[" + clientIPAddressPaddedBigInt + "]");
             //utx.begin();
@@ -310,19 +306,13 @@ public class WebApiEJB implements WebApi {
             }
 
             for (String cidr : customerDNSSetting.keySet()) {
-                CIDRUtils cidrUtils = new CIDRUtils(cidr);
-                if (cidrUtils == null) {
-                    log.log(Level.SEVERE, "putDNSClientSettings: We have failed to construct CIDRUtils instance.");
-                    // TODO: Proper Error codes.
-                    return null;
-                }
+                final Pair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(cidr);
                 Rule rule = new Rule();
                 rule.setCidrAddress(cidr);
                 rule.setCustomerId(customerId);
                 rule.setSources(customerDNSSetting.get(cidr));
-                rule.setStartAddress(cidrUtils.getStartIPBigIntegerString());
-                rule.setEndAddress(cidrUtils.getEndIPBigIntegerString());
-                cidrUtils = null;
+                rule.setStartAddress(startEndAddresses.getA());
+                rule.setEndAddress(startEndAddresses.getB());
                 log.log(Level.FINE, "Putting key [" + rule.getStartAddress() + "]");
                 ruleCache.put(rule.getStartAddress(), rule);
             }
@@ -345,19 +335,13 @@ public class WebApiEJB implements WebApi {
                     // TODO: Proper Error codes.
                     return null;
                 }
-                CIDRUtils cidrUtils = new CIDRUtils(allDNSSettingDTO.getDnsClient());
-                if (cidrUtils == null) {
-                    log.log(Level.SEVERE, "postAllDNSClientSettings: We have failed to construct CIDRUtils instance.");
-                    // TODO: Proper Error codes.
-                    return null;
-                }
-                Rule rule = new Rule();
+                final Pair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(allDNSSettingDTO.getDnsClient());
+                final Rule rule = new Rule();
                 rule.setCidrAddress(allDNSSettingDTO.getDnsClient());
                 rule.setCustomerId(allDNSSettingDTO.getCustomerId());
                 rule.setSources(allDNSSettingDTO.getSettings());
-                rule.setStartAddress(cidrUtils.getStartIPBigIntegerString());
-                rule.setEndAddress(cidrUtils.getEndIPBigIntegerString());
-                cidrUtils = null;
+                rule.setStartAddress(startEndAddresses.getA());
+                rule.setEndAddress(startEndAddresses.getB());
                 //utx.begin();
                 log.log(Level.FINE, "Putting key [" + rule.getStartAddress() + "]");
                 ruleCache.put(rule.getStartAddress(), rule);
@@ -407,16 +391,10 @@ public class WebApiEJB implements WebApi {
         int customListsElementCounter = 0;
         for (CustomerCustomListDTO customerCustomList : customerCustomLists) {
             // Let's calculate DNS Client address
-            CIDRUtils cidrUtils;
             try {
-                cidrUtils = new CIDRUtils(customerCustomList.getDnsClient());
-                if (cidrUtils == null) {
-                    log.log(Level.SEVERE, "putCustomLists: We have failed to construct CIDRUtils instance from " + customerCustomList.getDnsClient());
-                    // TODO: Proper Error codes.
-                    return null;
-                }
-                dnsClientStartAddress = cidrUtils.getStartIPBigIntegerString();
-                dnsClientEndAddress = cidrUtils.getEndIPBigIntegerString();
+                final Pair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(customerCustomList.getDnsClient());
+                dnsClientStartAddress = startEndAddresses.getA();
+                dnsClientEndAddress = startEndAddresses.getB();
                 if (dnsClientStartAddress == null || dnsClientEndAddress == null) {
                     log.log(Level.SEVERE, "putCustomLists: dnsClientStartAddress or dnsClientEndAddress were null. This cannot happen.");
                     // TODO: Proper Error codes.
@@ -428,8 +406,6 @@ public class WebApiEJB implements WebApi {
                 log.log(Level.SEVERE, "putCustomLists: Invalid CIDR " + customerCustomList.getDnsClient(), e);
                 // TODO: Proper Error codes.
                 return null;
-            } finally {
-                cidrUtils = null;
             }
 
             // Let's process list of Blacklisted / Whitelisted / Logged CIDRs and FQDNs.
@@ -440,7 +416,7 @@ public class WebApiEJB implements WebApi {
                 customList.setClientCidrAddress(customerCustomList.getDnsClient());
                 customList.setClientStartAddress(dnsClientStartAddress);
                 customList.setClientEndAddress(dnsClientEndAddress);
-                String blacklistWhitelistLog = customerCustomList.getLists().get(fqdnOrCIDR);
+                final String blacklistWhitelistLog = customerCustomList.getLists().get(fqdnOrCIDR);
                 if (!(blacklistWhitelistLog != null && (blacklistWhitelistLog.equals("B") || blacklistWhitelistLog.equals("W") || blacklistWhitelistLog.equals("L")))) {
                     log.log(Level.SEVERE, "putCustomLists: Expected one of <B|W|L> but got: " + blacklistWhitelistLog + ". customListsElementCounter: " + customListsElementCounter);
                     // TODO: Proper Error codes.
@@ -453,14 +429,9 @@ public class WebApiEJB implements WebApi {
                 } else {
                     // In this case, we have to calculate CIDR subnet start and end address
                     try {
-                        cidrUtils = new CIDRUtils(fqdnOrCIDR);
-                        if (cidrUtils == null) {
-                            log.log(Level.SEVERE, "putCustomLists: We have failed to construct CIDRUtils instance from " + fqdnOrCIDR + ". customListsElementCounter: " + customListsElementCounter);
-                            // TODO: Proper Error codes.
-                            return null;
-                        }
-                        final String startAddress = cidrUtils.getStartIPBigIntegerString();
-                        final String endAddress = cidrUtils.getEndIPBigIntegerString();
+                        final Pair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(fqdnOrCIDR);
+                        final String startAddress = startEndAddresses.getA();
+                        final String endAddress = startEndAddresses.getB();
                         if (startAddress == null || endAddress == null) {
                             log.log(Level.SEVERE, "putCustomLists: endAddress or startAddress were null for CIDR " + fqdnOrCIDR + ". This cannot happen. customListsElementCounter: " + customListsElementCounter);
                             // TODO: Proper Error codes.
@@ -475,8 +446,6 @@ public class WebApiEJB implements WebApi {
                         log.log(Level.SEVERE, "putCustomLists: Invalid CIDR " + customerCustomList.getDnsClient() + ", customListsElementCounter: " + customListsElementCounter, e);
                         // TODO: Proper Error codes.
                         return null;
-                    } finally {
-                        cidrUtils = null;
                     }
                 }
 

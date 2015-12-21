@@ -25,7 +25,7 @@ public interface DNSApi {
 
     Sinkhole getSinkHole(final String clientIPAddress, final String fqdnOrIp, String fqdn);
 
-    Future<EventLogRecord> logDNSEvent(
+    void logDNSEvent(
             EventLogAction action,
             String clientUid,
             String requestIp,

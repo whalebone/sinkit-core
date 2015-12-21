@@ -26,7 +26,6 @@ import org.infinispan.query.dsl.QueryFactory;
 import org.jboss.marshalling.Pair;
 
 import javax.annotation.PostConstruct;
-import javax.ejb.AsyncResult;
 import javax.ejb.Asynchronous;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -40,7 +39,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -116,7 +114,6 @@ public class DNSApiEJB implements DNSApi {
             }
             return new ArrayList<>();
 
-
             /*
             SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
             QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(Rule.class).get();
@@ -163,7 +160,7 @@ public class DNSApiEJB implements DNSApi {
         } else {
             final String clientIPAddressPaddedBigInt;
             try {
-                clientIPAddressPaddedBigInt = new CIDRUtils(fqdnOrIp).getStartIPBigIntegerString();
+                clientIPAddressPaddedBigInt = CIDRUtils.getStartEndAddresses(fqdnOrIp).getA();
             } catch (UnknownHostException e) {
                 log.log(Level.SEVERE, "customListsLookup: " + fqdnOrIp + " in not a valid IP address nor a valid FQDN.");
                 return null;
@@ -176,7 +173,6 @@ public class DNSApiEJB implements DNSApi {
                     .must(queryBuilder.range().onField("listEndAddress").above(clientIPAddressPaddedBigInt).createQuery())
                     .createQuery();
             */
-
             query = qf.from(CustomList.class)
                     .having("customerId").eq(customerId)
                     .and()
@@ -184,8 +180,6 @@ public class DNSApiEJB implements DNSApi {
                     .and()
                     .having("listEndAddress").gte(clientIPAddressPaddedBigInt)
                     .toBuilder().build();
-
-
         }
         //return searchManager.getQuery(luceneQuery, CustomList.class).list();
         return query.list();
@@ -210,32 +204,17 @@ public class DNSApiEJB implements DNSApi {
      */
     @Override
     public Sinkhole getSinkHole(final String clientIPAddress, final String fqdnOrIp, final String fqdn) {
-        //log.log(Level.INFO,"Entered getSinkHole");
         /**
          * At first, we lookup Rules
          */
         final String clientIPAddressPaddedBigInt;
-        final boolean probablyIsIPv6;
-        CIDRUtils cidrUtils;
-
-        //ALL BLOCK1
-        //long start = System.currentTimeMillis();
-
         try {
-            cidrUtils = new CIDRUtils(clientIPAddress);
-            clientIPAddressPaddedBigInt = cidrUtils.getStartIPBigIntegerString();
-            probablyIsIPv6 = cidrUtils.isProbablyIsIPv6();
+            clientIPAddressPaddedBigInt = CIDRUtils.getStartEndAddresses(fqdnOrIp).getA();
         } catch (UnknownHostException e) {
             log.log(Level.SEVERE, "getSinkHole: clientIPAddress " + clientIPAddress + " in not a valid address.");
             return null;
-        } finally {
-            cidrUtils = null;
         }
-
-        //log.log(Level.INFO,"BLOCK1 took: " + (System.currentTimeMillis()-start));
-
-        //ALL BLOCK2
-        //start = System.currentTimeMillis();
+        final boolean probablyIsIPv6 = fqdnOrIp.contains(":");
 
         // Lookup Rules (gives customerId, feeds and their settings)
         //TODO: Add test that all such found rules have the same customerId
@@ -248,21 +227,12 @@ public class DNSApiEJB implements DNSApi {
             //TODO: Distinguish this from an error state.
             return null;
         }
-        //log.log(Level.INFO,"BLOCK2 took: " + (System.currentTimeMillis()-start));
-
-        //ALL BLOCK3
-        //start = System.currentTimeMillis();
 
         //TODO: regarding get(0): Solve overlapping customer settings.
         // Customer ID for this whole method context
         final int customerId = rules.get(0).getCustomerId();
         // To determine whether key is a FQDN or an IP address
         final boolean isFQDN = DomainValidator.getInstance().isValid(fqdnOrIp);
-
-        //log.log(Level.INFO,"BLOCK3 took: " + (System.currentTimeMillis()-start));
-
-        //ALL BLOCK4
-        //start = System.currentTimeMillis();
 
         /**
          * Next we fetch one and only one or none CustomList for a given fqdnOrIp
@@ -288,9 +258,6 @@ public class DNSApiEJB implements DNSApi {
             }
         }
 
-        //log.log(Level.INFO,"BLOCK4 took: " + (System.currentTimeMillis()-start));
-        //ALL BLOCK5
-        //start = System.currentTimeMillis();
         /**
          * Now it's the time to search IoC cache
          */
@@ -301,9 +268,6 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.FINE, "No hit. The requested fqdnOrIp: " + fqdnOrIp + " is clean.");
             return null;
         }
-        //log.log(Level.INFO,"BLOCK5 took: " + (System.currentTimeMillis()-start));
-        //ALL BLOCK6
-        //start = System.currentTimeMillis();
         // Feed UID : Type
         final Map<String, Pair<String, String>> feedTypeMap = blacklistedRecord.getSources();
         //If there is no feed, we simply don't sinkhole anything. It is weird though.
@@ -311,12 +275,8 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.WARNING, "getSinkHole: IoC without feed settings.");
             return null;
         }
-        //log.log(Level.INFO,"BLOCK6 took: " + (System.currentTimeMillis()-start));
-        //ALL BLOCK7
-        //start = System.currentTimeMillis();
         // Feed UID, Mode <L|S|D>. In the end, we operate on a one selected Feed:mode pair only.
         String mode = null;
-        String feedUUID = null;
         //TODO: Nested cycles, worth profiling.
         for (Rule rule : rules) {
             for (String uuid : rule.getSources().keySet()) {
@@ -327,14 +287,12 @@ public class DNSApiEJB implements DNSApi {
                     if (mode == null || ("S".equals(tmpMode) && !"D".equals(mode)) || "D".equals(tmpMode)) {
                         //D >= S >= L >= null, i.e. if a feed is Disabled, we don't switch to Sinkhole.
                         mode = tmpMode;
-                        feedUUID = uuid;
                     }
                 } else {
                     log.log(Level.FINE, "getSinkHole: BlacklistedRecord " + blacklistedRecord.getBlackListedDomainOrIP() + " for feed " + uuid + " does not have Type nor DocID.");
                 }
             }
         }
-        //log.log(Level.INFO,"BLOCK7 took: " + (System.currentTimeMillis()-start));
         log.log(Level.FINE, "getSinkHole: Feed mode decision:");
         // Let's decide on feed mode:
         if (mode == null) {
@@ -342,8 +300,6 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.FINE, "getSinkHole: No match, no feed settings, we don't sinkhole.");
             return null;
         } else if ("S".equals(mode)) {
-            //ALL BLOCK8
-            //start = System.currentTimeMillis();
             log.log(Level.FINE, "getSinkHole: Sinkhole.");
             try {
                 log.log(Level.FINE, "getSinkHole: Calling coreService.logDNSEvent(EventLogAction.BLOCK,...");
@@ -352,12 +308,9 @@ public class DNSApiEJB implements DNSApi {
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging BLOCK failed: ", e);
             } finally {
-                //log.log(Level.INFO,"BLOCK8 took: " + (System.currentTimeMillis()-start));
                 return new Sinkhole(probablyIsIPv6 ? ipv6Sinkhole : ipv4Sinkhole);
             }
         } else if ("L".equals(mode)) {
-            //ALL BLOCK9
-            //start = System.currentTimeMillis();
             //Log it for customer
             log.log(Level.FINE, "getSinkHole: Log.");
             try {
@@ -370,8 +323,6 @@ public class DNSApiEJB implements DNSApi {
                 return null;
             }
         } else if ("D".equals(mode)) {
-            //ALL BLOCK10
-            //start = System.currentTimeMillis();
             //Log it for us
             log.log(Level.FINE, "getSinkHole: Log internally.");
             try {
@@ -379,7 +330,6 @@ public class DNSApiEJB implements DNSApi {
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging INTERNAL failed: ", e);
             } finally {
-                //log.log(Level.INFO,"BLOCK10 took: " + (System.currentTimeMillis()-start));
                 //TODO: Distinguish this from an error state.
                 return null;
             }
@@ -394,9 +344,22 @@ public class DNSApiEJB implements DNSApi {
         return pairs.stream().map(Pair::getB).collect(Collectors.toCollection(HashSet::new));
     }
 
+    /**
+     * Fire and Forget pattern
+     *
+     * @param action      BLOCK|AUDIT|INTERNAL
+     * @param clientUid   Client's UID
+     * @param requestIp   Client's IP address
+     * @param requestFqdn TFDN client wanted to have resolved by DNS
+     * @param requestType DNS request type
+     * @param reasonFqdn  IOC hit
+     * @param reasonIp    IOC hit
+     * @param matchedIoCs IoCs with the same feed listed
+     * @throws ArchiveException
+     */
     @Asynchronous
     @Override
-    public Future<EventLogRecord> logDNSEvent(
+    public void logDNSEvent(
             EventLogAction action,
             String clientUid,
             String requestIp,
@@ -446,7 +409,6 @@ public class DNSApiEJB implements DNSApi {
         VirusTotalRequest vtReq = new VirusTotalRequest();
         vtReq.setStatus(VirusTotalRequestStatus.WAITING);
         logRecord.setVirusTotalRequest(vtReq);
-
-        return new AsyncResult<>(archiveService.archiveEventLogRecord(logRecord));
+        archiveService.archiveEventLogRecord(logRecord);
     }
 }
