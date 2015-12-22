@@ -1,19 +1,18 @@
 package biz.karms.sinkit.ejb.impl;
 
 import biz.karms.sinkit.ejb.CacheService;
-import biz.karms.sinkit.ejb.MyCacheManagerProvider;
+import biz.karms.sinkit.ejb.cache.annotations.SinkitCache;
+import biz.karms.sinkit.ejb.cache.annotations.SinkitCacheName;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ioc.IoCRecord;
 import org.infinispan.Cache;
 import org.jboss.marshalling.Pair;
 
-import javax.annotation.PostConstruct;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -21,33 +20,21 @@ import java.util.logging.Logger;
  * @author Michal Karm Babacek
  */
 @Stateless
-//@TransactionManagement(TransactionManagementType.BEAN)
-//@TransactionManagement(TransactionManagementType.CONTAINER)
 public class CacheServiceEJB implements CacheService {
 
     @Inject
     private Logger log;
 
     @Inject
-    private MyCacheManagerProvider m;
-
+    @SinkitCache(SinkitCacheName.BLACKLIST_CACHE)
     private Cache<String, BlacklistedRecord> blacklistCache;
 
+    @Inject
+    @SinkitCache(SinkitCacheName.RULES_CACHE)
     private Cache<String, Rule> ruleCache;
 
     //@Inject
     //private javax.transaction.UserTransaction utx;
-
-    @PostConstruct
-    public void setup() {
-        blacklistCache = m.getCache(MyCacheManagerProvider.BLACKLIST_CACHE);
-        ruleCache = m.getCache(MyCacheManagerProvider.RULES_CACHE);
-
-        if (blacklistCache == null || ruleCache == null) {
-            throw new IllegalStateException("Both BLACKLIST_CACHE and RULES_CACHE must not be null.");
-        }
-
-    }
 
     //TODO: Batch mode. It is wasteful to operate for 1 single update like this for thousand times.
     @Override

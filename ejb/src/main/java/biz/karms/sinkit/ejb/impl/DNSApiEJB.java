@@ -3,8 +3,9 @@ package biz.karms.sinkit.ejb.impl;
 import biz.karms.sinkit.ejb.ArchiveService;
 import biz.karms.sinkit.ejb.CoreService;
 import biz.karms.sinkit.ejb.DNSApi;
-import biz.karms.sinkit.ejb.MyCacheManagerProvider;
 import biz.karms.sinkit.ejb.WebApi;
+import biz.karms.sinkit.ejb.cache.annotations.SinkitCache;
+import biz.karms.sinkit.ejb.cache.annotations.SinkitCacheName;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.CustomList;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
@@ -18,6 +19,7 @@ import biz.karms.sinkit.eventlog.VirusTotalRequest;
 import biz.karms.sinkit.eventlog.VirusTotalRequestStatus;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.ioc.IoCRecord;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.validator.routines.DomainValidator;
 import org.infinispan.Cache;
 import org.infinispan.query.Search;
@@ -25,16 +27,18 @@ import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
 import org.jboss.marshalling.Pair;
 
-import javax.annotation.PostConstruct;
 import javax.ejb.Asynchronous;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
+import javax.ejb.TransactionAttribute;
+import javax.ejb.TransactionAttributeType;
 import javax.inject.Inject;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -48,13 +52,11 @@ import java.util.stream.Collectors;
  * @author Michal Karm Babacek
  */
 @Stateless
+@TransactionAttribute(TransactionAttributeType.NEVER)
 public class DNSApiEJB implements DNSApi {
 
     @Inject
     private Logger log;
-
-    @Inject
-    private MyCacheManagerProvider m;
 
     @EJB
     private CoreService coreService;
@@ -65,54 +67,62 @@ public class DNSApiEJB implements DNSApi {
     @EJB
     private ArchiveService archiveService;
 
-    private Cache<String, BlacklistedRecord> blacklistCache = null;
+    @Inject
+    @SinkitCache(SinkitCacheName.BLACKLIST_CACHE)
+    private Cache<String, BlacklistedRecord> blacklistCache;
 
-    private Cache<String, Rule> ruleCache = null;
+    @Inject
+    @SinkitCache(SinkitCacheName.RULES_CACHE)
+    private Cache<String, Rule> ruleCache;
 
-    private Cache<String, CustomList> customListsCache = null;
+    @Inject
+    @SinkitCache(SinkitCacheName.CUSTOM_LISTS_CACHE)
+    private Cache<String, CustomList> customListsCache;
+
+    @Inject
+    @SinkitCache(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE)
+    private Cache<String, List<CustomList>> customListsLocalCache;
+
+    @Inject
+    @SinkitCache(SinkitCacheName.RULES_LOCAL_CACHE)
+    private Cache<String, List<Rule>> ruleLocalCache;
 
     private static final List<String> feedTypes = Arrays.asList("c&c", "malware", "ransomware", "malware configuration", "phishing", "blacklist");
     private static final String ipv6Sinkhole = System.getenv("SINKIT_SINKHOLE_IPV6");
     private static final String ipv4Sinkhole = System.getenv("SINKIT_SINKHOLE_IP");
 
-    @PostConstruct
-    public void setup() {
-        if (m == null || coreService == null || webApi == null || archiveService == null) {
-            throw new IllegalArgumentException("DefaultCacheManager, ArchiveService, WebApiEJB and CoreServiceEJB must be injected.");
-        }
-        blacklistCache = m.getCache(MyCacheManagerProvider.BLACKLIST_CACHE);
-        ruleCache = m.getCache(MyCacheManagerProvider.RULES_CACHE);
-        customListsCache = m.getCache(MyCacheManagerProvider.CUSTOM_LISTS_CACHE);
-        if (blacklistCache == null || ruleCache == null || customListsCache == null) {
-            throw new IllegalStateException("Both BLACKLIST_CACHE and RULES_CACHE and CUSTOM_LISTS_CACHE must not be null.");
-        }
-    }
-
     // TODO: List? Array? Map with additional data? Let's think this over.
     // TODO: Replace/factor out duplicated code in .getRules out of webApiEJB
-    @Override
-    public List<?> rulesLookup(final String clientIPAddressPaddedBigInt) {
+    private List<Rule> rulesLookup(final String clientIPAddressPaddedBigInt) {
         try {
             log.log(Level.FINE, "Getting key BigInteger zero padded representation " + clientIPAddressPaddedBigInt);
             // Let's try to hit it
-            Rule rule = ruleCache.get(clientIPAddressPaddedBigInt);
+            final Rule rule = ruleCache.get(clientIPAddressPaddedBigInt);
             if (rule != null) {
-                List<Rule> wrapit = new ArrayList<>();
-                wrapit.add(rule);
-                return wrapit;
+                return Collections.singletonList(rule);
             }
             // Let's search subnets
+            final String keyInCache = DigestUtils.md5Hex(clientIPAddressPaddedBigInt + clientIPAddressPaddedBigInt);
+            log.log(Level.FINE, "keyInCache: " + keyInCache + ", from: " + (clientIPAddressPaddedBigInt + clientIPAddressPaddedBigInt));
 
-            QueryFactory qf = Search.getQueryFactory(ruleCache);
-            Query query = qf.from(Rule.class)
-                    .having("startAddress").lte(clientIPAddressPaddedBigInt)
-                    .and()
-                    .having("endAddress").gte(clientIPAddressPaddedBigInt)
-                    .toBuilder().build();
-            if (query != null) {
-                return query.list();
+            final List<Rule> cached = ruleLocalCache.get(keyInCache);
+            if (cached != null) {
+                return cached;
+            } else {
+                final QueryFactory qf = Search.getQueryFactory(ruleCache);
+                Query query = qf.from(Rule.class)
+                        .having("startAddress").lte(clientIPAddressPaddedBigInt)
+                        .and()
+                        .having("endAddress").gte(clientIPAddressPaddedBigInt)
+                        .toBuilder().build();
+                if (query != null) {
+                    final List<Rule> result = query.list();
+                    ruleLocalCache.putAsync(keyInCache, result);
+                    return result;
+
+                }
+                return Collections.emptyList();
             }
-            return new ArrayList<>();
 
             /*
             SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
@@ -135,14 +145,21 @@ public class DNSApiEJB implements DNSApi {
         }
     }
 
-    @Override
-    public List<?> customListsLookup(final Integer customerId, final boolean isFQDN, final String fqdnOrIp) {
+    private List<CustomList> customListsLookup(final Integer customerId, final boolean isFQDN, final String fqdnOrIp) {
         //SearchManager searchManager = org.infinispan.query.Search.getSearchManager(customListsCache);
         //QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(CustomList.class).get();
         //Query luceneQuery;
-        QueryFactory qf = Search.getQueryFactory(customListsCache);
+        final QueryFactory qf = Search.getQueryFactory(customListsCache);
         Query query = null;
         if (isFQDN) {
+
+            final String keyInCache = DigestUtils.md5Hex(customerId + fqdnOrIp);
+            log.log(Level.FINE, "keyInCache: " + keyInCache + ", from: " + (customerId + fqdnOrIp));
+
+            final List<CustomList> cached = customListsLocalCache.get(keyInCache);
+            if (cached != null) {
+                return cached;
+            } else {
 
             /*
             luceneQuery = queryBuilder
@@ -151,12 +168,18 @@ public class DNSApiEJB implements DNSApi {
             .must(queryBuilder.keyword().wildcard().onField("fqdn").matching(fqdnOrIp).createQuery())
             .createQuery();
              */
-
-            query = qf.from(CustomList.class)
-                    .having("customerId").eq(customerId)
-                    .and()
-                    .having("fqdn").like("%" + fqdnOrIp + "%")
-                    .toBuilder().build();
+                query = qf.from(CustomList.class)
+                        .having("customerId").eq(customerId)
+                        .and()
+                        .having("fqdn").like("%" + fqdnOrIp + "%")
+                        .toBuilder().build();
+                if (query != null) {
+                    final List<CustomList> result = query.list();
+                    customListsLocalCache.putAsync(keyInCache, result);
+                    return result;
+                }
+                return null;
+            }
         } else {
             final String clientIPAddressPaddedBigInt;
             try {
@@ -165,6 +188,7 @@ public class DNSApiEJB implements DNSApi {
                 log.log(Level.SEVERE, "customListsLookup: " + fqdnOrIp + " in not a valid IP address nor a valid FQDN.");
                 return null;
             }
+
             /*
             luceneQuery = queryBuilder
                     .bool()
@@ -173,25 +197,38 @@ public class DNSApiEJB implements DNSApi {
                     .must(queryBuilder.range().onField("listEndAddress").above(clientIPAddressPaddedBigInt).createQuery())
                     .createQuery();
             */
-            query = qf.from(CustomList.class)
-                    .having("customerId").eq(customerId)
-                    .and()
-                    .having("listStartAddress").lte(clientIPAddressPaddedBigInt)
-                    .and()
-                    .having("listEndAddress").gte(clientIPAddressPaddedBigInt)
-                    .toBuilder().build();
+
+            final String keyInCache = DigestUtils.md5Hex(customerId + clientIPAddressPaddedBigInt + clientIPAddressPaddedBigInt);
+            log.log(Level.FINE, "keyInCache: " + keyInCache + ", from: " + (customerId + clientIPAddressPaddedBigInt + clientIPAddressPaddedBigInt));
+
+            final List<CustomList> cached = customListsLocalCache.get(keyInCache);
+            if (cached != null) {
+                return cached;
+            } else {
+                query = qf.from(CustomList.class)
+                        .having("customerId").eq(customerId)
+                        .and()
+                        .having("listStartAddress").lte(clientIPAddressPaddedBigInt)
+                        .and()
+                        .having("listEndAddress").gte(clientIPAddressPaddedBigInt)
+                        .toBuilder().build();
+                if (query != null) {
+                    final List<CustomList> result = query.list();
+                    customListsLocalCache.putAsync(keyInCache, result);
+                    return result;
+                }
+                return null;
+            }
         }
         //return searchManager.getQuery(luceneQuery, CustomList.class).list();
-        return query.list();
     }
 
-    @Override
-    public CustomList retrieveOneCustomList(final Integer customerId, final boolean isFQDN, final String fqdnOrIp) {
+    private CustomList retrieveOneCustomList(final Integer customerId, final boolean isFQDN, final String fqdnOrIp) {
         //TODO logic about B|W lists
         //TODO logic about *something.foo.com being less important then bar.something.foo.com
         //TODO This is just a stupid dummy/mock
-        List customLists = customListsLookup(customerId, isFQDN, fqdnOrIp);
-        return (customLists == null || customLists.isEmpty()) ? null : (CustomList) customLists.get(0);
+        List<CustomList> customLists = customListsLookup(customerId, isFQDN, fqdnOrIp);
+        return (customLists == null || customLists.isEmpty()) ? null : customLists.get(0);
     }
 
     /**
@@ -209,7 +246,7 @@ public class DNSApiEJB implements DNSApi {
          */
         final String clientIPAddressPaddedBigInt;
         try {
-            clientIPAddressPaddedBigInt = CIDRUtils.getStartEndAddresses(fqdnOrIp).getA();
+            clientIPAddressPaddedBigInt = CIDRUtils.getStartEndAddresses(clientIPAddress).getA();
         } catch (UnknownHostException e) {
             log.log(Level.SEVERE, "getSinkHole: clientIPAddress " + clientIPAddress + " in not a valid address.");
             return null;
@@ -220,7 +257,7 @@ public class DNSApiEJB implements DNSApi {
         //TODO: Add test that all such found rules have the same customerId
         //TODO: factor .getRules out of webApiEJB
         //@SuppressWarnings("unchecked")
-        final List<Rule> rules = (List<Rule>) rulesLookup(clientIPAddressPaddedBigInt);
+        final List<Rule> rules = rulesLookup(clientIPAddressPaddedBigInt);
 
         //If there is no rule, we simply don't sinkhole anything.
         if (rules == null || rules.isEmpty()) {
@@ -238,6 +275,7 @@ public class DNSApiEJB implements DNSApi {
          * Next we fetch one and only one or none CustomList for a given fqdnOrIp
          */
         final CustomList customList = retrieveOneCustomList(customerId, isFQDN, fqdnOrIp);
+
         // Was it found in any of customer's Black/White/Log lists?
         // TODO: Implement logging for whitelisted stuff that's positive on IoC.
         if (customList != null) {

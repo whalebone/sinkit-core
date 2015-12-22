@@ -1,7 +1,8 @@
 package biz.karms.sinkit.ejb.impl;
 
-import biz.karms.sinkit.ejb.MyCacheManagerProvider;
 import biz.karms.sinkit.ejb.WebApi;
+import biz.karms.sinkit.ejb.cache.annotations.SinkitCache;
+import biz.karms.sinkit.ejb.cache.annotations.SinkitCacheName;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.CustomList;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
@@ -19,10 +20,10 @@ import org.infinispan.query.dsl.QueryFactory;
 import org.jboss.marshalling.Pair;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-import javax.annotation.PostConstruct;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -38,33 +39,25 @@ import java.util.logging.Logger;
  * @author Michal Karm Babacek
  */
 @Stateless
-//@TransactionManagement(TransactionManagementType.BEAN)
 public class WebApiEJB implements WebApi {
 
     @Inject
     private Logger log;
 
     @Inject
-    private MyCacheManagerProvider m;
+    @SinkitCache(SinkitCacheName.BLACKLIST_CACHE)
+    private Cache<String, BlacklistedRecord> blacklistCache;
 
-    private Cache<String, BlacklistedRecord> blacklistCache = null;
+    @Inject
+    @SinkitCache(SinkitCacheName.RULES_CACHE)
+    private Cache<String, Rule> ruleCache;
 
-    private Cache<String, Rule> ruleCache = null;
-
-    private Cache<String, CustomList> customListsCache = null;
+    @Inject
+    @SinkitCache(SinkitCacheName.CUSTOM_LISTS_CACHE)
+    private Cache<String, CustomList> customListsCache;
 
     //@Inject
     //private javax.transaction.UserTransaction utx;
-
-    @PostConstruct
-    public void setup() {
-        blacklistCache = m.getCache(MyCacheManagerProvider.BLACKLIST_CACHE);
-        ruleCache = m.getCache(MyCacheManagerProvider.RULES_CACHE);
-        customListsCache = m.getCache(MyCacheManagerProvider.CUSTOM_LISTS_CACHE);
-        if (blacklistCache == null || ruleCache == null || customListsCache == null) {
-            throw new IllegalStateException("Both BLACKLIST_CACHE and RULES_CACHE and CUSTOM_LISTS_CACHE must not be null.");
-        }
-    }
 
     // Testing purposes
     @Override
@@ -156,9 +149,7 @@ public class WebApiEJB implements WebApi {
             // Let's try to hit it
             Rule rule = ruleCache.get(clientIPAddressPaddedBigInt);
             if (rule != null) {
-                List<Rule> wrapit = new ArrayList<>();
-                wrapit.add(rule);
-                return wrapit;
+                return Collections.singletonList(rule);
             }
 
             // Let's search subnets
