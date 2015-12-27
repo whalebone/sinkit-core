@@ -57,17 +57,6 @@ public class SinkitREST {
     }
 
     @GET
-    @Path("/blacklist/dns/{client}/{key}")
-    @Produces({"application/json;charset=UTF-8"})
-    public String getSinkHole(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("client") String client, @PathParam("key") String key) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            return sinkitService.getSinkHole(client, key);
-        } else {
-            return AUTH_FAIL;
-        }
-    }
-
-    @GET
     @Path("/blacklist/record/{key}")
     @Produces({"application/json;charset=UTF-8"})
     public String getBlacklistedRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("key") String key) {

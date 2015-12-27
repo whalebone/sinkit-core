@@ -18,7 +18,7 @@ ENV HIBERNATE_HQL_LUCENE_VERSION 1.3.0.Alpha2
 ENV HIBERNATE_HQL_PARSER_VERSION 1.3.0.Alpha2
 ENV STRINGTEMPLATE_VERSION 3.2.1
 ENV ANTLR_RUNTIME_VERSION 3.4
-ENV VERSION_INFINISPAN 8.0.1.Final
+ENV VERSION_INFINISPAN 8.1.0.Final
 ENV MAVEN_CENTRAL http://central.maven.org/maven2
 
 # ADD would run every rebuild
@@ -69,21 +69,12 @@ ENV WF_CONFIG /opt/sinkit/wildfly/standalone/configuration/standalone-ha.xml
 
 ADD standalone-ha.xml ${WF_CONFIG}
 
-# Yikes, editing an XML file with AWK :-)
-#RUN awk '{ if ( $0 ~ /<inet-address value=/ ) { printf( "%s\n%s\n", $0, "        <nic name=\"@SINKITNIC@\"/>"); } else {print $0; } }' \
-#   ${WF_CONFIG} > ${WF_CONFIG}.tmp && mv ${WF_CONFIG}.tmp ${WF_CONFIG}
-
-#RUN awk '/periodic-rotating-file-handler/ {f=1} !f; /\/periodic-rotating-file-handler/ {print "<size-rotating-file-handler name=\"FILE\" autoflush=\"true\"><file relative-to=\"jboss.server.log.dir\" path=\"server.log\"/><rotate-size value=\"500M\"/><max-backup-index value=\"4\"/><level name=\"DEBUG\"/></size-rotating-file-handler>"; f=0}' \
-#${WF_CONFIG} > ${WF_CONFIG}.tmp && mv ${WF_CONFIG}.tmp ${WF_CONFIG}
-
 RUN echo 'JAVA_OPTS="\
  -server \
- -XX:+UseCompressedOops \
  -Xms${SINKIT_MS_RAM:-6144m} \
  -Xmx${SINKIT_MX_RAM:-6144m} \
  -XX:+HeapDumpOnOutOfMemoryError \
  -XX:HeapDumpPath=/opt/sinkit \
- -XX:+UseConcMarkSweepGC \
 "' >> /opt/sinkit/wildfly/bin/standalone.conf
 ADD sinkit.sh /opt/sinkit/
 CMD ["/opt/sinkit/sinkit.sh"]

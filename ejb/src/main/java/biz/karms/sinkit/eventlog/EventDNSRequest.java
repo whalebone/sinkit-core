@@ -10,7 +10,8 @@ public class EventDNSRequest implements Serializable {
     private static final long serialVersionUID = -8270442960082815073L;
 
     private String ip;
-    private String raw;
+    private String fqdn;
+    private String type;
 
     public String getIp() {
         return ip;
@@ -20,19 +21,28 @@ public class EventDNSRequest implements Serializable {
         this.ip = ip;
     }
 
-    public String getRaw() {
-        return raw;
+    public String getFqdn() {
+        return fqdn;
     }
 
-    public void setRaw(String raw) {
-        this.raw = raw;
+    public void setFqdn(String fqdn) {
+        this.fqdn = fqdn;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 
     @Override
     public String toString() {
         return "EventDNSRequest{" +
                 "ip='" + ip + '\'' +
-                ", raw='" + raw + '\'' +
+                ", fqdn='" + fqdn + '\'' +
+                ", type='" + type + '\'' +
                 '}';
     }
 }

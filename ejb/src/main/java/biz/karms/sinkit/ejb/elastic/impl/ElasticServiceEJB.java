@@ -226,7 +226,7 @@ public class ElasticServiceEJB implements ElasticService {
 
         if (result.isSucceeded()) {
             String docId = result.getJsonObject().getAsJsonPrimitive("_id").getAsString();
-            log.info("Indexed docId [" + docId + "]");
+            log.fine("Indexed docId [" + docId + "]");
         } else {
             log.severe("Archive returned error: " + result.getErrorMessage());
             throw new ArchiveException(result.getErrorMessage());

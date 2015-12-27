@@ -209,8 +209,8 @@
             <worker name="default"/>
             <buffer-pool name="default"/>
         </subsystem>
-        <subsystem xmlns="urn:jboss:domain:infinispan:3.0">
-            <cache-container name="server" aliases="singleton cluster" module="org.wildfly.clustering.server" default-cache="default">
+        <subsystem xmlns="urn:jboss:domain:infinispan:4.0">
+            <cache-container name="server" aliases="singleton cluster" default-cache="default" module="org.wildfly.clustering.server">
                 <transport channel="ee"/>
                 <replicated-cache name="default" mode="ASYNC">
                     <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>

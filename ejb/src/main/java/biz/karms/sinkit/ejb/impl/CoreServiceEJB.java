@@ -28,7 +28,6 @@ import java.util.logging.Logger;
 @Stateless
 public class CoreServiceEJB implements CoreService {
 
-    //public static final int IOC_ACTIVE_HOURS = Integer.parseInt(System.getenv("SINKIT_IOC_ACTIVE_HOURS"));
     private static final String IOC_ACTIVE_HOURS_ENV = "SINKIT_IOC_ACTIVE_HOURS";
     private int iocActiveHours;
 

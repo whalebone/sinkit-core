@@ -27,160 +27,52 @@ package biz.karms.sinkit.ejb.util;
 *
 * */
 
+import org.jboss.marshalling.Pair;
+
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * A class that enables to get an IP range from CIDR specification. It supports
  * both IPv4 and IPv6.
  */
 public class CIDRUtils {
-    private final String cidr;
+    private CIDRUtils() {
+    }
 
-    private InetAddress inetAddress;
-    private InetAddress startAddress;
-    private InetAddress endAddress;
-    private BigInteger startIp;
-    private BigInteger endIp;
-    private final int prefixLength;
-    private boolean probablyIsIPv6;
-
-    public CIDRUtils(String cidr) throws UnknownHostException {
+    public static Pair<String, String> getStartEndAddresses(final String cidr) throws UnknownHostException {
         //TODO: This is silly. Refactor CIDRUtils so as to accept actual IPs as well as subnets.
         //TODO: Validate the thing before processing. Guava?
-        probablyIsIPv6 = cidr.contains(":");
+        final String fixedCIDR;
         if (!cidr.contains("/")) {
-            if (probablyIsIPv6) {
-                this.cidr = cidr + "/128";
+            //IPv6? Hmmm...
+            if (cidr.contains(":")) {
+                fixedCIDR = cidr + "/128";
             } else {
-                this.cidr = cidr + "/32";
+                fixedCIDR = cidr + "/32";
             }
         } else {
-            this.cidr = cidr;
+            fixedCIDR = cidr;
         }
-        int index = this.cidr.indexOf("/");
-        String addressPart = this.cidr.substring(0, index);
-        String networkPart = this.cidr.substring(index + 1);
+        final int index = fixedCIDR.indexOf("/");
+        final InetAddress inetAddress = InetAddress.getByName(fixedCIDR.substring(0, index));
+        final int prefixLength = Integer.parseInt(fixedCIDR.substring(index + 1));
 
-        inetAddress = InetAddress.getByName(addressPart);
-        prefixLength = Integer.parseInt(networkPart);
-
-        calculate();
-    }
-
-    private void calculate() throws UnknownHostException {
-        ByteBuffer maskBuffer;
-        int targetSize;
+        final ByteBuffer maskBuffer;
         if (inetAddress.getAddress().length == 4) {
-            maskBuffer =
-                    ByteBuffer
-                            .allocate(4)
-                            .putInt(-1);
-            targetSize = 4;
+            maskBuffer = ByteBuffer.allocate(4).putInt(-1);
         } else {
-            maskBuffer = ByteBuffer.allocate(16)
-                    .putLong(-1L)
-                    .putLong(-1L);
-            targetSize = 16;
+            maskBuffer = ByteBuffer.allocate(16).putLong(-1L).putLong(-1L);
         }
 
-        BigInteger mask = (new BigInteger(1, maskBuffer.array())).not().shiftRight(prefixLength);
+        final BigInteger mask = (new BigInteger(1, maskBuffer.array())).not().shiftRight(prefixLength);
+        final ByteBuffer buffer = ByteBuffer.wrap(inetAddress.getAddress());
+        final BigInteger ipVal = new BigInteger(1, buffer.array());
+        final BigInteger startIp = ipVal.and(mask);
+        final BigInteger endIp = startIp.add(mask.not());
 
-        ByteBuffer buffer = ByteBuffer.wrap(inetAddress.getAddress());
-        BigInteger ipVal = new BigInteger(1, buffer.array());
-
-        startIp = ipVal.and(mask);
-        endIp = startIp.add(mask.not());
-
-        byte[] startIpArr = toBytes(startIp.toByteArray(), targetSize);
-        byte[] endIpArr = toBytes(endIp.toByteArray(), targetSize);
-
-        this.startAddress = InetAddress.getByAddress(startIpArr);
-        this.endAddress = InetAddress.getByAddress(endIpArr);
+        return new Pair<>(String.format("%040d", startIp), String.format("%040d", endIp));
     }
-
-    private byte[] toBytes(byte[] array, int targetSize) {
-        int counter = 0;
-        List<Byte> newArr = new ArrayList<Byte>();
-        while (counter < targetSize && (array.length - 1 - counter >= 0)) {
-            newArr.add(0, array[array.length - 1 - counter]);
-            counter++;
-        }
-
-        int size = newArr.size();
-        for (int i = 0; i < (targetSize - size); i++) {
-
-            newArr.add(0, (byte) 0);
-        }
-
-        byte[] ret = new byte[newArr.size()];
-        for (int i = 0; i < newArr.size(); i++) {
-            ret[i] = newArr.get(i);
-        }
-        return ret;
-    }
-
-    public BigInteger getStartIP() {
-        return startIp;
-    }
-
-    public BigInteger getEndIP() {
-        return endIp;
-    }
-
-    public String getStartIPBigIntegerString() {
-        return String.format("%040d", startIp);
-    }
-
-    public String getEndIPBigIntegerString() {
-        return String.format("%040d", endIp);
-    }
-
-    public String getNetworkAddress() {
-        return this.startAddress.getHostAddress();
-    }
-
-    public String getBroadcastAddress() {
-        return this.endAddress.getHostAddress();
-    }
-
-    public boolean isProbablyIsIPv6() {
-        return probablyIsIPv6;
-    }
-
-    public boolean isInRange(String ipAddress) throws UnknownHostException {
-        InetAddress address = InetAddress.getByName(ipAddress);
-        BigInteger start = new BigInteger(1, this.startAddress.getAddress());
-        BigInteger end = new BigInteger(1, this.endAddress.getAddress());
-        BigInteger target = new BigInteger(1, address.getAddress());
-
-        int st = start.compareTo(target);
-        int te = target.compareTo(end);
-
-        return (st == -1 || st == 0) && (te == -1 || te == 0);
-    }
-
-    //TODO think about porting this whole class to SubnetUtils
-    /*
-    public static boolean isValidSubnetFormat(String subnet) {
-        try {
-            SubnetUtils subnetUtils = new SubnetUtils(subnet);
-            return true;
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
-    }
-
-    public static boolean isValidSubnet(String subnet) {
-        try {
-            SubnetUtils subnetUtils = new SubnetUtils(subnet);
-            return subnetUtils.getInfo().getAddress().equals(subnetUtils.getInfo().getNetworkAddress());
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
-    }*/
 }

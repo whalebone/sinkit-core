@@ -3,8 +3,9 @@ package biz.karms.sinkit.ejb.impl;
 import biz.karms.sinkit.ejb.ArchiveService;
 import biz.karms.sinkit.ejb.CoreService;
 import biz.karms.sinkit.ejb.DNSApi;
-import biz.karms.sinkit.ejb.MyCacheManagerProvider;
 import biz.karms.sinkit.ejb.WebApi;
+import biz.karms.sinkit.ejb.cache.annotations.SinkitCache;
+import biz.karms.sinkit.ejb.cache.annotations.SinkitCacheName;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.CustomList;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
@@ -18,6 +19,7 @@ import biz.karms.sinkit.eventlog.VirusTotalRequest;
 import biz.karms.sinkit.eventlog.VirusTotalRequestStatus;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.ioc.IoCRecord;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.validator.routines.DomainValidator;
 import org.infinispan.Cache;
 import org.infinispan.query.Search;
@@ -25,42 +27,36 @@ import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
 import org.jboss.marshalling.Pair;
 
-import javax.annotation.PostConstruct;
-import javax.ejb.AsyncResult;
 import javax.ejb.Asynchronous;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
+import javax.ejb.TransactionAttribute;
+import javax.ejb.TransactionAttributeType;
 import javax.inject.Inject;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-//import org.apache.lucene.search.Query;
-//import org.hibernate.search.query.dsl.QueryBuilder;
-//import org.infinispan.query.SearchManager;
-//import org.infinispan.query.dsl.Query;
 
 /**
  * @author Michal Karm Babacek
  */
 @Stateless
+@TransactionAttribute(TransactionAttributeType.NEVER)
 public class DNSApiEJB implements DNSApi {
 
     @Inject
     private Logger log;
-
-    @Inject
-    private MyCacheManagerProvider m;
 
     @EJB
     private CoreService coreService;
@@ -71,55 +67,62 @@ public class DNSApiEJB implements DNSApi {
     @EJB
     private ArchiveService archiveService;
 
-    private Cache<String, BlacklistedRecord> blacklistCache = null;
+    @Inject
+    @SinkitCache(SinkitCacheName.BLACKLIST_CACHE)
+    private Cache<String, BlacklistedRecord> blacklistCache;
 
-    private Cache<String, Rule> ruleCache = null;
+    @Inject
+    @SinkitCache(SinkitCacheName.RULES_CACHE)
+    private Cache<String, Rule> ruleCache;
 
-    private Cache<String, CustomList> customListsCache = null;
+    @Inject
+    @SinkitCache(SinkitCacheName.CUSTOM_LISTS_CACHE)
+    private Cache<String, CustomList> customListsCache;
+
+    @Inject
+    @SinkitCache(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE)
+    private Cache<String, List<CustomList>> customListsLocalCache;
+
+    @Inject
+    @SinkitCache(SinkitCacheName.RULES_LOCAL_CACHE)
+    private Cache<String, List<Rule>> ruleLocalCache;
 
     private static final List<String> feedTypes = Arrays.asList("c&c", "malware", "ransomware", "malware configuration", "phishing", "blacklist");
     private static final String ipv6Sinkhole = System.getenv("SINKIT_SINKHOLE_IPV6");
     private static final String ipv4Sinkhole = System.getenv("SINKIT_SINKHOLE_IP");
 
-    @PostConstruct
-    public void setup() {
-        if (m == null || coreService == null || webApi == null || archiveService == null) {
-            throw new IllegalArgumentException("DefaultCacheManager, ArchiveService, WebApiEJB and CoreServiceEJB must be injected.");
-        }
-        blacklistCache = m.getCache(MyCacheManagerProvider.BLACKLIST_CACHE);
-        ruleCache = m.getCache(MyCacheManagerProvider.RULES_CACHE);
-        customListsCache = m.getCache(MyCacheManagerProvider.CUSTOM_LISTS_CACHE);
-        if (blacklistCache == null || ruleCache == null || customListsCache == null) {
-            throw new IllegalStateException("Both BLACKLIST_CACHE and RULES_CACHE and CUSTOM_LISTS_CACHE must not be null.");
-        }
-    }
-
     // TODO: List? Array? Map with additional data? Let's think this over.
     // TODO: Replace/factor out duplicated code in .getRules out of webApiEJB
-    @Override
-    public List<?> rulesLookup(final String clientIPAddressPaddedBigInt) {
+    private List<Rule> rulesLookup(final String clientIPAddressPaddedBigInt) {
         try {
             log.log(Level.FINE, "Getting key BigInteger zero padded representation " + clientIPAddressPaddedBigInt);
             // Let's try to hit it
-            Rule rule = ruleCache.get(clientIPAddressPaddedBigInt);
+            final Rule rule = ruleCache.get(clientIPAddressPaddedBigInt);
             if (rule != null) {
-                List<Rule> wrapit = new ArrayList<>();
-                wrapit.add(rule);
-                return wrapit;
+                return Collections.singletonList(rule);
             }
             // Let's search subnets
+            final String keyInCache = DigestUtils.md5Hex(clientIPAddressPaddedBigInt + clientIPAddressPaddedBigInt);
+            log.log(Level.FINE, "keyInCache: " + keyInCache + ", from: " + (clientIPAddressPaddedBigInt + clientIPAddressPaddedBigInt));
 
-            QueryFactory qf = Search.getQueryFactory(ruleCache);
-            Query query = qf.from(Rule.class)
-                    .having("startAddress").lte(clientIPAddressPaddedBigInt)
-                    .and()
-                    .having("endAddress").gte(clientIPAddressPaddedBigInt)
-                    .toBuilder().build();
-            if (query != null) {
-                return query.list();
+            final List<Rule> cached = ruleLocalCache.get(keyInCache);
+            if (cached != null) {
+                return cached;
+            } else {
+                final QueryFactory qf = Search.getQueryFactory(ruleCache);
+                Query query = qf.from(Rule.class)
+                        .having("startAddress").lte(clientIPAddressPaddedBigInt)
+                        .and()
+                        .having("endAddress").gte(clientIPAddressPaddedBigInt)
+                        .toBuilder().build();
+                if (query != null) {
+                    final List<Rule> result = query.list();
+                    ruleLocalCache.putAsync(keyInCache, result);
+                    return result;
+
+                }
+                return Collections.emptyList();
             }
-            return new ArrayList<>();
-
 
             /*
             SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
@@ -142,35 +145,50 @@ public class DNSApiEJB implements DNSApi {
         }
     }
 
-    @Override
-    public List<?> customListsLookup(final Integer customerId, final boolean isFQDN, final String fqdnOrIp) {
+    private List<CustomList> customListsLookup(final Integer customerId, final boolean isFQDN, final String fqdnOrIp) {
         //SearchManager searchManager = org.infinispan.query.Search.getSearchManager(customListsCache);
         //QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(CustomList.class).get();
         //Query luceneQuery;
-        QueryFactory qf = Search.getQueryFactory(customListsCache);
+        final QueryFactory qf = Search.getQueryFactory(customListsCache);
         Query query = null;
         if (isFQDN) {
-        /*    luceneQuery = queryBuilder
-                    .bool()
-                    .must(queryBuilder.keyword().onField("customerId").matching(customerId).createQuery())
-                    .must(queryBuilder.keyword().wildcard().onField("fqdn").matching(fqdnOrIp).createQuery())
-                    .createQuery();
-                    */
 
-            query = qf.from(CustomList.class)
-                    .having("customerId").eq(customerId)
-                    .and()
-                    .having("fqdn").like("%" + fqdnOrIp + "%")
-                    .toBuilder().build();
+            final String keyInCache = DigestUtils.md5Hex(customerId + fqdnOrIp);
+            log.log(Level.FINE, "keyInCache: " + keyInCache + ", from: " + (customerId + fqdnOrIp));
 
+            final List<CustomList> cached = customListsLocalCache.get(keyInCache);
+            if (cached != null) {
+                return cached;
+            } else {
+
+            /*
+            luceneQuery = queryBuilder
+            .bool()
+            .must(queryBuilder.keyword().onField("customerId").matching(customerId).createQuery())
+            .must(queryBuilder.keyword().wildcard().onField("fqdn").matching(fqdnOrIp).createQuery())
+            .createQuery();
+             */
+                query = qf.from(CustomList.class)
+                        .having("customerId").eq(customerId)
+                        .and()
+                        .having("fqdn").like("%" + fqdnOrIp + "%")
+                        .toBuilder().build();
+                if (query != null) {
+                    final List<CustomList> result = query.list();
+                    customListsLocalCache.putAsync(keyInCache, result);
+                    return result;
+                }
+                return null;
+            }
         } else {
             final String clientIPAddressPaddedBigInt;
             try {
-                clientIPAddressPaddedBigInt = new CIDRUtils(fqdnOrIp).getStartIPBigIntegerString();
+                clientIPAddressPaddedBigInt = CIDRUtils.getStartEndAddresses(fqdnOrIp).getA();
             } catch (UnknownHostException e) {
                 log.log(Level.SEVERE, "customListsLookup: " + fqdnOrIp + " in not a valid IP address nor a valid FQDN.");
                 return null;
             }
+
             /*
             luceneQuery = queryBuilder
                     .bool()
@@ -178,31 +196,39 @@ public class DNSApiEJB implements DNSApi {
                     .must(queryBuilder.range().onField("listStartAddress").below(clientIPAddressPaddedBigInt).createQuery())
                     .must(queryBuilder.range().onField("listEndAddress").above(clientIPAddressPaddedBigInt).createQuery())
                     .createQuery();
-*/
+            */
 
+            final String keyInCache = DigestUtils.md5Hex(customerId + clientIPAddressPaddedBigInt + clientIPAddressPaddedBigInt);
+            log.log(Level.FINE, "keyInCache: " + keyInCache + ", from: " + (customerId + clientIPAddressPaddedBigInt + clientIPAddressPaddedBigInt));
 
-            query = qf.from(CustomList.class)
-                    .having("customerId").eq(customerId)
-                    .and()
-                    .having("listStartAddress").lte(clientIPAddressPaddedBigInt)
-                    .and()
-                    .having("listEndAddress").gte(clientIPAddressPaddedBigInt)
-                    .toBuilder().build();
-
-
+            final List<CustomList> cached = customListsLocalCache.get(keyInCache);
+            if (cached != null) {
+                return cached;
+            } else {
+                query = qf.from(CustomList.class)
+                        .having("customerId").eq(customerId)
+                        .and()
+                        .having("listStartAddress").lte(clientIPAddressPaddedBigInt)
+                        .and()
+                        .having("listEndAddress").gte(clientIPAddressPaddedBigInt)
+                        .toBuilder().build();
+                if (query != null) {
+                    final List<CustomList> result = query.list();
+                    customListsLocalCache.putAsync(keyInCache, result);
+                    return result;
+                }
+                return null;
+            }
         }
         //return searchManager.getQuery(luceneQuery, CustomList.class).list();
-        List<CustomList> list = query.list();
-        return list;
     }
 
-    @Override
-    public CustomList retrieveOneCustomList(final Integer customerId, final boolean isFQDN, final String fqdnOrIp) {
+    private CustomList retrieveOneCustomList(final Integer customerId, final boolean isFQDN, final String fqdnOrIp) {
         //TODO logic about B|W lists
         //TODO logic about *something.foo.com being less important then bar.something.foo.com
         //TODO This is just a stupid dummy/mock
-        List customLists = customListsLookup(customerId, isFQDN, fqdnOrIp);
-        return (customLists == null || customLists.isEmpty()) ? null : (CustomList) customLists.get(0);
+        List<CustomList> customLists = customListsLookup(customerId, isFQDN, fqdnOrIp);
+        return (customLists == null || customLists.isEmpty()) ? null : customLists.get(0);
     }
 
     /**
@@ -210,32 +236,28 @@ public class DNSApiEJB implements DNSApi {
      *
      * @param clientIPAddress - DNS server IP
      * @param fqdnOrIp        - FQDN DNS is trying to resolve or resolved IP (v6 or v4)
+     * @param fqdn
      * @return null if there is an error and/or there is no reason to sinkhole or Sinkhole instance on positive hit
      */
     @Override
-    public Sinkhole getSinkHole(final String clientIPAddress, final String fqdnOrIp) {
-
+    public Sinkhole getSinkHole(final String clientIPAddress, final String fqdnOrIp, final String fqdn) {
         /**
          * At first, we lookup Rules
          */
         final String clientIPAddressPaddedBigInt;
-        final boolean probablyIsIPv6;
-        CIDRUtils cidrUtils;
         try {
-            cidrUtils = new CIDRUtils(clientIPAddress);
-            clientIPAddressPaddedBigInt = cidrUtils.getStartIPBigIntegerString();
-            probablyIsIPv6 = cidrUtils.isProbablyIsIPv6();
+            clientIPAddressPaddedBigInt = CIDRUtils.getStartEndAddresses(clientIPAddress).getA();
         } catch (UnknownHostException e) {
             log.log(Level.SEVERE, "getSinkHole: clientIPAddress " + clientIPAddress + " in not a valid address.");
             return null;
-        } finally {
-            cidrUtils = null;
         }
+        final boolean probablyIsIPv6 = fqdnOrIp.contains(":");
+
         // Lookup Rules (gives customerId, feeds and their settings)
         //TODO: Add test that all such found rules have the same customerId
         //TODO: factor .getRules out of webApiEJB
         //@SuppressWarnings("unchecked")
-        final List<Rule> rules = (List<Rule>) rulesLookup(clientIPAddressPaddedBigInt);
+        final List<Rule> rules = rulesLookup(clientIPAddressPaddedBigInt);
 
         //If there is no rule, we simply don't sinkhole anything.
         if (rules == null || rules.isEmpty()) {
@@ -253,6 +275,7 @@ public class DNSApiEJB implements DNSApi {
          * Next we fetch one and only one or none CustomList for a given fqdnOrIp
          */
         final CustomList customList = retrieveOneCustomList(customerId, isFQDN, fqdnOrIp);
+
         // Was it found in any of customer's Black/White/Log lists?
         // TODO: Implement logging for whitelisted stuff that's positive on IoC.
         if (customList != null) {
@@ -283,7 +306,6 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.FINE, "No hit. The requested fqdnOrIp: " + fqdnOrIp + " is clean.");
             return null;
         }
-
         // Feed UID : Type
         final Map<String, Pair<String, String>> feedTypeMap = blacklistedRecord.getSources();
         //If there is no feed, we simply don't sinkhole anything. It is weird though.
@@ -291,10 +313,8 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.WARNING, "getSinkHole: IoC without feed settings.");
             return null;
         }
-
         // Feed UID, Mode <L|S|D>. In the end, we operate on a one selected Feed:mode pair only.
         String mode = null;
-        String feedUUID = null;
         //TODO: Nested cycles, worth profiling.
         for (Rule rule : rules) {
             for (String uuid : rule.getSources().keySet()) {
@@ -305,24 +325,23 @@ public class DNSApiEJB implements DNSApi {
                     if (mode == null || ("S".equals(tmpMode) && !"D".equals(mode)) || "D".equals(tmpMode)) {
                         //D >= S >= L >= null, i.e. if a feed is Disabled, we don't switch to Sinkhole.
                         mode = tmpMode;
-                        feedUUID = uuid;
                     }
                 } else {
                     log.log(Level.FINE, "getSinkHole: BlacklistedRecord " + blacklistedRecord.getBlackListedDomainOrIP() + " for feed " + uuid + " does not have Type nor DocID.");
                 }
             }
         }
-        log.log(Level.WARNING, "getSinkHole: Feed mode decision:");
+        log.log(Level.FINE, "getSinkHole: Feed mode decision:");
         // Let's decide on feed mode:
         if (mode == null) {
             //TODO: Distinguish this from an error state.
-            log.log(Level.WARNING, "getSinkHole: No match, no feed settings, we don't sinkhole.");
+            log.log(Level.FINE, "getSinkHole: No match, no feed settings, we don't sinkhole.");
             return null;
         } else if ("S".equals(mode)) {
-            log.log(Level.WARNING, "getSinkHole: Sinkhole.");
+            log.log(Level.FINE, "getSinkHole: Sinkhole.");
             try {
                 log.log(Level.FINE, "getSinkHole: Calling coreService.logDNSEvent(EventLogAction.BLOCK,...");
-                logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()));
+                logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()));
                 log.log(Level.FINE, "getSinkHole: coreService.logDNSEvent returned.");
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging BLOCK failed: ", e);
@@ -331,20 +350,21 @@ public class DNSApiEJB implements DNSApi {
             }
         } else if ("L".equals(mode)) {
             //Log it for customer
-            log.log(Level.WARNING, "getSinkHole: Log.");
+            log.log(Level.FINE, "getSinkHole: Log.");
             try {
-                logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()));
+                logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()));
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging AUDIT failed: ", e);
             } finally {
+                //log.log(Level.INFO,"BLOCK9 took: " + (System.currentTimeMillis()-start));
                 //TODO: Distinguish this from an error state.
                 return null;
             }
         } else if ("D".equals(mode)) {
             //Log it for us
-            log.log(Level.WARNING, "getSinkHole: Log internally.");
+            log.log(Level.FINE, "getSinkHole: Log internally.");
             try {
-                logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()));
+                logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()));
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging INTERNAL failed: ", e);
             } finally {
@@ -355,29 +375,45 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.SEVERE, "getSinkHole: Feed mode must be one of L,S,D, null but was: " + mode);
             return null;
         }
+
     }
 
     private Set<String> unwrapDocumentIds(Collection<Pair<String, String>> pairs) {
         return pairs.stream().map(Pair::getB).collect(Collectors.toCollection(HashSet::new));
     }
 
+    /**
+     * Fire and Forget pattern
+     *
+     * @param action      BLOCK|AUDIT|INTERNAL
+     * @param clientUid   Client's UID
+     * @param requestIp   Client's IP address
+     * @param requestFqdn TFDN client wanted to have resolved by DNS
+     * @param requestType DNS request type
+     * @param reasonFqdn  IOC hit
+     * @param reasonIp    IOC hit
+     * @param matchedIoCs IoCs with the same feed listed
+     * @throws ArchiveException
+     */
     @Asynchronous
     @Override
-    public Future<EventLogRecord> logDNSEvent(
+    public void logDNSEvent(
             EventLogAction action,
             String clientUid,
             String requestIp,
-            String requestRaw,
+            String requestFqdn,
+            String requestType,
             String reasonFqdn,
             String reasonIp,
             Set<String> matchedIoCs
     ) throws ArchiveException {
-        log.log(Level.FINE, "Logging DNS event. clientUid: " + clientUid + ", requestIp: " + requestIp + ", requestRaw: " + requestRaw + ", reasonFqdn: " + reasonFqdn + ", reasonIp: " + reasonIp);
+        log.log(Level.FINE, "Logging DNS event. clientUid: " + clientUid + ", requestIp: " + requestIp + ", requestFqdn: " + requestFqdn + ", requestType: " + requestType + ", reasonFqdn: " + reasonFqdn + ", reasonIp: " + reasonIp);
         EventLogRecord logRecord = new EventLogRecord();
 
         EventDNSRequest request = new EventDNSRequest();
         request.setIp(requestIp);
-        request.setRaw(requestRaw);
+        request.setFqdn(requestFqdn);
+        request.setType(requestType);
         logRecord.setRequest(request);
 
         EventReason reason = new EventReason();
@@ -411,7 +447,6 @@ public class DNSApiEJB implements DNSApi {
         VirusTotalRequest vtReq = new VirusTotalRequest();
         vtReq.setStatus(VirusTotalRequestStatus.WAITING);
         logRecord.setVirusTotalRequest(vtReq);
-
-        return new AsyncResult<>(archiveService.archiveEventLogRecord(logRecord));
+        archiveService.archiveEventLogRecord(logRecord);
     }
 }

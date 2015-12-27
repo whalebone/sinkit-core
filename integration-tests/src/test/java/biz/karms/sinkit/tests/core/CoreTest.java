@@ -9,7 +9,11 @@ import biz.karms.sinkit.exception.TooOldIoCException;
 import biz.karms.sinkit.ioc.IoCRecord;
 import biz.karms.sinkit.ioc.IoCSourceIdType;
 import biz.karms.sinkit.tests.util.IoCFactory;
-import com.gargoylesoftware.htmlunit.*;
+import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
+import com.gargoylesoftware.htmlunit.HttpMethod;
+import com.gargoylesoftware.htmlunit.Page;
+import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.WebRequest;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -21,16 +25,17 @@ import org.testng.annotations.Test;
 
 import javax.ejb.EJB;
 import java.net.URL;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.concurrent.Future;
 import java.util.logging.Logger;
 
-import static org.testng.Assert.*;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
 
 
 /**
@@ -191,15 +196,16 @@ public class CoreTest extends Arquillian {
         IoCRecord ioc1 = archiveService.getIoCRecordById(iocId1);
         IoCRecord ioc2 = archiveService.getIoCRecordById(iocId2);
 
-        Future a = dnsApi.logDNSEvent(EventLogAction.BLOCK,
+        dnsApi.logDNSEvent(EventLogAction.BLOCK,
                 "10.1.1.1",
                 "10.1.1.2",
-                "requestRaw",
+                "requestFqdn",
+                "requestType",
                 "seznam.cz",
                 "10.1.1.3",
-                new HashSet<String>(Arrays.asList(iocId1,iocId2))
+                new HashSet<String>(Arrays.asList(iocId1, iocId2))
         );
-        a.get(); //wait for asynch task result
+        // The async task follows Fire and Forget. TODO: dnsEventLogTestAssert must wait
     }
 
     @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 19)
@@ -208,7 +214,6 @@ public class CoreTest extends Arquillian {
     public void dnsEventLogTestAssert() throws Exception {
 
         String index = IoCFactory.getLogIndex();
-
         WebClient webClient = new WebClient();
         WebRequest requestSettings = new WebRequest(new URL(
                 "http://" + System.getenv("SINKIT_ELASTIC_HOST") + ":" + System.getenv("SINKIT_ELASTIC_PORT") + "/" +
@@ -224,7 +229,8 @@ public class CoreTest extends Arquillian {
                         "                   \"query\": \"action : \\\"block\\\" AND " +
                         "                       client : \\\"10.1.1.1\\\" AND " +
                         "                       request.ip : \\\"10.1.1.2\\\" AND " +
-                        "                       request.raw : \\\"requestRaw\\\" AND " +
+                        "                       request.fqdn : \\\"requestFqdn\\\" AND " +
+                        "                       request.type : \\\"requestType\\\" AND " +
                         "                       reason.fqdn : \\\"seznam.cz\\\" AND " +
                         "                       reason.ip : \\\"10.1.1.3\\\"\"\n" +
                         "               }\n" +
@@ -233,8 +239,18 @@ public class CoreTest extends Arquillian {
                         "   }\n" +
                         "}\n"
         );
+
         Page page = webClient.getPage(requestSettings);
-        assertEquals(200, page.getWebResponse().getStatusCode());
+        int statusCode = page.getWebResponse().getStatusCode();
+        int counter = 0;
+        // TODO: 30? No sleep? Magic numbers...
+        while (statusCode != 200 && counter < 30) {
+            page = webClient.getPage(requestSettings);
+            statusCode = page.getWebResponse().getStatusCode();
+            counter++;
+        }
+
+        assertEquals(200, statusCode);
         String responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("Response:" + responseBody);
         JsonParser jsonParser = new JsonParser();
@@ -247,7 +263,8 @@ public class CoreTest extends Arquillian {
         assertEquals(logRecord.get("action").getAsString(), "block");
         assertEquals(logRecord.get("client").getAsString(), "10.1.1.1");
         assertEquals(logRecord.get("request").getAsJsonObject().get("ip").getAsString(), "10.1.1.2");
-        assertEquals(logRecord.get("request").getAsJsonObject().get("raw").getAsString(), "requestRaw");
+        assertEquals(logRecord.get("request").getAsJsonObject().get("fqdn").getAsString(), "requestFqdn");
+        assertEquals(logRecord.get("request").getAsJsonObject().get("type").getAsString(), "requestType");
         assertEquals(logRecord.get("reason").getAsJsonObject().get("fqdn").getAsString(), "seznam.cz");
         assertEquals(logRecord.get("reason").getAsJsonObject().get("ip").getAsString(), "10.1.1.3");
         assertNotNull(logRecord.get("logged").getAsString());
