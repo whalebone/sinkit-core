@@ -21,6 +21,8 @@ machine:
     SINKIT_ELASTIC_HOST: localhost
     SINKIT_ELASTIC_PORT: 9200
     SINKIT_IOC_ACTIVE_HOURS: 72
+    SINKIT_GSB_API_KEY: blablabla
+    SINKIT_GSB_FULLHASH_URL: http://localhost:8080/sinkit/rest/gsbapitest/fullhash
     JAVA_HOME:
 dependencies:
   cache_directories:
