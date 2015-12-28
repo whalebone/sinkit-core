@@ -41,7 +41,7 @@ import static org.testng.Assert.assertTrue;
 /**
  * Created by tkozel on 29.8.15.
  */
-public class CoreTest extends Arquillian {
+public class CoreTest /*extends Arquillian*/ {
 
     private static final Logger LOGGER = Logger.getLogger(CoreTest.class.getName());
     private static final String TOKEN = System.getenv("SINKIT_ACCESS_TOKEN");

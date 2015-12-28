@@ -2,6 +2,7 @@ package biz.karms.sinkit.rest;
 
 import biz.karms.sinkit.ejb.CoreService;
 import biz.karms.sinkit.ejb.DNSApi;
+import biz.karms.sinkit.ejb.GSBService;
 import biz.karms.sinkit.ejb.WebApi;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.dto.AllDNSSettingDTO;
@@ -44,6 +45,9 @@ public class SinkitService implements Serializable {
 
     @EJB
     private DNSApi dnsApi;
+
+    @EJB
+    private GSBService gsbService;
 
     @Inject
     private Logger log;
@@ -223,5 +227,27 @@ public class SinkitService implements Serializable {
 
     public String deleteRulesByCustomer(Integer customerId) {
         return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapi.deleteRulesByCustomer(customerId));
+    }
+
+    public boolean putGSBHashPrefix(String hashPrefix) {
+        return gsbService.putHashPrefix(hashPrefix);
+    }
+
+    public boolean removeGSBHashPrefix(String hashPrefix) {
+        return gsbService.removeHashPrefix(hashPrefix);
+    }
+
+    public String getGSBStats() {
+        HashMap<String, Integer> stats = new HashMap<>();
+        stats.put("gsbRecords", gsbService.getStats());
+        return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(stats);
+    }
+
+    public String gsbLookup(String url) {
+        return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(gsbService.lookup(url));
+    }
+
+    public String clearGSBCache() {
+        return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(gsbService.dropTheWholeCache(false));
     }
 }

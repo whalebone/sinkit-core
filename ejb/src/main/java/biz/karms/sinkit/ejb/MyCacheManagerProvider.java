@@ -4,6 +4,7 @@ import biz.karms.sinkit.ejb.cache.annotations.SinkitCache;
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCacheName;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.CustomList;
+import biz.karms.sinkit.ejb.cache.pojo.GSBRecord;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import org.infinispan.Cache;
 import org.infinispan.configuration.cache.CacheMode;
@@ -99,9 +100,11 @@ public class MyCacheManagerProvider implements Serializable {
         manager.defineConfiguration(SinkitCacheName.BLACKLIST_CACHE.toString(), loc);
         manager.defineConfiguration(SinkitCacheName.RULES_CACHE.toString(), loc);
         manager.defineConfiguration(SinkitCacheName.CUSTOM_LISTS_CACHE.toString(), loc);
+        manager.defineConfiguration(SinkitCacheName.GSB_CACHE.toString(), loc);
         manager.getCache(SinkitCacheName.BLACKLIST_CACHE.toString()).start();
         manager.getCache(SinkitCacheName.RULES_CACHE.toString()).start();
         manager.getCache(SinkitCacheName.CUSTOM_LISTS_CACHE.toString()).start();
+        manager.getCache(SinkitCacheName.GSB_CACHE.toString()).start();
         loc = new ConfigurationBuilder().jmxStatistics().disable().available(false) // JMX statistics
                 .clustering().cacheMode(CacheMode.LOCAL)
                 .expiration()
@@ -111,7 +114,6 @@ public class MyCacheManagerProvider implements Serializable {
         manager.getCache(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE.toString()).start();
         manager.defineConfiguration(SinkitCacheName.RULES_LOCAL_CACHE.toString(), loc);
         manager.getCache(SinkitCacheName.RULES_LOCAL_CACHE.toString()).start();
-
         log.log(Level.INFO, "Caches defined.");
     }
 
@@ -150,6 +152,17 @@ public class MyCacheManagerProvider implements Serializable {
 
     @Produces
     @ApplicationScoped
+    @SinkitCache(SinkitCacheName.GSB_CACHE)
+    public Cache<String, GSBRecord> getGsbCache() {
+        if (manager == null) {
+            throw new IllegalArgumentException("Manager must not be null.");
+        }
+        log.log(Level.INFO, "getGsbCache called.");
+        return manager.getCache(SinkitCacheName.GSB_CACHE.toString());
+    }
+
+    @Produces
+    @ApplicationScoped
     @SinkitCache(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE)
     public Cache<String, List<CustomList>> getCustomListLocalCache() {
         if (manager == null) {
@@ -177,11 +190,13 @@ public class MyCacheManagerProvider implements Serializable {
             manager.getCache(SinkitCacheName.CUSTOM_LISTS_CACHE.toString()).stop();
             manager.getCache(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE.toString()).stop();
             manager.getCache(SinkitCacheName.RULES_LOCAL_CACHE.toString()).stop();
+            manager.getCache(SinkitCacheName.GSB_CACHE.toString()).stop();
             manager.undefineConfiguration(SinkitCacheName.BLACKLIST_CACHE.toString());
             manager.undefineConfiguration(SinkitCacheName.RULES_CACHE.toString());
             manager.undefineConfiguration(SinkitCacheName.CUSTOM_LISTS_CACHE.toString());
             manager.undefineConfiguration(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE.toString());
             manager.undefineConfiguration(SinkitCacheName.RULES_LOCAL_CACHE.toString());
+            manager.undefineConfiguration(SinkitCacheName.GSB_CACHE.toString());
             manager.stop();
             manager = null;
         }
