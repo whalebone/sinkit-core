@@ -6,7 +6,7 @@ export HIBERNATE_HQL_LUCENE_VERSION=1.3.0.Alpha2
 export HIBERNATE_HQL_PARSER_VERSION=1.3.0.Alpha2
 export STRINGTEMPLATE_VERSION=3.2.1
 export ANTLR_RUNTIME_VERSION=3.4
-export VERSION_INFINISPAN=8.0.1.Final
+export VERSION_INFINISPAN=8.1.0.Final
 export MAVEN_CENTRAL=http://central.maven.org/maven2
 export SINKIT_HOME=$PWD
 
@@ -41,8 +41,8 @@ cp ${SINKIT_HOME}/standalone-ha.xml ${WF_CONFIG}
 echo 'JAVA_OPTS="\
  -server \
  -XX:+UseCompressedOops \
- -Xms${SINKIT_MS_RAM:-6144m} \
- -Xmx${SINKIT_MX_RAM:-6144m} \
+ -Xms${SINKIT_MS_RAM:-64m} \
+ -Xmx${SINKIT_MX_RAM:-512m} \
  -XX:+HeapDumpOnOutOfMemoryError \
  -XX:HeapDumpPath=/opt/sinkit \
  -XX:+UseConcMarkSweepGC \
@@ -51,3 +51,4 @@ echo 'JAVA_OPTS="\
 sed -i "s/@SINKITNIC@/lo/g" ${WF_CONFIG}
 sed -i "s/@SINKITLOGGING@/INFO/g" ${WF_CONFIG}
 sed -i "s/<core-environment>/<core-environment node-identifier=\"circle-node\">/g" ${WF_CONFIG}
+
