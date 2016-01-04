@@ -1,14 +1,8 @@
 package biz.karms.sinkit.ejb.util;
 
 import biz.karms.sinkit.ejb.gsb.util.GSBUtils;
-import com.buildabrand.gsb.util.URLUtils;
 
-import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
-import java.io.UnsupportedEncodingException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.net.URISyntaxException;
 
 /**
  * Created by tom on 11/29/15.
@@ -22,9 +16,14 @@ public class GSBUrl {
     private String hashString;
 
     public GSBUrl(String url) {
-        this.url = URLUtils.getInstance().canonicalizeURL(url);
-        if (this.url == null) {
-            throw new IllegalArgumentException("URL " + url + " has wrong format.");
+        if (url == null) {
+            throw new IllegalArgumentException("URL is null!");
+        }
+
+        try {
+            this.url = GSBUtils.canonicalizeUrl(url);
+        } catch (URISyntaxException ex) {
+            throw new IllegalArgumentException("URL " + url + " has wrong format: " + ex.getMessage(), ex);
         }
     }
 
