@@ -17,6 +17,8 @@ A prototype of a toy project featuring Infinispan dist cache.
     export SINKIT_SINKHOLE_IPV6=
     export SINKIT_IOC_DEACTIVATOR_SKIP=
     export SINKIT_IOC_ACTIVE_HOURS=
+    export SINKIT_GSB_API_KEY=
+    export SINKIT_GSB_FULLHASH_URL=
 
 ## Basic config
 ###Feeds configurations
@@ -59,3 +61,20 @@ A prototype of a toy project featuring Infinispan dist cache.
     -H "Accept: application/json;charset=UTF-8" \
     -H "X-sinkit-token: ${SINKIT_ACCESS_TOKEN}" \
     -X GET http://feedcore-lb:8080/sinkit/rest/blacklist/dns/<DNS client IP>/<domain or IP to check>
+
+## Google Safe Browsing API
+###Add a hash prefix
+    curl -i -H "X-sinkit-token: ${SINKIT_ACCESS_TOKEN}" -X PUT http://localhost:8080/sinkit/rest/gsb/cf4b367e
+
+###Remove a hash prefix
+    curl -i -H "X-sinkit-token: ${SINKIT_ACCESS_TOKEN}" -X DELETE http://localhost:8080/sinkit/rest/gsb/cf4b367e
+
+###Get number of cached prefixes
+    curl -i -H "X-sinkit-token: ${SINKIT_ACCESS_TOKEN}" -X GET http://localhost:8080/sinkit/rest/gsb/stats
+
+###Cleare GSB cache (this can be requested by Google itself)
+    curl -i -H "X-sinkit-token: ${SINKIT_ACCESS_TOKEN}" -X DELETE http://localhost:8080/sinkit/rest/gsb/
+
+###Lookup for URL (for testing purposes)
+    curl -i -H "X-sinkit-token: ${SINKIT_ACCESS_TOKEN}" -X GET http://localhost:8080/sinkit/rest/gsb/lookup/google.com
+

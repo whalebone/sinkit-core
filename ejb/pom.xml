@@ -228,11 +228,26 @@
             <version>${io.searchbox.jest.version}</version>
         </dependency>
 
+        <!--Import the JAX-RS API, we use provided scope as the API is included in JBoss WildFly-->
+        <dependency>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>jaxrs-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- VirusTotal client-->
         <dependency>
             <groupId>com.kanishka.api</groupId>
             <artifactId>VirustotalPublicV2.0</artifactId>
             <version>${com.kanishka.api.VirustotalPublicV2.0.version}</version>
+        </dependency>
+
+        <!-- jUnit testing -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

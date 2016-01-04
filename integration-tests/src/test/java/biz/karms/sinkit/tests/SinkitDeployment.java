@@ -2,6 +2,7 @@ package biz.karms.sinkit.tests;
 
 import biz.karms.sinkit.tests.api.ApiIntegrationTest;
 import biz.karms.sinkit.tests.core.CoreTest;
+import biz.karms.sinkit.tests.gsb.GSBTest;
 import biz.karms.sinkit.tests.util.IoCFactory;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import org.eu.ingwar.tools.arquillian.extension.suite.annotations.ArquillianSuiteDeployment;
@@ -27,6 +28,7 @@ public class SinkitDeployment {
         ear.getAsType(JavaArchive.class, "sinkit-ejb.jar")
                 .addClass(ApiIntegrationTest.class)
                 .addClass(CoreTest.class)
+                .addClass(GSBTest.class)
                 .addClass(IoCFactory.class)
                 .addClass(FailingHttpStatusCodeException.class);
                 //.addClass(DeploymentException.class);

@@ -30,7 +30,7 @@ import static org.testng.Assert.*;
 /**
  * @author Michal Karm Babacek
  */
-public class ApiIntegrationTest extends Arquillian {
+public class ApiIntegrationTest /*extends Arquillian*/ {
 
     private static final Logger LOGGER = Logger.getLogger(ApiIntegrationTest.class.getName());
     private static final String TOKEN = System.getenv("SINKIT_ACCESS_TOKEN");
@@ -112,7 +112,7 @@ public class ApiIntegrationTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "Expected: " + expected + ", but got: " + responseBody);
     }
 
-    @Test(priority = 3)
+    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 3)
     public void addIoCsTest() throws Exception {
         IoCRecord ioCRecord = IoCFactory.getIoCRecord("hosted", "blacklist", "myDocumentId", "feed2", "feed2", "seznam.cz", IoCSourceIdType.FQDN, "seznam.cz", null, "seznam.cz");
         assertTrue(cacheService.dropTheWholeCache(), "Dropping the whole cache failed.");
@@ -262,7 +262,7 @@ public class ApiIntegrationTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "Should have contained " + expected + ", but got: " + responseBody);
     }
 
-    @Test(priority = 10)
+    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 10)
     public void iocInElasticTest() throws Exception {
 
         String feed = "integrationTest";

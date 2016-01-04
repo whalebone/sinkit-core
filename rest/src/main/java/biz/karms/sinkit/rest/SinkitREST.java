@@ -1,8 +1,11 @@
 package biz.karms.sinkit.rest;
 
+import biz.karms.sinkit.ejb.gsb.GSBClient;
 import biz.karms.sinkit.exception.IoCValidationException;
 import com.google.gson.JsonSyntaxException;
+import org.apache.commons.lang3.ArrayUtils;
 
+import javax.ejb.EJB;
 import javax.inject.Inject;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.FormParam;
@@ -14,6 +17,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Response;
+import java.util.Random;
 import java.util.logging.Logger;
 
 /**
@@ -260,6 +264,87 @@ public class SinkitREST {
                 e.printStackTrace();
                 return "Not Ok";
             }
+        } else {
+            return AUTH_FAIL;
+        }
+    }
+
+    @PUT
+    @Path("/gsb/{hashPrefix}")
+    @Produces({"application/json;charset=UTF-8"})
+    //@Consumes({"application/json;charset=UTF-8"})
+    public Response putGSBHashRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("hashPrefix") String hashPrefix) {
+        if (!StupidAuthenticator.isAuthenticated(token)) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity(AUTH_FAIL).build();
+        }
+        try {
+            boolean response = sinkitService.putGSBHashPrefix(hashPrefix);
+            Response.Status status;
+            if (response) {
+                status = Response.Status.OK;
+            } else {
+                status = Response.Status.INTERNAL_SERVER_ERROR;
+            }
+            return Response.status(status).entity(response).build();
+        } catch (Exception ex) {
+            log.severe("putGSBHashRecord: Adding hash prefix " + hashPrefix + " to GSB cache went wrong: " + ex.getMessage());
+            ex.printStackTrace();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex.getMessage()).build();
+        }
+    }
+
+    @DELETE
+    @Path("/gsb/{hashPrefix}")
+    @Produces({"application/json;charset=UTF-8"})
+    //@Consumes({"application/json;charset=UTF-8"})
+    public Response removeGSBHashRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("hashPrefix") String hashPrefix) {
+        if (!StupidAuthenticator.isAuthenticated(token)) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity(AUTH_FAIL).build();
+        }
+        try {
+            boolean response = sinkitService.removeGSBHashPrefix(hashPrefix);
+            Response.Status status;
+            if (response) {
+                status = Response.Status.OK;
+            } else {
+                status = Response.Status.INTERNAL_SERVER_ERROR;
+            }
+            return Response.status(status).entity(response).build();
+        } catch (Exception ex) {
+            log.severe("removeGSBHashRecord: Removing hash prefix " + hashPrefix + " to GSB cache went wrong: " + ex.getMessage());
+            ex.printStackTrace();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex.getMessage()).build();
+        }
+    }
+
+    @GET
+    @Path("/gsb/stats")
+    @Produces({"application/json;charset=UTF-8"})
+    public String getGSBStats(@HeaderParam(AUTH_HEADER_PARAM) String token) {
+        if (StupidAuthenticator.isAuthenticated(token)) {
+            return sinkitService.getGSBStats();
+        } else {
+            return AUTH_FAIL;
+        }
+    }
+
+    @GET
+    @Path("/gsb/lookup/{url}")
+    @Produces({"application/json;charset=UTF-8"})
+    public String gsbLookup(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("url") String url) {
+        if (StupidAuthenticator.isAuthenticated(token)) {
+            return sinkitService.gsbLookup(url);
+        } else {
+            return AUTH_FAIL;
+        }
+    }
+
+    @DELETE
+    @Path("/gsb")
+    @Produces({"application/json;charset=UTF-8"})
+    public String gsbClearCache(@HeaderParam(AUTH_HEADER_PARAM) String token) {
+        if (StupidAuthenticator.isAuthenticated(token)) {
+            return sinkitService.clearGSBCache();
         } else {
             return AUTH_FAIL;
         }
