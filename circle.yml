@@ -7,7 +7,7 @@ machine:
     - docker
   environment:
     JBOSS_HOME: ${HOME}/wildfly
-    WILDFLY_VERSION: 10.0.0.CR4
+    WILDFLY_VERSION: 10.0.0.CR5
     ELASTICSEARCH_VERSION: 1.7.1
     SINKIT_ACCESS_TOKEN: blablabla
     SINKIT_POSTGRESQL_DB_HOST: localhost

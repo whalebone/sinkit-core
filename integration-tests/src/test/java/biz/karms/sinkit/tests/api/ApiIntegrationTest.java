@@ -165,7 +165,7 @@ public class ApiIntegrationTest /*extends Arquillian*/ {
         LOGGER.info("getIoCTest Response:" + responseBody);
         String expected = "\"black_listed_domain_or_i_p\":\"seznam.cz\"";
         assertTrue(responseBody.contains(expected), "IoC response should have contained " + expected + ", but got:" + responseBody);
-        expected = "\"sources\":{\"feed2\":\"blacklist\"}";
+        expected = "\"sources\":{\"feed2\":{\"a\":\"blacklist\",\"b\":\"myDocumentId\"}}";
         assertTrue(responseBody.contains(expected), "IoC should have contained " + expected + ", but got: " + responseBody);
     }
 
@@ -174,7 +174,7 @@ public class ApiIntegrationTest /*extends Arquillian*/ {
     @RunAsClient
     public void getSinkHoleTest(@ArquillianResource URL context) throws Exception {
         WebClient webClient = new WebClient();
-        WebRequest requestSettings = new WebRequest(new URL(context + "rest/blacklist/dns/10.11.12.22/seznam.cz"), HttpMethod.GET);
+        WebRequest requestSettings = new WebRequest(new URL(context + "rest/blacklist/dns/10.11.12.22/seznam.cz/seznam.cz"), HttpMethod.GET);
         requestSettings.setAdditionalHeader("Content-Type", "application/json");
         requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
         Page page = webClient.getPage(requestSettings);
@@ -299,7 +299,7 @@ public class ApiIntegrationTest /*extends Arquillian*/ {
         LOGGER.info("iocInCacheTest Response:" + responseBody);
         String expected = "\"black_listed_domain_or_i_p\":\"phishing.ru\"";
         assertTrue(responseBody.contains(expected), "IoC response should have contained " + expected + ", but got:" + responseBody);
-        expected = "\"sources\":{\"integrationTest\":\"phishing\"}";
+        expected = "\"sources\":{\"integrationTest\":{\"a\":\"phishing\",\"b\":\"";
         assertTrue(responseBody.contains(expected), "IoC should have contained " + expected + ", but got: " + responseBody);
     }
 
@@ -337,7 +337,7 @@ public class ApiIntegrationTest /*extends Arquillian*/ {
         assertTrue(responseBodyIoC.contains("\"feed\":{\"url\":\"http://example.com/feed.txt\",\"name\":\"some-intelmq-feed-to-sink\"},\"description\":{\"text\":\"description\"},\"classification\":{\"type\":\"phishing\",\"taxonomy\":\"Fraud\"},\"protocol\":{\"application\":\"ssh\"},\"raw\":\"aHwwwwfdfBmODQ2N244iNGZiNS8\\u003d\",\"source\":{\"id\":{\"value\":\"evil-domain-that-is-to-be-listed.cz\",\"type\":\"fqdn\"},\"fqdn\":\"evil-domain-that-is-to-be-listed.cz\",\"asn\":3355556,\"asn_name\":\"any_name\",\"geolocation\":{\"cc\":\"RU\",\"city\":\"City\",\"latitude\":85.12645,\"longitude\":-12.9788},\"bgp_prefix\":\"some_prefix\"}"));
 
         //dns query
-        WebRequest requestSettingsDNS = new WebRequest(new URL(context + "rest/blacklist/dns/94.0.0.1/evil-domain-that-is-to-be-listed.cz"), HttpMethod.GET);
+        WebRequest requestSettingsDNS = new WebRequest(new URL(context + "rest/blacklist/dns/94.0.0.1/evil-domain-that-is-to-be-listed.cz/evil-domain-that-is-to-be-listed.cz"), HttpMethod.GET);
         requestSettingsDNS.setAdditionalHeader("Content-Type", "application/json");
         requestSettingsDNS.setAdditionalHeader("X-sinkit-token", TOKEN);
         Page pageDNS = webClient.getPage(requestSettingsDNS);
