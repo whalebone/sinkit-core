@@ -413,7 +413,7 @@ public class ApiIntegrationTest extends Arquillian {
         assertNotNull(matchedIoc1.get("time").getAsJsonObject().get("observation"));
         assertNotNull(matchedIoc1.get("time").getAsJsonObject().get("received_by_core"));
         assertNotNull(matchedIoc1.get("seen").getAsJsonObject().get("first"));
-        assertNotNull(matchedIoc1.get("seen").getAsJsonObject().get("last"));
-        assertTrue(matchedIoc1.get("active").getAsBoolean());
+        assertNull(matchedIoc1.get("seen").getAsJsonObject().get("last"));
+        assertNull(matchedIoc1.get("active"));
     }
 }
