@@ -30,7 +30,7 @@ import static org.testng.Assert.*;
 /**
  * @author Michal Karm Babacek
  */
-public class ApiIntegrationTest /*extends Arquillian*/ {
+public class ApiIntegrationTest extends Arquillian {
 
     private static final Logger LOGGER = Logger.getLogger(ApiIntegrationTest.class.getName());
     private static final String TOKEN = System.getenv("SINKIT_ACCESS_TOKEN");

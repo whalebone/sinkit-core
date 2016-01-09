@@ -41,7 +41,7 @@ import static org.testng.Assert.assertTrue;
 /**
  * Created by tkozel on 29.8.15.
  */
-public class CoreTest /*extends Arquillian*/ {
+public class CoreTest extends Arquillian {
 
     private static final Logger LOGGER = Logger.getLogger(CoreTest.class.getName());
     private static final String TOKEN = System.getenv("SINKIT_ACCESS_TOKEN");
@@ -239,7 +239,7 @@ public class CoreTest /*extends Arquillian*/ {
                         "   }\n" +
                         "}\n"
         );
-
+        Thread.sleep(1000); // give a chance to all async calls to finish their work
         Page page = webClient.getPage(requestSettings);
         int statusCode = page.getWebResponse().getStatusCode();
         int counter = 0;
