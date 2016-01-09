@@ -24,7 +24,6 @@ import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.service.ServiceName;
 import org.wildfly.clustering.singleton.SingletonServiceBuilderFactory;
 import org.wildfly.clustering.singleton.SingletonServiceName;
-import org.wildfly.clustering.singleton.election.NamePreference;
 import org.wildfly.clustering.singleton.election.PreferredSingletonElectionPolicy;
 import org.wildfly.clustering.singleton.election.SimpleSingletonElectionPolicy;
 
@@ -39,6 +38,7 @@ import java.util.logging.Logger;
 public class HATimerServiceActivator implements ServiceActivator {
 
     private final Logger log = Logger.getLogger(this.getClass().toString());
+    public static final String unwantedNameSuffix = (System.getenv().containsKey("SINKIT_UNWANTED_SINGLETON_NODE_SUFFIX")) ? System.getenv("SINKIT_UNWANTED_SINGLETON_NODE_SUFFIX") : "dns";
 
     @Override
     public void activate(ServiceActivatorContext context) {
@@ -59,7 +59,7 @@ public class HATimerServiceActivator implements ServiceActivator {
              *   - To pass a list of more than one node, comment the first line and uncomment the
              * second line below.
              */
-                .electionPolicy(new PreferredSingletonElectionPolicy(new SimpleSingletonElectionPolicy(), new NamePreference("node1/singleton")))
+                .electionPolicy(new PreferredSingletonElectionPolicy(new SimpleSingletonElectionPolicy(), new LikenessNamePreference(unwantedNameSuffix, "singleton")))
                         //singleton.setElectionPolicy(new PreferredSingletonElectionPolicy(new SimpleSingletonElectionPolicy(), new NamePreference("node1/singleton"), new NamePreference("node2/singleton")));
 
                 .build(new DelegatingServiceContainer(context.getServiceTarget(), context.getServiceRegistry()))
