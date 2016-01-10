@@ -30,7 +30,7 @@ import static org.testng.Assert.*;
 /**
  * @author Michal Karm Babacek
  */
-public class ApiIntegrationTest /*extends Arquillian*/ {
+public class ApiIntegrationTest extends Arquillian {
 
     private static final Logger LOGGER = Logger.getLogger(ApiIntegrationTest.class.getName());
     private static final String TOKEN = System.getenv("SINKIT_ACCESS_TOKEN");
@@ -413,7 +413,7 @@ public class ApiIntegrationTest /*extends Arquillian*/ {
         assertNotNull(matchedIoc1.get("time").getAsJsonObject().get("observation"));
         assertNotNull(matchedIoc1.get("time").getAsJsonObject().get("received_by_core"));
         assertNotNull(matchedIoc1.get("seen").getAsJsonObject().get("first"));
-        assertNotNull(matchedIoc1.get("seen").getAsJsonObject().get("last"));
-        assertTrue(matchedIoc1.get("active").getAsBoolean());
+        assertNull(matchedIoc1.get("seen").getAsJsonObject().get("last"));
+        assertNull(matchedIoc1.get("active"));
     }
 }
