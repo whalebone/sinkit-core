@@ -23,6 +23,7 @@ machine:
     SINKIT_IOC_ACTIVE_HOURS: 72
     SINKIT_GSB_API_KEY: blablabla
     SINKIT_GSB_FULLHASH_URL: http://localhost:8080/sinkit/rest/gsbapitest/fullhash
+    SINKIT_WHITELIST_VALID_HOURS: 1
     JAVA_HOME:
 dependencies:
   cache_directories:

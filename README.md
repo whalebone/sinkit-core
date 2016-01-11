@@ -19,6 +19,7 @@ A prototype of a toy project featuring Infinispan dist cache.
     export SINKIT_IOC_ACTIVE_HOURS=
     export SINKIT_GSB_API_KEY=
     export SINKIT_GSB_FULLHASH_URL=
+    export SINKIT_WHITELIST_VALID_HOURS=
 
 ## Basic config
 ###Feeds configurations
@@ -61,6 +62,20 @@ A prototype of a toy project featuring Infinispan dist cache.
     -H "Accept: application/json;charset=UTF-8" \
     -H "X-sinkit-token: ${SINKIT_ACCESS_TOKEN}" \
     -X GET http://feedcore-lb:8080/sinkit/rest/blacklist/dns/<DNS client IP>/<domain or IP to check>
+
+###Add global whitelist IP entry
+    curl -i -H "Content-Type: application/json;charset=UTF-8" \
+    -H "Accept: application/json;charset=UTF-8" \
+    -H "X-sinkit-token: ${SINKIT_ACCESS_TOKEN}" \
+    -X POST --data '{"feed":{"name":"name_of_whitelist"},"source":{"ip":"83.215.22.31"}}"' \
+    http://feedcore-lb:8080/sinkit/rest/whitelist/ioc/
+
+###Add global whitelist IP entry
+    curl -i -H "Content-Type: application/json;charset=UTF-8" \
+    -H "Accept: application/json;charset=UTF-8" \
+    -H "X-sinkit-token: ${SINKIT_ACCESS_TOKEN}" \
+    -X POST --data '{"feed":{"name":"name_of_whitelist"},"source":{"fqdn":"trusted.net"}}"' \
+    http://feedcore-lb:8080/sinkit/rest/whitelist/ioc/
 
 ## Google Safe Browsing API
 ###Add a hash prefix
