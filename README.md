@@ -70,7 +70,7 @@ A prototype of a toy project featuring Infinispan dist cache.
     -X POST --data '{"feed":{"name":"name_of_whitelist"},"source":{"ip":"83.215.22.31"}}"' \
     http://feedcore-lb:8080/sinkit/rest/whitelist/ioc/
 
-###Add global whitelist IP entry
+###Add global whitelist FQDN entry
     curl -i -H "Content-Type: application/json;charset=UTF-8" \
     -H "Accept: application/json;charset=UTF-8" \
     -H "X-sinkit-token: ${SINKIT_ACCESS_TOKEN}" \
