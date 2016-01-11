@@ -2,7 +2,12 @@ package biz.karms.sinkit.ejb;
 
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCache;
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCacheName;
-import biz.karms.sinkit.ejb.cache.pojo.*;
+import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
+import biz.karms.sinkit.ejb.cache.pojo.CustomList;
+import biz.karms.sinkit.ejb.cache.pojo.GSBRecord;
+import biz.karms.sinkit.ejb.cache.pojo.Rule;
+import biz.karms.sinkit.ejb.cache.pojo.WhitelistedRecord;
+import biz.karms.sinkit.ejb.hasingleton.HATimerServiceActivator;
 import org.infinispan.Cache;
 import org.infinispan.configuration.cache.CacheMode;
 import org.infinispan.configuration.cache.Configuration;
@@ -47,6 +52,9 @@ public class MyCacheManagerProvider implements Serializable {
 
     public void init(@Observes @Initialized(ApplicationScoped.class) Object init) {
         log.info("\n\n Constructing caches...\n\n");
+
+        final boolean startWhiteCache = !manager.getAddress().toString().contains(HATimerServiceActivator.unwantedNameSuffix);
+
         Configuration loc = new ConfigurationBuilder().jmxStatistics().disable().available(false) // JMX statistics
                 .clustering().cacheMode(CacheMode.REPL_ASYNC)
                 .stateTransfer().awaitInitialTransfer(true)
@@ -95,12 +103,20 @@ public class MyCacheManagerProvider implements Serializable {
                 .build();
 
         manager.defineConfiguration(SinkitCacheName.BLACKLIST_CACHE.toString(), loc);
-        manager.defineConfiguration(SinkitCacheName.WHITELIST_CACHE.toString(), loc);
+
+        if (startWhiteCache) {
+            manager.defineConfiguration(SinkitCacheName.WHITELIST_CACHE.toString(), loc);
+        } else {
+            log.log(Level.INFO, "This node's address " + manager.getAddress().toString() + " contains unwanted suffix " + HATimerServiceActivator.unwantedNameSuffix + ", so cache " + SinkitCacheName.WHITELIST_CACHE.toString() + "won't be created.");
+        }
+
         manager.defineConfiguration(SinkitCacheName.RULES_CACHE.toString(), loc);
         manager.defineConfiguration(SinkitCacheName.CUSTOM_LISTS_CACHE.toString(), loc);
         manager.defineConfiguration(SinkitCacheName.GSB_CACHE.toString(), loc);
         manager.getCache(SinkitCacheName.BLACKLIST_CACHE.toString()).start();
-        manager.getCache(SinkitCacheName.WHITELIST_CACHE.toString()).start();
+        if (startWhiteCache) {
+            manager.getCache(SinkitCacheName.WHITELIST_CACHE.toString()).start();
+        }
         manager.getCache(SinkitCacheName.RULES_CACHE.toString()).start();
         manager.getCache(SinkitCacheName.CUSTOM_LISTS_CACHE.toString()).start();
         manager.getCache(SinkitCacheName.GSB_CACHE.toString()).start();
@@ -135,7 +151,10 @@ public class MyCacheManagerProvider implements Serializable {
             throw new IllegalArgumentException("Manager must not be null.");
         }
         log.log(Level.INFO, "getWhitelistCache called.");
-        return manager.getCache(SinkitCacheName.WHITELIST_CACHE.toString());
+        if (manager.cacheExists(SinkitCacheName.WHITELIST_CACHE.toString())) {
+            return manager.getCache(SinkitCacheName.WHITELIST_CACHE.toString());
+        }
+        throw new IllegalStateException("getWhitelistCache called on a node that ain't supposed to be running it. DNS node?");
     }
 
     @Produces
