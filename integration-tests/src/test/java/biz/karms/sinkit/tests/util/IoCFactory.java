@@ -92,6 +92,26 @@ public class IoCFactory {
         return ioc;
     }
 
+    public static IoCRecord getIoCForWhitelist(String ip, String fqdn, String sourceName, boolean withId) {
+        IoCRecord ioc = new IoCRecord();
+        ioc.setSource(new IoCSource());
+        ioc.getSource().setIp(ip);
+        ioc.getSource().setFQDN(fqdn);
+        ioc.setFeed(new IoCFeed());
+        ioc.getFeed().setName(sourceName);
+        if (withId) {
+            ioc.getSource().setId(new IoCSourceId());
+            if (fqdn != null) {
+                ioc.getSource().getId().setValue(fqdn);
+                ioc.getSource().getId().setType(IoCSourceIdType.FQDN);
+            } else if (ip != null) {
+                ioc.getSource().getId().setValue(ip);
+                ioc.getSource().getId().setType(IoCSourceIdType.IP);
+            }
+        }
+        return ioc;
+    }
+
     public static String getLogIndex() {
         DateFormat df = new SimpleDateFormat("YYYY-MM-dd");
         return ArchiveServiceEJB.ELASTIC_LOG_INDEX + "-" + df.format(new Date());

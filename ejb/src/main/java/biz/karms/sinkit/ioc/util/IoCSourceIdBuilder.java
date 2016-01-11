@@ -13,10 +13,7 @@ public class IoCSourceIdBuilder {
     public static IoCSourceId build(IoCRecord ioc) throws IoCSourceIdException {
 
         IoCSourceId sid = new IoCSourceId();
-        if (ioc.getSource().getUrl() != null ) {
-            sid.setValue(ioc.getSource().getUrl());
-            sid.setType(IoCSourceIdType.URL);
-        } else if (ioc.getSource().getFQDN() != null) {
+        if (ioc.getSource().getFQDN() != null) {
             sid.setValue(ioc.getSource().getFQDN());
             sid.setType(IoCSourceIdType.FQDN);
         } else if (ioc.getSource().getIp() != null) {

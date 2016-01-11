@@ -81,6 +81,29 @@ public class ArchiveServiceEJB implements ArchiveService {
     }
 
     @Override
+    public List<IoCRecord> findIoCsForWhitelisting(String sourceId) throws ArchiveException {
+        //log.info("Searching archive for active IoCs with seen.last older than " + hours + " hours.");
+        String sourceIdValue = new GsonBuilder().create().toJson(sourceId);
+        String query_string = "\"active: true AND NOT whitelist_name: * AND " +
+                "(source.id.value: " + sourceId + " OR source.id.value: *." + sourceId + ")\"";
+        String query = "{\n" +
+                "   \"query\": {\n" +
+                "       \"filtered\": {\n" +
+                "           \"query\": {\n" +
+                "               \"query_string\": {\n" +
+                "                   \"query\": " + query_string + ",\n" +
+                "                   \"analyze_wildcard\": true\n" +
+                "               }\n" +
+                "           }\n" +
+                "       }\n" +
+                "   }\n"+
+                "}\n";
+
+        return elasticService.search(query, ELASTIC_IOC_INDEX,
+                ELASTIC_IOC_TYPE, IoCRecord.class);
+    }
+
+    @Override
     public boolean archiveReceivedIoCRecord(IoCRecord ioc) throws ArchiveException {
 
         //compute documentId
@@ -144,6 +167,14 @@ public class ArchiveServiceEJB implements ArchiveService {
     }
 
     @Override
+    public IoCRecord setRecordWhitelisted(IoCRecord ioc, String whitelistName) throws ArchiveException {
+        ioc.getTime().setWhitelisted(Calendar.getInstance().getTime());
+        ioc.setWhitelistName(whitelistName);
+        ioc = elasticService.index(ioc, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE);
+        return ioc;
+    }
+
+    @Override
     public EventLogRecord archiveEventLogRecord(EventLogRecord logRecord) throws ArchiveException {
         DateFormat df = new SimpleDateFormat("YYYY-MM-dd");
         String index = ELASTIC_LOG_INDEX + "-" + df.format(logRecord.getLogged());
@@ -152,13 +183,22 @@ public class ArchiveServiceEJB implements ArchiveService {
     }
 
     @Override
-    public List<IoCRecord> getActiveIoCs(int from, int size) throws ArchiveException {
+    public List<IoCRecord> getActiveNotWhitelistedIoCs(int from, int size) throws ArchiveException {
         //log.info("Searching archive for active IoCs with seen.last older than " + hours + " hours.");
         String query = "{\n" +
-                "   \"query\": {\n" +
-                "               \"term\": {\n" +
-                "                   \"active\": true\n" +
+                "   \"query\":{\n" +
+                "       \"filtered\":{\n" +
+                "           \"query\":{\n" +
+                "               \"term\":{\n" +
+                "                   \"active\":true\n" +
                 "               }\n" +
+                "           },\n" +
+                "           \"filter\":{\n" +
+                "               \"missing\":{\n" +
+                "                   \"field\":\"whitelist_name\"\n" +
+                "               }\n" +
+                "           }\n" +
+                "       }\n" +
                 "   }\n" +
                 "}\n";
 

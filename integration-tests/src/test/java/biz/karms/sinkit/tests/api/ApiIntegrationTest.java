@@ -2,7 +2,7 @@ package biz.karms.sinkit.tests.api;
 
 
 import biz.karms.sinkit.ejb.ArchiveService;
-import biz.karms.sinkit.ejb.CacheService;
+import biz.karms.sinkit.ejb.BlacklistCacheService;
 import biz.karms.sinkit.ejb.CoreService;
 import biz.karms.sinkit.ejb.impl.ArchiveServiceEJB;
 import biz.karms.sinkit.ioc.IoCRecord;
@@ -36,7 +36,7 @@ public class ApiIntegrationTest extends Arquillian {
     private static final String TOKEN = System.getenv("SINKIT_ACCESS_TOKEN");
 
     @EJB
-    CacheService cacheService;
+    BlacklistCacheService blacklistCacheService;
 
     @EJB
     ArchiveService archiveService;
@@ -115,8 +115,8 @@ public class ApiIntegrationTest extends Arquillian {
     @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 3)
     public void addIoCsTest() throws Exception {
         IoCRecord ioCRecord = IoCFactory.getIoCRecord("hosted", "blacklist", "myDocumentId", "feed2", "feed2", "seznam.cz", IoCSourceIdType.FQDN, "seznam.cz", null, "seznam.cz");
-        assertTrue(cacheService.dropTheWholeCache(), "Dropping the whole cache failed.");
-        assertTrue(cacheService.addToCache(ioCRecord), "Adding a new IoC to a presumably empty cache failed.");
+        assertTrue(blacklistCacheService.dropTheWholeCache(), "Dropping the whole cache failed.");
+        assertTrue(blacklistCacheService.addToCache(ioCRecord), "Adding a new IoC to a presumably empty cache failed.");
     }
 
     @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 4)

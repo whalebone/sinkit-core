@@ -20,4 +20,8 @@ public interface CoreService {
     boolean runCacheRebuilding();
 
     void enrich();
+
+    boolean processWhitelistIoCRecord(final IoCRecord white) throws IoCValidationException, ArchiveException;
+
+    void setWhitelistValidSeconds(long whitelistValidSeconds);
 }

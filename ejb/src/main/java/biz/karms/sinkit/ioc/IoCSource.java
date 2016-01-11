@@ -16,6 +16,7 @@ public class IoCSource implements Serializable {
     private String url;
     private String ip;
     private String fqdn;
+    private Long ttl;
 
     @SerializedName("reverse_domain_name")
     private String reverseDomainName;
@@ -103,6 +104,14 @@ public class IoCSource implements Serializable {
         this.bgpPrefix = bgpPrefix;
     }
 
+    public Long getTTL() {
+        return ttl;
+    }
+
+    public void setTTL(Long ttl) {
+        this.ttl = ttl;
+    }
+
     @Override
     public String toString() {
         return "IoCSource{" +
@@ -110,6 +119,7 @@ public class IoCSource implements Serializable {
                 ", url='" + url + '\'' +
                 ", ip='" + ip + '\'' +
                 ", fqdn='" + fqdn + '\'' +
+                ", ttl=" + ttl +
                 ", reverseDomainName='" + reverseDomainName + '\'' +
                 ", asn=" + asn +
                 ", asnName='" + asnName + '\'' +

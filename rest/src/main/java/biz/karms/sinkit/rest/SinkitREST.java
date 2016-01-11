@@ -127,6 +127,27 @@ public class SinkitREST {
     }
 
     @POST
+    @Path("/whitelist/ioc/")
+    @Produces({"application/json;charset=UTF-8"})
+    //@Consumes({"application/json;charset=UTF-8"})
+    public Response putWhitelistEntry(@HeaderParam(AUTH_HEADER_PARAM) String token, String ioc) {
+        if (!StupidAuthenticator.isAuthenticated(token)) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity(AUTH_FAIL).build();
+        }
+        try {
+            String response = sinkitService.processWhitelistIoCRecord(ioc);
+            return Response.status(Response.Status.OK).entity(response).build();
+        } catch (IoCValidationException | JsonSyntaxException ex) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(ex.getMessage() + " JSON was:" + ioc).build();
+        } catch (Exception ex) {
+            log.severe("Processiong whitelist entry went wrong: " + ex.getMessage());
+            log.severe("IoC: " + ioc);
+            ex.printStackTrace();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex.getMessage()).build();
+        }
+    }
+
+    @POST
     @Path("/rebuildCache/")
     @Produces({"application/json;charset=UTF-8"})
     public Response rebuildCache(@HeaderParam(AUTH_HEADER_PARAM) String token) {

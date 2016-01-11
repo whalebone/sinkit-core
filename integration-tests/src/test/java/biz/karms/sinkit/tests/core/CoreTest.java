@@ -215,6 +215,7 @@ public class CoreTest extends Arquillian {
 
         String index = IoCFactory.getLogIndex();
         WebClient webClient = new WebClient();
+        webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
         WebRequest requestSettings = new WebRequest(new URL(
                 "http://" + System.getenv("SINKIT_ELASTIC_HOST") + ":" + System.getenv("SINKIT_ELASTIC_PORT") + "/" +
                         index + "/" + ArchiveServiceEJB.ELASTIC_LOG_TYPE + "/_search"
@@ -239,17 +240,15 @@ public class CoreTest extends Arquillian {
                         "   }\n" +
                         "}\n"
         );
-        Thread.sleep(1000); // give a chance to all async calls to finish their work
         Page page = webClient.getPage(requestSettings);
         int statusCode = page.getWebResponse().getStatusCode();
         int counter = 0;
-        // TODO: 30? No sleep? Magic numbers...
-        while (statusCode != 200 && counter < 30) {
+        while (statusCode != 200 && counter < 10) {
+            Thread.sleep(100);
             page = webClient.getPage(requestSettings);
             statusCode = page.getWebResponse().getStatusCode();
             counter++;
         }
-
         assertEquals(200, statusCode);
         String responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("Response:" + responseBody);

@@ -16,13 +16,17 @@ public interface ArchiveService {
 
     List<IoCRecord> findIoCsForDeactivation(int hours) throws ArchiveException;
 
+    List<IoCRecord> findIoCsForWhitelisting(String sourceId) throws ArchiveException;
+
     boolean archiveReceivedIoCRecord(IoCRecord ioc) throws ArchiveException;
 
     IoCRecord deactivateRecord(IoCRecord ioc) throws ArchiveException;
 
+    IoCRecord setRecordWhitelisted(IoCRecord ioc, String whitelistName) throws ArchiveException;
+
     EventLogRecord archiveEventLogRecord(EventLogRecord logRecord) throws ArchiveException;
 
-    List<IoCRecord> getActiveIoCs(int from, int size) throws ArchiveException;
+    List<IoCRecord> getActiveNotWhitelistedIoCs(int from, int size) throws ArchiveException;
 
     IoCRecord getIoCRecordById(String id) throws ArchiveException;
 

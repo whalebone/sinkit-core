@@ -109,14 +109,18 @@ public class SinkitService implements Serializable {
     }
 
     String processIoCRecord(final String jsonIoCRecord) throws IoCValidationException, ArchiveException {
-
         IoCRecord ioc = new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().fromJson(jsonIoCRecord, IoCRecord.class);
         ioc = coreService.processIoCRecord(ioc);
         return new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().toJson(ioc);
     }
 
-    String runCacheRebuilding() {
+    String processWhitelistIoCRecord(final String jsonIoCRecord) throws IoCValidationException, ArchiveException {
+        IoCRecord ioc = new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().fromJson(jsonIoCRecord, IoCRecord.class);
+        boolean response = coreService.processWhitelistIoCRecord(ioc);
+        return new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().toJson(response);
+    }
 
+    String runCacheRebuilding() {
         String response;
         if (coreService.runCacheRebuilding()) {
             response = "Cache rebuilding started";

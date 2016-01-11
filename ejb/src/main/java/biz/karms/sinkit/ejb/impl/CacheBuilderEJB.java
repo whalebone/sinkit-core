@@ -2,14 +2,13 @@ package biz.karms.sinkit.ejb.impl;
 
 import biz.karms.sinkit.ejb.ArchiveService;
 import biz.karms.sinkit.ejb.CacheBuilder;
-import biz.karms.sinkit.ejb.CacheService;
+import biz.karms.sinkit.ejb.BlacklistCacheService;
 import biz.karms.sinkit.ioc.IoCRecord;
 
 import javax.ejb.*;
 import javax.inject.Inject;
 import java.util.List;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
@@ -30,7 +29,7 @@ public class CacheBuilderEJB implements CacheBuilder {
     private ArchiveService archiveService;
 
     @EJB
-    private CacheService cacheService;
+    private BlacklistCacheService blacklistCacheService;
 
     @Lock(LockType.READ)
     @Override
@@ -59,7 +58,7 @@ public class CacheBuilderEJB implements CacheBuilder {
         log.info("Rebuilding Cache started");
 
         // TODO: Is it O.K. that this could _take time_ ?
-        cacheService.dropTheWholeCache();
+        blacklistCacheService.dropTheWholeCache();
 
         int recordsCount = 0;
         int from = 0;
@@ -69,9 +68,9 @@ public class CacheBuilderEJB implements CacheBuilder {
 
         try {
             do {
-                iocs = archiveService.getActiveIoCs(from, size);
+                iocs = archiveService.getActiveNotWhitelistedIoCs(from, size);
                 for (IoCRecord ioc : iocs) {
-                    cacheService.addToCache(ioc);
+                    blacklistCacheService.addToCache(ioc);
                 }
                 recordsCount += iocs.size();
                 from += size;
