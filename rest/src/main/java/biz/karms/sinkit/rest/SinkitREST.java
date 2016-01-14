@@ -6,6 +6,7 @@ import com.google.gson.JsonSyntaxException;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.ejb.EJB;
+import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.FormParam;
@@ -26,6 +27,7 @@ import java.util.logging.Logger;
  *         TODO: Validation :-)
  *         TODO: OAuth
  */
+@RequestScoped
 @Path("/")
 public class SinkitREST {
 

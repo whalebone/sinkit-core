@@ -1,5 +1,6 @@
 package biz.karms.sinkit.rest;
 
+import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
@@ -14,6 +15,7 @@ import java.util.logging.Logger;
  *         TODO: Validation :-)
  *         TODO: OAuth
  */
+@RequestScoped
 @Path("/blacklist/dns/")
 public class DnsREST {
 

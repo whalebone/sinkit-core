@@ -1,18 +1,7 @@
 package biz.karms.sinkit.ejb.cache.pojo;
 
-import biz.karms.sinkit.ejb.util.SettingsMapBridge;
-import com.google.gson.FieldNamingPolicy;
-import com.google.gson.GsonBuilder;
-import org.hibernate.search.annotations.Analyze;
-import org.hibernate.search.annotations.CalendarBridge;
-import org.hibernate.search.annotations.Field;
-import org.hibernate.search.annotations.FieldBridge;
-import org.hibernate.search.annotations.Index;
-import org.hibernate.search.annotations.Indexed;
-import org.hibernate.search.annotations.Resolution;
 import org.jboss.marshalling.Pair;
 
-import javax.persistence.Entity;
 import java.io.Serializable;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -20,24 +9,26 @@ import java.util.HashMap;
 /**
  * @author Michal Karm Babacek
  */
+/*
 @Indexed(index = "BlacklistedRecord")
 @Entity
+*/
 public class BlacklistedRecord implements Serializable {
 
     private static final long serialVersionUID = 2184999923427771L;
 
-    @Field(index = Index.YES, analyze = Analyze.NO)
+    //@Field(index = Index.YES, analyze = Analyze.NO)
     private String blackListedDomainOrIP;
 
-    @Field
-    @CalendarBridge(resolution = Resolution.HOUR)
+    //@Field
+    //@CalendarBridge(resolution = Resolution.HOUR)
     private Calendar listed;
 
     /**
      * Feed : {Type, IoCID}
      */
-    @FieldBridge(impl = SettingsMapBridge.class)
-    @Field(index = Index.YES, analyze = Analyze.YES)
+    //@FieldBridge(impl = SettingsMapBridge.class)
+    //@Field(index = Index.YES, analyze = Analyze.YES)
     private HashMap<String, Pair<String, String>> sources;
 
     public BlacklistedRecord(String blackListedDomainOrIP, Calendar listed, HashMap<String, Pair<String, String>> sources) {

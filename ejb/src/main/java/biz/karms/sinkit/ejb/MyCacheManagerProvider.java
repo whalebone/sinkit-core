@@ -43,6 +43,7 @@ public class MyCacheManagerProvider implements Serializable {
 
     private static final long ENTRY_LIFESPAN = 60 * 1000; //ms
     private static final long ENTRY_LIFESPAN_NEVER = -1;
+    private static final int CONCURRENCY_LEVEL = 1000;
 
     @Inject
     private Logger log;
@@ -55,14 +56,19 @@ public class MyCacheManagerProvider implements Serializable {
 
         final boolean startWhiteCache = !manager.getAddress().toString().contains(HATimerServiceActivator.unwantedNameSuffix);
 
-        Configuration loc = new ConfigurationBuilder().jmxStatistics().disable().available(false) // JMX statistics
+        /**
+         * There is some duplicity in the configuration, but this is pretty much WIP.
+         * TODO: Merge what is in common.
+         */
+
+        final Configuration rulesAndLists = new ConfigurationBuilder().jmxStatistics().disable().available(false) // JMX statistics
                 .clustering().cacheMode(CacheMode.REPL_ASYNC)
                 .stateTransfer().awaitInitialTransfer(true)
                 .timeout(5, TimeUnit.MINUTES)
                 .async()
                 .locking().lockAcquisitionTimeout(1, TimeUnit.MINUTES)
-                .concurrencyLevel(300)
-                .isolationLevel(IsolationLevel.READ_COMMITTED)
+                .concurrencyLevel(CONCURRENCY_LEVEL)
+                .isolationLevel(IsolationLevel.READ_UNCOMMITTED) //Allow dirty reads
                 .expiration()
                 .lifespan(ENTRY_LIFESPAN_NEVER)
                 .disableReaper()
@@ -73,7 +79,7 @@ public class MyCacheManagerProvider implements Serializable {
                 .addProperty("default.indexmanager", "near-real-time")
                 .eviction().strategy(EvictionStrategy.NONE)
                 .transaction().transactionMode(TransactionMode.NON_TRANSACTIONAL)
-                        //If you put or remove, the returned object might not be what you expect :-)
+                        //If you put or remove, the returned object might not be what you expect.
                 .unsafe().unreliableReturnValues(true)
                 .persistence()
                 .addSingleFileStore()
@@ -102,17 +108,67 @@ public class MyCacheManagerProvider implements Serializable {
                 .threadPoolSize(15)*/
                 .build();
 
-        manager.defineConfiguration(SinkitCacheName.BLACKLIST_CACHE.toString(), loc);
+        final Configuration distributedNotIndexed = new ConfigurationBuilder().jmxStatistics().disable().available(false)
+                .clustering().cacheMode(CacheMode.REPL_ASYNC)
+                .stateTransfer().awaitInitialTransfer(true)
+                .timeout(5, TimeUnit.MINUTES)
+                .async()
+                .locking().lockAcquisitionTimeout(1, TimeUnit.MINUTES)
+                .concurrencyLevel(CONCURRENCY_LEVEL)
+                .isolationLevel(IsolationLevel.READ_UNCOMMITTED) //Allow dirty reads
+                .expiration()
+                .lifespan(ENTRY_LIFESPAN_NEVER)
+                .disableReaper()
+                .indexing().index(Index.NONE)
+                .eviction().strategy(EvictionStrategy.NONE)
+                .transaction().transactionMode(TransactionMode.NON_TRANSACTIONAL)
+                        //If you put or remove, the returned object might not be what you expect.
+                .unsafe().unreliableReturnValues(true)
+                .persistence()
+                .addSingleFileStore()
+                .location(System.getProperty("java.io.tmpdir"))
+                .async()
+                .enabled(true)
+                /*.persistence().addStore(JdbcStringBasedStoreConfigurationBuilder.class)
+                        //.persistence().addStore(JdbcBinaryStoreConfigurationBuilder.class)
+                .fetchPersistentState(true)
+                .ignoreModifications(false)
+                .purgeOnStartup(false)
+                .table()
+                .dropOnExit(false)
+                .createOnStart(true)
+                .tableNamePrefix("ISPN_STRING_TABLE")
+                .idColumnName("ID_COLUMN").idColumnType("VARCHAR(255)")
+                .dataColumnName("DATA_COLUMN").dataColumnType("BYTEA")
+                .timestampColumnName("TIMESTAMP_COLUMN").timestampColumnType("BIGINT")
+                .connectionPool()
+                .connectionUrl("jdbc:postgresql://" + System.getenv("SINKIT_POSTGRESQL_DB_HOST") + ":" + System.getenv("SINKIT_POSTGRESQL_DB_PORT") + "/" + System.getenv("SINKIT_POSTGRESQL_DB_NAME"))
+                .driverClass("org.postgresql.Driver")
+                .password(System.getenv("SINKIT_POSTGRESQL_PASS"))
+                .username(System.getenv("SINKIT_POSTGRESQL_USER"))
+                .async()
+                .enabled(true)
+                .threadPoolSize(15)*/
+                .build();
+
+        final Configuration localSearchResultsCaches = new ConfigurationBuilder().jmxStatistics().disable().available(false)
+                .clustering().cacheMode(CacheMode.LOCAL)
+                .expiration()
+                .lifespan(ENTRY_LIFESPAN)
+                .transaction().transactionMode(TransactionMode.NON_TRANSACTIONAL)
+                .build();
+
+        manager.defineConfiguration(SinkitCacheName.BLACKLIST_CACHE.toString(), distributedNotIndexed);
 
         if (startWhiteCache) {
-            manager.defineConfiguration(SinkitCacheName.WHITELIST_CACHE.toString(), loc);
+            manager.defineConfiguration(SinkitCacheName.WHITELIST_CACHE.toString(), distributedNotIndexed);
         } else {
             log.log(Level.INFO, "This node's address " + manager.getAddress().toString() + " contains unwanted suffix " + HATimerServiceActivator.unwantedNameSuffix + ", so cache " + SinkitCacheName.WHITELIST_CACHE.toString() + "won't be created.");
         }
 
-        manager.defineConfiguration(SinkitCacheName.RULES_CACHE.toString(), loc);
-        manager.defineConfiguration(SinkitCacheName.CUSTOM_LISTS_CACHE.toString(), loc);
-        manager.defineConfiguration(SinkitCacheName.GSB_CACHE.toString(), loc);
+        manager.defineConfiguration(SinkitCacheName.RULES_CACHE.toString(), rulesAndLists);
+        manager.defineConfiguration(SinkitCacheName.CUSTOM_LISTS_CACHE.toString(), rulesAndLists);
+        manager.defineConfiguration(SinkitCacheName.GSB_CACHE.toString(), distributedNotIndexed);
         manager.getCache(SinkitCacheName.BLACKLIST_CACHE.toString()).start();
         if (startWhiteCache) {
             manager.getCache(SinkitCacheName.WHITELIST_CACHE.toString()).start();
@@ -120,14 +176,11 @@ public class MyCacheManagerProvider implements Serializable {
         manager.getCache(SinkitCacheName.RULES_CACHE.toString()).start();
         manager.getCache(SinkitCacheName.CUSTOM_LISTS_CACHE.toString()).start();
         manager.getCache(SinkitCacheName.GSB_CACHE.toString()).start();
-        loc = new ConfigurationBuilder().jmxStatistics().disable().available(false) // JMX statistics
-                .clustering().cacheMode(CacheMode.LOCAL)
-                .expiration()
-                .lifespan(ENTRY_LIFESPAN)
-                .build();
-        manager.defineConfiguration(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE.toString(), loc);
+
+        // Local search result caches
+        manager.defineConfiguration(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE.toString(), localSearchResultsCaches);
         manager.getCache(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE.toString()).start();
-        manager.defineConfiguration(SinkitCacheName.RULES_LOCAL_CACHE.toString(), loc);
+        manager.defineConfiguration(SinkitCacheName.RULES_LOCAL_CACHE.toString(), localSearchResultsCaches);
         manager.getCache(SinkitCacheName.RULES_LOCAL_CACHE.toString()).start();
         log.log(Level.INFO, "Caches defined.");
     }
@@ -215,19 +268,23 @@ public class MyCacheManagerProvider implements Serializable {
     public void destroy(@Observes @Destroyed(ApplicationScoped.class) Object init) {
         if (manager != null) {
             manager.getCache(SinkitCacheName.BLACKLIST_CACHE.toString()).stop();
-            manager.getCache(SinkitCacheName.WHITELIST_CACHE.toString()).stop();
             manager.getCache(SinkitCacheName.RULES_CACHE.toString()).stop();
             manager.getCache(SinkitCacheName.CUSTOM_LISTS_CACHE.toString()).stop();
             manager.getCache(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE.toString()).stop();
             manager.getCache(SinkitCacheName.RULES_LOCAL_CACHE.toString()).stop();
             manager.getCache(SinkitCacheName.GSB_CACHE.toString()).stop();
             manager.undefineConfiguration(SinkitCacheName.BLACKLIST_CACHE.toString());
-            manager.undefineConfiguration(SinkitCacheName.WHITELIST_CACHE.toString());
             manager.undefineConfiguration(SinkitCacheName.RULES_CACHE.toString());
             manager.undefineConfiguration(SinkitCacheName.CUSTOM_LISTS_CACHE.toString());
             manager.undefineConfiguration(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE.toString());
             manager.undefineConfiguration(SinkitCacheName.RULES_LOCAL_CACHE.toString());
             manager.undefineConfiguration(SinkitCacheName.GSB_CACHE.toString());
+
+            if (manager.cacheExists(SinkitCacheName.WHITELIST_CACHE.toString())) {
+                manager.getCache(SinkitCacheName.WHITELIST_CACHE.toString()).stop();
+                manager.undefineConfiguration(SinkitCacheName.WHITELIST_CACHE.toString());
+            }
+
             manager.stop();
             manager = null;
         }

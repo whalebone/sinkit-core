@@ -17,7 +17,6 @@
 package biz.karms.sinkit.ejb.hasingleton;
 
 import javax.ejb.Local;
-import javax.ejb.Remote;
 
 /**
  * Source: WildFly Examples, Quickstarts
@@ -25,7 +24,7 @@ import javax.ejb.Remote;
  *
  * @author Wolf-Dieter Fink
  */
-@Remote
+@Local
 public interface SchedulerDemo {
     void initialize(String info);
 
