@@ -33,6 +33,8 @@ public class JestClientProvider {
             factory.setHttpClientConfig(new HttpClientConfig
                     .Builder("http://" + elasticHost + ":" + elasticPort)
                     .multiThreaded(true)
+                    .connTimeout(10000)
+                    .readTimeout(10000)
                     .build());
 
             this.jestClient = factory.getObject();
