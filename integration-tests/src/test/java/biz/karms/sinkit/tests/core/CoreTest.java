@@ -218,7 +218,7 @@ public class CoreTest extends Arquillian {
         webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
         WebRequest requestSettings = new WebRequest(new URL(
                 "http://" + System.getenv("SINKIT_ELASTIC_HOST") + ":" + System.getenv("SINKIT_ELASTIC_PORT") + "/" +
-                        index + "/" + ArchiveServiceEJB.ELASTIC_LOG_TYPE + "/_search"
+                        index + "/" /*+ ArchiveServiceEJB.ELASTIC_LOG_TYPE*/ + "/_search"
         ), HttpMethod.POST);
         requestSettings.setAdditionalHeader("Content-Type", "application/json");
         requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
@@ -251,7 +251,7 @@ public class CoreTest extends Arquillian {
 
         // ugly while cycle within while cycle due to circle.ci -> test run by circle intermittently fails here
         // because of 404 response core or hits.size == 0, unable to simulate on local environment
-        while (hits == 0 && hitsCounter < 30) {
+        while (hits == 0 && hitsCounter < 60) {
             int counter = 0;
             while (statusCode != 200 && counter < 10) {
                 Thread.sleep(100);
