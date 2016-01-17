@@ -1,5 +1,6 @@
 package biz.karms.sinkit.ejb;
 
+import biz.karms.sinkit.ejb.cache.pojo.WhitelistedRecord;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCValidationException;
 import biz.karms.sinkit.ioc.IoCRecord;
@@ -24,4 +25,10 @@ public interface CoreService {
     boolean processWhitelistIoCRecord(final IoCRecord white) throws IoCValidationException, ArchiveException;
 
     void setWhitelistValidSeconds(long whitelistValidSeconds);
+
+    WhitelistedRecord getWhitelistedRecord(String id);
+
+    boolean removeWhitelistedRecord(String id);
+
+    int getWhitelistStats();
 }

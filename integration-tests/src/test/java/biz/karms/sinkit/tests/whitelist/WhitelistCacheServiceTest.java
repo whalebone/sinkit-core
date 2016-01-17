@@ -64,8 +64,8 @@ public class WhitelistCacheServiceTest extends Arquillian {
         assertTrue(coreService.processWhitelistIoCRecord(IoCFactory.getIoCForWhitelist(null, "whalebone.io", "whalebone", false)));
         Calendar after = Calendar.getInstance();
         after.add(Calendar.SECOND, VALID_HOURS * 3600 + 1);
-        WhitelistedRecord whiteIP = whitelistService.get(IoCFactory.getIoCForWhitelist("1.2.3.4", null, null, true));
-        WhitelistedRecord whiteFQDN = whitelistService.get(IoCFactory.getIoCForWhitelist(null, "whalebone.io", null, true));
+        WhitelistedRecord whiteIP = whitelistService.get("1.2.3.4");
+        WhitelistedRecord whiteFQDN = whitelistService.get("whalebone.io");
         assertNotNull(whiteIP);
         assertNotNull(whiteFQDN);
         assertEquals(whiteIP.getRawId(), "1.2.3.4");
@@ -84,21 +84,18 @@ public class WhitelistCacheServiceTest extends Arquillian {
     public void putAndGetSubdomainTest() throws Exception {
         LOGGER.log(Level.INFO, "putAndGetSubdomainTest");
         assertTrue(coreService.processWhitelistIoCRecord(IoCFactory.getIoCForWhitelist(null, "subdomain.whalebone.cz", "subdomain", false)));
-        WhitelistedRecord white = whitelistService.get(IoCFactory.getIoCForWhitelist(null, "subdomain.whalebone.cz", null, true));
-        WhitelistedRecord theSameWhite = whitelistService.get(IoCFactory.getIoCForWhitelist(null, "whalebone.cz", null, true));
+        WhitelistedRecord white = whitelistService.get("subdomain.whalebone.cz");
+        WhitelistedRecord theSameWhite = whitelistService.get("whalebone.cz");
         assertNotNull(white);
-        assertNotNull(theSameWhite);
-        assertEquals(white.getRawId(), "whalebone.cz");
-        assertEquals(theSameWhite.getRawId(), "whalebone.cz");
+        assertEquals(white.getRawId(), "subdomain.whalebone.cz");
         assertEquals(white.getSourceName(), "subdomain");
-        assertEquals(theSameWhite.getSourceName(), "subdomain");
-        assertEquals(white.getExpiresAt(), theSameWhite.getExpiresAt());
+        assertNull(theSameWhite);
     }
 
     @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 302)
     public void getNonExistingTest() throws Exception {
         LOGGER.log(Level.INFO, "getNonExistingTest");
-        assertNull(whitelistService.get(IoCFactory.getIoCForWhitelist(null, "not exist", "noReal", true)));
+        assertNull(whitelistService.get("not exist"));
     }
 
     /**
@@ -110,7 +107,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
     public void putUpdateTest() throws Exception {
         LOGGER.log(Level.INFO, "putUpdateTest");
         Thread.sleep(1001); // get some time for whitelist to get old
-        WhitelistedRecord oldWhite = whitelistService.get(IoCFactory.getIoCForWhitelist(null, "whalebone.io", null, true));
+        WhitelistedRecord oldWhite = whitelistService.get("whalebone.io");
         assertNotNull(oldWhite);
         assertEquals(oldWhite.getRawId(), "whalebone.io");
         assertEquals(oldWhite.getSourceName(), "whalebone");
@@ -118,7 +115,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         Calendar before = Calendar.getInstance();
         before.add(Calendar.SECOND, VALID_HOURS * 3600 - 1);
         assertTrue(coreService.processWhitelistIoCRecord(IoCFactory.getIoCForWhitelist(null, "whalebone.io", "newWhalebone", false)));
-        WhitelistedRecord white = whitelistService.get(IoCFactory.getIoCForWhitelist(null, "whalebone.io", null, true));
+        WhitelistedRecord white = whitelistService.get("whalebone.io");
         Calendar after = Calendar.getInstance();
         after.add(Calendar.SECOND, VALID_HOURS * 3600 + 1);
         assertNotNull(white);
@@ -142,7 +139,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         assertTrue(coreService.processWhitelistIoCRecord(IoCFactory.getIoCForWhitelist(null, "whalebone.net", "oldWhalebone", false)));
         coreService.setWhitelistValidSeconds(1);
         assertTrue(coreService.processWhitelistIoCRecord(IoCFactory.getIoCForWhitelist(null, "whalebone.net", "newWhalebone", false)));
-        WhitelistedRecord white = whitelistService.get(IoCFactory.getIoCForWhitelist(null, "whalebone.net", null, true));
+        WhitelistedRecord white = whitelistService.get("whalebone.net");
         Calendar before = Calendar.getInstance();
         before.add(Calendar.SECOND, 10);
         assertEquals(white.getRawId(), "whalebone.net");
@@ -159,12 +156,12 @@ public class WhitelistCacheServiceTest extends Arquillian {
         LOGGER.log(Level.INFO, "expirationTest");
         coreService.setWhitelistValidSeconds(1);
         assertTrue(coreService.processWhitelistIoCRecord(IoCFactory.getIoCForWhitelist(null, "willExpire", "nothing", false)));
-        assertNotNull(whitelistService.get(IoCFactory.getIoCForWhitelist(null, "willExpire", null, true)));
+        assertNotNull(whitelistService.get("willExpire"));
         int counter = 0;
-        WhitelistedRecord white = whitelistService.get(IoCFactory.getIoCForWhitelist(null, "willExpire", null, true));
+        WhitelistedRecord white = whitelistService.get("willExpire");
         while (white != null && counter < 10) {
             Thread.sleep(100);
-            white = whitelistService.get(IoCFactory.getIoCForWhitelist(null, "willExpire", null, true));
+            white = whitelistService.get("willExpire");
             counter++;
         }
         assertNull(white);
@@ -173,27 +170,32 @@ public class WhitelistCacheServiceTest extends Arquillian {
     @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 306)
     public void dropTheWholeCacheTest() throws Exception {
         LOGGER.log(Level.INFO, "dropTheWholeCacheTest");
-        WhitelistedRecord whiteIP = whitelistService.get(IoCFactory.getIoCForWhitelist("1.2.3.4", null, null, true));
+        WhitelistedRecord whiteIP = whitelistService.get("1.2.3.4");
         assertNotNull(whiteIP);
-        WhitelistedRecord whiteFQDNio = whitelistService.get(IoCFactory.getIoCForWhitelist(null, "whalebone.io", null, true));
+        WhitelistedRecord whiteFQDNio = whitelistService.get("whalebone.io");
         assertNotNull(whiteFQDNio);
-        WhitelistedRecord whiteFQDNcz = whitelistService.get(IoCFactory.getIoCForWhitelist(null, "whalebone.cz", null, true));
+        WhitelistedRecord whiteFQDNcz = whitelistService.get("subdomain.whalebone.cz");
         assertNotNull(whiteFQDNcz);
         assertTrue(whitelistService.dropTheWholeCache());
-        whiteIP = whitelistService.get(IoCFactory.getIoCForWhitelist("1.2.3.4", null,  null, true));
-        whiteFQDNio = whitelistService.get(IoCFactory.getIoCForWhitelist(null, "whalebone.io", null, true));
-        whiteFQDNcz = whitelistService.get(IoCFactory.getIoCForWhitelist(null, "whalebone.cz", null, true));
+        whiteIP = whitelistService.get("1.2.3.4");
+        whiteFQDNio = whitelistService.get("whalebone.io");
+        whiteFQDNcz = whitelistService.get("subdomain.whalebone.cz");
         int counter = 0;
         while ((whiteIP != null  || whiteFQDNio != null || whiteFQDNcz != null) && counter < 10 ) {
             Thread.sleep(100);
-            whiteIP = whitelistService.get(IoCFactory.getIoCForWhitelist("1.2.3.4", null, null, true));
-            whiteFQDNio = whitelistService.get(IoCFactory.getIoCForWhitelist(null, "whalebone.io", null, true));
-            whiteFQDNcz = whitelistService.get(IoCFactory.getIoCForWhitelist(null, "whalebone.cz", null, true));
+            whiteIP = whitelistService.get("1.2.3.4");
+            whiteFQDNio = whitelistService.get("whalebone.io");
+            whiteFQDNcz = whitelistService.get("subdomain.whalebone.cz");
             counter++;
         }
         assertNull(whiteIP);
         assertNull(whiteFQDNio);
         assertNull(whiteFQDNcz);
+        counter = 0;
+        while (whitelistService.getStats() > 0 && counter < 10) {
+            counter++;
+        }
+        assertEquals(0, whitelistService.getStats());
     }
 
     /**
@@ -483,5 +485,48 @@ public class WhitelistCacheServiceTest extends Arquillian {
 //        responseBodyDNS = pageDNS.getWebResponse().getContentAsString();
 //        LOGGER.info("endToEndDNSWhitelisted Response:" + responseBodyDNS);
 //        assertTrue(responseBodyIoC.contains("\"ip\":\"83.215.22.31\""));
+    }
+
+    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 309)
+    @OperateOnDeployment("ear")
+    @RunAsClient
+    public void testRESTApi(@ArquillianResource URL context) throws Exception {
+        WebClient webClient = new WebClient();
+
+        WebRequest request = new WebRequest(new URL(context + "rest/whitelist/record/trusted.domain.to.be.whitelisted.cz"), HttpMethod.GET);
+        request.setAdditionalHeader("Content-Type", "application/json");
+        request.setAdditionalHeader("X-sinkit-token", TOKEN);
+        Page page = webClient.getPage(request);
+        assertEquals(200, page.getWebResponse().getStatusCode());
+        String responseBody = page.getWebResponse().getContentAsString();
+        LOGGER.info("RESTApi Response:" + responseBody);
+        assertTrue(responseBody.contains("trusted.domain.to.be.whitelisted.cz"));
+
+        request = new WebRequest(new URL(context + "rest/whitelist/record/trusted.domain.to.be.whitelisted.cz"), HttpMethod.GET);
+        request.setAdditionalHeader("Content-Type", "application/json");
+        request.setAdditionalHeader("X-sinkit-token", TOKEN);
+        page = webClient.getPage(request);
+        assertEquals(200, page.getWebResponse().getStatusCode());
+        responseBody = page.getWebResponse().getContentAsString();
+        LOGGER.info("RESTApi Response:" + responseBody);
+        assertTrue(responseBody.contains("trusted.domain.to.be.whitelisted.cz"));
+
+        request = new WebRequest(new URL(context + "rest/whitelist/record/trusted.domain.to.be.whitelisted.cz"), HttpMethod.DELETE);
+        request.setAdditionalHeader("Content-Type", "application/json");
+        request.setAdditionalHeader("X-sinkit-token", TOKEN);
+        page = webClient.getPage(request);
+        assertEquals(200, page.getWebResponse().getStatusCode());
+        responseBody = page.getWebResponse().getContentAsString();
+        LOGGER.info("RESTApi Response:" + responseBody);
+        assertTrue(responseBody.contains("true"));
+
+        request = new WebRequest(new URL(context + "rest/whitelist/stats/"), HttpMethod.GET);
+        request.setAdditionalHeader("Content-Type", "application/json");
+        request.setAdditionalHeader("X-sinkit-token", TOKEN);
+        page = webClient.getPage(request);
+        assertEquals(200, page.getWebResponse().getStatusCode());
+        responseBody = page.getWebResponse().getContentAsString();
+        LOGGER.info("RESTApi Response:" + responseBody);
+        assertTrue(responseBody.contains("5"));
     }
 }

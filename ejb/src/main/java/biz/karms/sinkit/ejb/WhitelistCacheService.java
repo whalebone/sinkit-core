@@ -10,9 +10,16 @@ import javax.ejb.Local;
  */
 @Local
 public interface WhitelistCacheService {
-    boolean put(final IoCRecord iocRecord);
+    WhitelistedRecord put(final IoCRecord iocRecord, boolean completed);
 
-    WhitelistedRecord get(final IoCRecord iocRecord);
+    WhitelistedRecord setCompleted(WhitelistedRecord partialWhite);
+
+    WhitelistedRecord get(String id);
+
+    boolean remove(String id);
+
+    int getStats();
 
     boolean dropTheWholeCache();
+
 }

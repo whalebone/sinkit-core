@@ -77,6 +77,24 @@ A prototype of a toy project featuring Infinispan dist cache.
     -X POST --data '{"feed":{"name":"name_of_whitelist"},"source":{"fqdn":"trusted.net"}}"' \
     http://feedcore-lb:8080/sinkit/rest/whitelist/ioc/
 
+###Get global whitelist entry
+    curl -i -H "Content-Type: application/json;charset=UTF-8" \
+    -H "Accept: application/json;charset=UTF-8" \
+    -H "X-sinkit-token: ${SINKIT_ACCESS_TOKEN}" \
+    -X GET http://feedcore-lb:8080/sinkit/rest/whitelist/record/<domain or IP to check>
+
+###Remove whitelist entry manually
+    curl -i -H "Content-Type: application/json;charset=UTF-8" \
+    -H "Accept: application/json;charset=UTF-8" \
+    -H "X-sinkit-token: ${SINKIT_ACCESS_TOKEN}" \
+    -X DELETE http://feedcore-lb:8080/sinkit/rest/whitelist/record/<domain or IP to check>
+
+###Get size of whitelist
+    curl -i -H "Content-Type: application/json;charset=UTF-8" \
+    -H "Accept: application/json;charset=UTF-8" \
+    -H "X-sinkit-token: ${SINKIT_ACCESS_TOKEN}" \
+    -X GET http://feedcore-lb:8080/sinkit/rest/whitelist/stats/
+
 ## Google Safe Browsing API
 ###Add a hash prefix
     curl -i -H "X-sinkit-token: ${SINKIT_ACCESS_TOKEN}" -X PUT http://localhost:8080/sinkit/rest/gsb/cf4b367e

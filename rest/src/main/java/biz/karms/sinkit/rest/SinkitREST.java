@@ -132,7 +132,7 @@ public class SinkitREST {
     @Path("/whitelist/ioc/")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public Response putWhitelistEntry(@HeaderParam(AUTH_HEADER_PARAM) String token, String ioc) {
+    public Response putWhitelistIoCRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, String ioc) {
         if (!StupidAuthenticator.isAuthenticated(token)) {
             return Response.status(Response.Status.UNAUTHORIZED).entity(AUTH_FAIL).build();
         }
@@ -147,6 +147,39 @@ public class SinkitREST {
             ex.printStackTrace();
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex.getMessage()).build();
         }
+    }
+
+    @GET
+    @Path("/whitelist/stats/")
+    @Produces({"application/json;charset=UTF-8"})
+    //@Consumes({"application/json;charset=UTF-8"})
+    public String getWhitelistStats(@HeaderParam(AUTH_HEADER_PARAM) String token) {
+        if (!StupidAuthenticator.isAuthenticated(token)) {
+            return AUTH_FAIL;
+        }
+        return sinkitService.getWhitelistStats();
+    }
+
+    @GET
+    @Path("/whitelist/record/{key}")
+    @Produces({"application/json;charset=UTF-8"})
+    //@Consumes({"application/json;charset=UTF-8"})
+    public String getWhitelistedRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("key") String key) {
+        if (!StupidAuthenticator.isAuthenticated(token)) {
+            return AUTH_FAIL;
+        }
+        return sinkitService.getWhitelistedRecord(key);
+    }
+
+    @DELETE
+    @Path("/whitelist/record/{key}")
+    @Produces({"application/json;charset=UTF-8"})
+    //@Consumes({"application/json;charset=UTF-8"})
+    public String removeWhitelistedRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("key") String key) {
+        if (!StupidAuthenticator.isAuthenticated(token)) {
+            return AUTH_FAIL;
+        }
+        return sinkitService.getWhitelistedRecord(key);
     }
 
     @POST

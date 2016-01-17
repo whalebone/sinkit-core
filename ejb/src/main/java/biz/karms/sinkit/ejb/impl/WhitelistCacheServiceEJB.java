@@ -31,12 +31,12 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
     private Cache<String, WhitelistedRecord> whitelistCache;
 
     @Override
-    public boolean put(final IoCRecord iocRecord) {
+    public WhitelistedRecord put(final IoCRecord iocRecord, boolean completed) {
         if (!isIoCValidForPut(iocRecord)) {
-            return false;
+            return null;
         }
 
-        WhitelistedRecord white = WhitelistUtils.createWhitelistedRecord(iocRecord);
+        WhitelistedRecord white = WhitelistUtils.createWhitelistedRecord(iocRecord, completed);
         String key = WhitelistUtils.computeHashedId(white.getRawId());
         try {
             if (!whitelistCache.containsKey(key)) {
@@ -46,25 +46,24 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
             }
         } catch (Exception e) {
             log.log(Level.SEVERE, "put", e);
-            return false;
+            return null;
         }
-        return true;
+        return white;
     }
 
     @Override
-    public WhitelistedRecord get(final IoCRecord iocRecord) {
-        if(iocRecord == null || iocRecord.getSource() == null || iocRecord.getSource().getId() == null ||
-                StringUtils.isBlank(iocRecord.getSource().getId().getValue())) {
-            log.log(Level.SEVERE, "add: Cannot search whitelist. Object ioc or ioc.source.id.value is null or blank");
+    public WhitelistedRecord get(String id) {
+//        if(iocRecord == null || iocRecord.getSource() == null || iocRecord.getSource().getId() == null ||
+//                StringUtils.isBlank(iocRecord.getSource().getId().getValue())) {
+//            log.log(Level.SEVERE, "add: Cannot search whitelist. Object ioc or ioc.source.id.value is null or blank");
+//            return null;
+//        }
+        if (id == null) {
+            log.log(Level.SEVERE, "get: Cannot search whitelist. Id is null.");
             return null;
         }
 
-        String key;
-        if (iocRecord.getSource().getId().getType() == IoCSourceIdType.FQDN) {
-            key = WhitelistUtils.computeHashedId(WhitelistUtils.stripSubdomains(iocRecord.getSource().getId().getValue()));
-        } else {
-            key = WhitelistUtils.computeHashedId(iocRecord.getSource().getId().getValue());
-        }
+        String key = WhitelistUtils.computeHashedId(id);
         if (!whitelistCache.containsKey(key)) {
             return null;
         }
@@ -82,6 +81,42 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
             return false;
         }
         return true;
+    }
+
+    @Override
+    public WhitelistedRecord setCompleted(WhitelistedRecord partialWhite) {
+        if (partialWhite == null || partialWhite.getRawId() == null || StringUtils.isBlank(partialWhite.getSourceName()) ||
+                partialWhite.getExpiresAt() == null) {
+            log.log(Level.SEVERE, "put: Cannot set whiltelist entry as completed - missing mandatory fields");
+            return null;
+        }
+        String key = WhitelistUtils.computeHashedId(partialWhite.getRawId());
+        if (!whitelistCache.containsKey(key)) {
+            return null;
+        }
+        long ttl = (partialWhite.getExpiresAt().getTimeInMillis() - Calendar.getInstance().getTimeInMillis());
+        if (ttl < 0) {
+            return null;
+        }
+        partialWhite.setCompleted(true);
+        return whitelistCache.replace(key, partialWhite, ttl, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    public boolean remove(String id) {
+        log.log(Level.INFO, "remove: removing whitelist entry manually, key: " + id);
+        String key = WhitelistUtils.computeHashedId(id);
+        if (!whitelistCache.containsKey(key)) {
+            log.log(Level.INFO, "remove: entry not found, key: " + id);
+            return false;
+        }
+        whitelistCache.remove(key);
+        return true;
+    }
+
+    @Override
+    public int getStats() {
+        return whitelistCache.size();
     }
 
     private boolean isIoCValidForPut(IoCRecord iocRecord) {

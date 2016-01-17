@@ -3,14 +3,13 @@ package biz.karms.sinkit.ejb.impl;
 import biz.karms.sinkit.ejb.*;
 import biz.karms.sinkit.ejb.cache.pojo.WhitelistedRecord;
 import biz.karms.sinkit.ejb.util.IoCValidator;
+import biz.karms.sinkit.ejb.util.WhitelistUtils;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCValidationException;
-import biz.karms.sinkit.ioc.IoCRecord;
-import biz.karms.sinkit.ioc.IoCSeen;
-import biz.karms.sinkit.ioc.IoCSourceId;
-import biz.karms.sinkit.ioc.IoCSourceIdType;
+import biz.karms.sinkit.ioc.*;
 import biz.karms.sinkit.ioc.util.IoCSourceIdBuilder;
 import org.apache.commons.lang3.StringUtils;
+import sun.rmi.runtime.Log;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.EJB;
@@ -110,7 +109,17 @@ public class CoreServiceEJB implements CoreService {
         Date receivedByCore = Calendar.getInstance().getTime();
         ioc.getTime().setReceivedByCore(receivedByCore);
 
-        WhitelistedRecord white = whitelistCacheService.get(ioc);
+
+        WhitelistedRecord white = null;
+        if (ioc.getSource().getId().getType() == IoCSourceIdType.FQDN) {
+            String[] fqdns = WhitelistUtils.explodeDomains(ioc.getSource().getId().getValue());
+            int i = 0;
+            while (i < fqdns.length && white == null) {
+                white = whitelistCacheService.get(fqdns[i++]);
+            }
+        } else {
+            white = whitelistCacheService.get(ioc.getSource().getId().getValue());
+        }
         if (white == null) {
             // ioc is inserted as is if does not exist or last.seen is updated
             // ioc has to be inserted before blacklist record, because it needs the documentId to be computed
@@ -168,47 +177,78 @@ public class CoreServiceEJB implements CoreService {
     }
 
     @Override
-    public boolean processWhitelistIoCRecord(IoCRecord whiteIoC) throws IoCValidationException, ArchiveException {
+    public boolean processWhitelistIoCRecord(final IoCRecord whiteIoC) throws IoCValidationException, ArchiveException {
         IoCValidator.validateWhitelistIoCRecord(whiteIoC);
         IoCSourceId sid = IoCSourceIdBuilder.build(whiteIoC);
         whiteIoC.getSource().setId(sid);
         // TODO: remove when ttl is received from IntelMQ
         whiteIoC.getSource().setTTL(whitelistValidSeconds);
-        WhitelistedRecord white = whitelistCacheService.get(whiteIoC);
+        WhitelistedRecord white = whitelistCacheService.get(whiteIoC.getSource().getId().getValue());
+        boolean putToCacheBefore = true;
         if (white != null) {
             Calendar expiresAt = Calendar.getInstance();
             expiresAt.add(Calendar.SECOND, whiteIoC.getSource().getTTL().intValue());
+            // if old whitelist record needs update
             if (expiresAt.after(white.getExpiresAt())) {
-                return whitelistCacheService.put(whiteIoC);
-            }
-            return true;
-        }
-        if (!whitelistCacheService.put(whiteIoC)) {
-            return false;
-        }
-        if (!blacklistCacheService.removeWholeObjectFromCache(whiteIoC)) {
-            return false;
-        }
-        List<String> removedKeys = new ArrayList<>();
-        removedKeys.add(whiteIoC.getSource().getId().getValue());
-        List<IoCRecord> iocs = archiveService.findIoCsForWhitelisting(whiteIoC.getSource().getId().getValue());
-        boolean allWhitelisted = true;
-        for (IoCRecord iocRecord : iocs) {
-            try {
-                if (!removedKeys.contains(iocRecord.getSource().getId().getValue())) {
-                    if (!blacklistCacheService.removeWholeObjectFromCache(iocRecord)) {
-                        allWhitelisted = false;
+                // if old whitelist record was completely processed during last run just update it and quit the process
+                if (white.isCompleted()) {
+                    if (whitelistCacheService.put(whiteIoC, true) == null) {
+                        log.log(Level.SEVERE, "Cannot update whitelist record. Aborting process...");
+                        return false;
                     } else {
-                        removedKeys.add(iocRecord.getSource().getId().getValue());
+                        return true;
                     }
+                } else { // else the whitelisted record will be updated outside these 'ifs'
+                    putToCacheBefore = true;
                 }
-                archiveService.setRecordWhitelisted(iocRecord, whiteIoC.getFeed().getName());
-            } catch (ArchiveException e) {
-                log.log(Level.SEVERE, "processWhitelistIoCRecord: unable to set ioc (" + iocRecord.getDocumentId() + ") to whitelisted", e);
-                allWhitelisted = false;
+            } else { // else old whitelist record doesn't need update
+                // if old whitelist record was completely processed during last run and doesn't need update
+                // then nothing else has to be done
+                if (white.isCompleted()) {
+                    return true;
+                } else {
+                    putToCacheBefore = false;
+                }
             }
         }
-        return allWhitelisted;
+        if (putToCacheBefore) {
+            white = whitelistCacheService.put(whiteIoC, false);
+            if (white == null) {
+                log.log(Level.SEVERE, "Cannot put whitelist record to whitelist cache. Aborting process...");
+                return false;
+            }
+        }
+        List<IoCRecord> iocs = archiveService.findIoCsForWhitelisting(white.getRawId());
+        for (IoCRecord iocRecord : iocs) {
+            if (!blacklistCacheService.removeWholeObjectFromCache(iocRecord)) {
+                return false;
+            }
+            archiveService.setRecordWhitelisted(iocRecord, white.getSourceName());
+        }
+        return whitelistCacheService.setCompleted(white) != null;
+    }
+
+    @Override
+    public WhitelistedRecord getWhitelistedRecord(String id) {
+        if (id == null) {
+            log.log(Level.SEVERE, "getWhitelistedRecord: cannot search whitelist, id is null");
+            return null;
+        }
+        return whitelistCacheService.get(id);
+    }
+
+    @Override
+    public boolean removeWhitelistedRecord(String id) {
+        if (id == null) {
+            log.log(Level.SEVERE, "removeWhitelistedRecord: cannot remove whitelist entry, id is null");
+            return false;
+        }
+        return false;
+    }
+
+    @Override
+    public int getWhitelistStats() {
+        return whitelistCacheService.getStats();
     }
 
     @Override

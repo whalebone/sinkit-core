@@ -9,21 +9,23 @@ import java.util.Calendar;
 /**
  * Created by tkozel on 1/9/16.
  */
-@Indexed(index = "WhitelistedRecord")
-@Entity
+//@Indexed(index = "WhitelistedRecord")
+//@Entity
 public class WhitelistedRecord  implements Serializable {
 
     private static final long serialVersionUID = -4530501033533677059L;
 
-    @Field(index = Index.YES, analyze = Analyze.NO)
+    // @Field(index = Index.YES, analyze = Analyze.NO)
     String rawId;
 
-    @Field(index = Index.YES, analyze = Analyze.NO)
+    // @Field(index = Index.YES, analyze = Analyze.NO)
     String sourceName;
 
-    @Field
-    @CalendarBridge(resolution = Resolution.SECOND)
+    // @Field
+    // @CalendarBridge(resolution = Resolution.SECOND)
     Calendar expiresAt;
+
+    boolean completed;
 
     public Calendar getExpiresAt() {
         return expiresAt;
@@ -47,6 +49,14 @@ public class WhitelistedRecord  implements Serializable {
 
     public void setSourceName(String sourceName) {
         this.sourceName = sourceName;
+    }
+
+    public boolean isCompleted() {
+        return completed;
+    }
+
+    public void setCompleted(boolean completed) {
+        this.completed = completed;
     }
 
     @Override
