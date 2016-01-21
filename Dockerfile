@@ -78,6 +78,15 @@ RUN echo 'JAVA_OPTS="\
  -XX:+UseConcMarkSweepGC \
  -XX:+HeapDumpOnOutOfMemoryError \
  -XX:HeapDumpPath=/opt/sinkit \
+ -verbose:gc \
+ -Xloggc:"/opt/sinkit/wildfly/standalone/log/gc.log" \
+ -XX:+PrintGCDetails \
+ -XX:+PrintGCDateStamps \
+ -XX:+UseGCLogFileRotation \
+ -XX:NumberOfGCLogFiles=5 \
+ -XX:GCLogFileSize=200M \
+ -XX:-TraceClassUnloading \
 "' >> /opt/sinkit/wildfly/bin/standalone.conf
+RUN mkdir -p /opt/sinkit/wildfly/standalone/log/
 ADD sinkit.sh /opt/sinkit/
 CMD ["/opt/sinkit/sinkit.sh"]
