@@ -13,6 +13,7 @@ import com.kanishka.virustotal.dto.FileScanReport;
 import com.kanishka.virustotal.exception.InvalidArguentsException;
 import com.kanishka.virustotal.exception.QuotaExceededException;
 import com.kanishka.virustotal.exception.UnauthorizedAccessException;
+import org.apache.commons.lang3.StringUtils;
 
 import javax.annotation.Resource;
 import javax.ejb.*;
@@ -117,7 +118,10 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
     private boolean processUrlScanRequest(final EventLogRecord enrichmentRequest) throws ArchiveException, QuotaExceededException, VirusTotalException {
         log.finest("Processing URL scan request: " + enrichmentRequest.toString());
 
-        String fqdn = enrichmentRequest.getReason().getFqdn();
+        String scanTarget = getScanTarget(enrichmentRequest);
+        if (scanTarget == null) {
+            throw new VirusTotalException("EventLog can't have both reason.fqdn and reason.ip set as null");
+        }
         boolean needEnrichment = false;
 
         iocsLoop:
@@ -138,11 +142,11 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
                 needEnrichment = true;
                 break;
             } else {
-                boolean fqdnFound = false;
+                boolean fqdnOrIpFound = false;
                 for (IoCVirusTotalReport report : ioc.getVirusTotalReports()) {
-                    if (fqdn.equals(report.getFqdn())) {
-                        log.finest("VT report for same FQDN found: " + report.toString());
-                        fqdnFound = true;
+                    if (scanTarget.equals(report.getFqdn()) || scanTarget.equals(report.getIp())) {
+                        log.finest("VT report for same FQDN or IP found: " + report.toString());
+                        fqdnOrIpFound = true;
                         // if fqdn was found in reports but the report is older than 24h we need enrichment
                         Calendar timeWindow = Calendar.getInstance();
                         timeWindow.add(Calendar.HOUR_OF_DAY, -24);
@@ -156,9 +160,9 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
                 }
 
                 // if fqdn was not found in reports we need enrichment
-                if (!fqdnFound) {
+                if (!fqdnOrIpFound) {
                     needEnrichment = true;
-                    log.finest("VT report with the same FQDN was not found -> FQDN will be scanned");
+                    log.finest("VT report with the same FQDN or IP was not found -> FQDN/IP will be scanned");
                     break;
                 }
             }
@@ -166,7 +170,7 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
 
         if (needEnrichment) {
             try {
-                virusTotalService.scanUrl("http://" + fqdn + "/");
+                virusTotalService.scanUrl("http://" + scanTarget + "/");
             } catch (InvalidArguentsException | UnauthorizedAccessException | IOException e) {
                 throw new VirusTotalException(e);
             }
@@ -180,17 +184,24 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
     private void processUrlScanReportRequest(final EventLogRecord enrichmentRequest) throws ArchiveException, QuotaExceededException, VirusTotalException {
         log.finest("Processing URL scan report request: " + enrichmentRequest.toString());
 
-        String fqdn = enrichmentRequest.getReason().getFqdn();
+        String scanTarget = getScanTarget(enrichmentRequest);
+        if (scanTarget == null) {
+            throw new VirusTotalException("EventLog can't have both reason.fqdn and reason.ip set as null");
+        }
 
         FileScanReport report;
         try {
-            report = virusTotalService.getUrlScanReport("http://" + fqdn + "/");
+            report = virusTotalService.getUrlScanReport("http://" + scanTarget + "/");
         } catch (InvalidArguentsException | UnauthorizedAccessException | IOException e) {
             throw new VirusTotalException(e);
         }
 
         IoCVirusTotalReport total = new IoCVirusTotalReport();
-        total.setFqdn(fqdn);
+        if (enrichmentRequest.getReason().getFqdn() != null) {
+            total.setFqdn(scanTarget);
+        } else {
+            total.setIp(scanTarget);
+        }
         total.setUrlReport(report);
         try {
             total.setScanDate(virusTotalService.parseDate(report.getScanDate()));
@@ -225,5 +236,16 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
 
             //archiveService.archiveIoCRecord(ioc);
         }
+    }
+
+    private String getScanTarget(EventLogRecord request) {
+        if (request == null || request.getReason() == null) {
+            return null;
+        }
+        String scanTarget = request.getReason().getFqdn();
+        if (StringUtils.isBlank(scanTarget)) {
+            scanTarget = request.getReason().getIp();
+        }
+        return scanTarget;
     }
 }

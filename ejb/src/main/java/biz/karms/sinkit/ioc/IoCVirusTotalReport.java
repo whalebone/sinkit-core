@@ -15,6 +15,8 @@ public class IoCVirusTotalReport implements Serializable {
 
     private String fqdn;
 
+    private String ip;
+
     @SerializedName("scan_date")
     private Date scanDate;
 
@@ -27,6 +29,14 @@ public class IoCVirusTotalReport implements Serializable {
 
     public void setFqdn(String fqdn) {
         this.fqdn = fqdn;
+    }
+
+    public String getIp() {
+        return ip;
+    }
+
+    public void setIp(String ip) {
+        this.ip = ip;
     }
 
     public Date getScanDate() {
@@ -49,6 +59,7 @@ public class IoCVirusTotalReport implements Serializable {
     public String toString() {
         return "IoCVirusTotalReport{" +
                 "fqdn='" + fqdn + '\'' +
+                ", ip='" + ip + '\'' +
                 ", scanDate=" + scanDate +
                 ", urlReport=" + urlReport +
                 '}';
