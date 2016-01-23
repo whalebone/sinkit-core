@@ -71,8 +71,11 @@ ADD standalone-ha.xml ${WF_CONFIG}
 
 RUN echo 'JAVA_OPTS="\
  -server \
- -Xms${SINKIT_MS_RAM:-6144m} \
- -Xmx${SINKIT_MX_RAM:-6144m} \
+ -Xms${SINKIT_MS_RAM:-6g} \
+ -Xmx${SINKIT_MX_RAM:-6g} \
+ -XX:+UseLargePages \
+ -XX:LargePageSizeInBytes=2m \
+ -XX:+UseConcMarkSweepGC \
  -XX:+HeapDumpOnOutOfMemoryError \
  -XX:HeapDumpPath=/opt/sinkit \
 "' >> /opt/sinkit/wildfly/bin/standalone.conf

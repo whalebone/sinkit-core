@@ -22,6 +22,10 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.ejb.Stateless;
 import javax.inject.Inject;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryUsage;
+import java.lang.management.OperatingSystemMXBean;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -59,10 +63,16 @@ public class WebApiEJB implements WebApi {
     //@Inject
     //private javax.transaction.UserTransaction utx;
 
-    // Testing purposes
+    // Testing/playground purposes
     @Override
     public String sayHello(final String queryString) {
-        return "Hello there." + queryString;
+        final OperatingSystemMXBean osmxbean = ManagementFactory.getOperatingSystemMXBean();
+        final MemoryMXBean memxbean = ManagementFactory.getMemoryMXBean();
+        final double load = osmxbean.getSystemLoadAverage() / osmxbean.getAvailableProcessors();
+        final MemoryUsage mamUsage = memxbean.getHeapMemoryUsage();
+        final long maxMem = mamUsage.getMax();
+        final double usedmem = mamUsage.getUsed();
+        return String.join(",", "Hello there ", queryString, ". My CPU load is ", Double.toString(load), "my heap mem usage is ", Double.toString(usedmem / ((maxMem >= 0) ? maxMem : mamUsage.getCommitted())));
     }
 
     @Override

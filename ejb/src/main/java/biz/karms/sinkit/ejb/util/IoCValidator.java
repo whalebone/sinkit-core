@@ -13,14 +13,15 @@ import java.util.Date;
 public class IoCValidator {
 
     public static IoCRecord validateIoCRecord(IoCRecord ioc, int windowHours) throws IoCValidationException {
-
+        if (ioc == null) {
+            throw new IoCValidationException("IoC record is null");
+        }
         if (ioc.getFeed() == null || ioc.getFeed().getName() == null) {
             throw new IoCValidationException("IoC record doesn't have mandatory field 'feed.name'");
         }
         if (ioc.getSource() == null || (
-                ioc.getSource().getFQDN() == null && ioc.getSource().getIp() == null && ioc.getSource().getUrl() == null
-        )) {
-            throw new IoCValidationException("IoC can't have all IP and Domain and URL set as null");
+                ioc.getSource().getFQDN() == null && ioc.getSource().getIp() == null)) {
+            throw new IoCValidationException("IoC can't have both IP and Domain set as null");
         }
         if (ioc.getClassification() == null || ioc.getClassification().getType() == null) {
             throw new IoCValidationException("IoC record doesn't have mandatory field 'classification.type'");
@@ -41,6 +42,20 @@ public class IoCValidator {
                     " shuld not be older than " + windowHours + " hours.");
         }
 
+        return ioc;
+    }
+
+    public static IoCRecord validateWhitelistIoCRecord(IoCRecord ioc) throws IoCValidationException {
+        if (ioc == null) {
+            throw new IoCValidationException("IoC record is null");
+        }
+        if (ioc.getFeed() == null || ioc.getFeed().getName() == null) {
+            throw new IoCValidationException("IoC record doesn't have mandatory field 'feed.name'");
+        }
+        if (ioc.getSource() == null ||
+                ioc.getSource().getFQDN() == null && ioc.getSource().getIp() == null) {
+            throw new IoCValidationException("IoC can't have both IP and FQDN set as null");
+        }
         return ioc;
     }
 }

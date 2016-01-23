@@ -1,25 +1,25 @@
 package biz.karms.sinkit.ejb.impl;
 
-import biz.karms.sinkit.ejb.ArchiveService;
-import biz.karms.sinkit.ejb.CacheBuilder;
-import biz.karms.sinkit.ejb.CacheService;
-import biz.karms.sinkit.ejb.CoreService;
+import biz.karms.sinkit.ejb.*;
+import biz.karms.sinkit.ejb.cache.pojo.WhitelistedRecord;
 import biz.karms.sinkit.ejb.util.IoCValidator;
+import biz.karms.sinkit.ejb.util.WhitelistUtils;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCValidationException;
-import biz.karms.sinkit.ioc.IoCRecord;
-import biz.karms.sinkit.ioc.IoCSeen;
-import biz.karms.sinkit.ioc.IoCSourceId;
-import biz.karms.sinkit.ioc.IoCSourceIdType;
+import biz.karms.sinkit.ioc.*;
 import biz.karms.sinkit.ioc.util.IoCSourceIdBuilder;
+import org.apache.commons.lang3.StringUtils;
+import sun.rmi.runtime.Log;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -29,7 +29,10 @@ import java.util.logging.Logger;
 public class CoreServiceEJB implements CoreService {
 
     private static final String IOC_ACTIVE_HOURS_ENV = "SINKIT_IOC_ACTIVE_HOURS";
+    private static final String WHITELIST_VALID_HOURS_ENV = "SINKIT_WHITELIST_VALID_HOURS";
+
     private int iocActiveHours;
+    private long whitelistValidSeconds;
 
     @Inject
     private Logger log;
@@ -38,15 +41,20 @@ public class CoreServiceEJB implements CoreService {
     private ArchiveService archiveService;
 
     @EJB
-    private CacheService cacheService;
+    private BlacklistCacheService blacklistCacheService;
+
+    @EJB
+    private WhitelistCacheService whitelistCacheService;
 
     @EJB
     private CacheBuilder cacheBuilder;
 
     @PostConstruct
     public void setup() {
-        if (log == null || archiveService == null || cacheService == null || cacheBuilder == null) {
-            throw new IllegalArgumentException("Logger, ArchiveServiceEJB, CacheServiceEJB, CacheBuilderEJB must be injected.");
+        if (log == null || archiveService == null || blacklistCacheService == null || whitelistCacheService == null ||
+                cacheBuilder == null) {
+            throw new IllegalArgumentException("Logger, ArchiveServiceEJB, BlacklistCacheServiceEJB, " +
+                    "WhitelistCacheServiceEJB, CacheBuilderEJB must be injected.");
         }
 
         try {
@@ -57,6 +65,16 @@ public class CoreServiceEJB implements CoreService {
 
         if (iocActiveHours < 0) {
             throw new IllegalArgumentException("System env " + IOC_ACTIVE_HOURS_ENV + " is mandatory and must be integer bigger than zero.");
+        }
+
+        if (StringUtils.isBlank(System.getenv(WHITELIST_VALID_HOURS_ENV))) {
+            throw new IllegalStateException("System property '" + WHITELIST_VALID_HOURS_ENV + "' is not set");
+        }
+
+        try {
+            whitelistValidSeconds = Integer.parseInt(System.getenv(WHITELIST_VALID_HOURS_ENV)) * 3600;
+        } catch (NumberFormatException ex) {
+            throw new IllegalStateException("System property '" + WHITELIST_VALID_HOURS_ENV + "' is not valid integer", ex);
         }
     }
 
@@ -88,15 +106,30 @@ public class CoreServiceEJB implements CoreService {
         seen.setLast(seenLast);
         seen.setFirst(seenFirst);
         ioc.setSeen(seen);
-        ioc.getTime().setReceivedByCore(Calendar.getInstance().getTime());
+        Date receivedByCore = Calendar.getInstance().getTime();
+        ioc.getTime().setReceivedByCore(receivedByCore);
 
-        // ioc is inserted as is if does not exist or last.seen is updated
-        archiveService.archiveReceivedIoCRecord(ioc);
 
-        if (ioc.getSource().getId().getType() == IoCSourceIdType.FQDN || ioc.getSource().getId().getType() == IoCSourceIdType.IP) {
-            cacheService.addToCache(ioc);
+        WhitelistedRecord white = null;
+        if (ioc.getSource().getId().getType() == IoCSourceIdType.FQDN) {
+            String[] fqdns = WhitelistUtils.explodeDomains(ioc.getSource().getId().getValue());
+            int i = 0;
+            while (i < fqdns.length && white == null) {
+                white = whitelistCacheService.get(fqdns[i++]);
+            }
+        } else {
+            white = whitelistCacheService.get(ioc.getSource().getId().getValue());
         }
-
+        if (white == null) {
+            // ioc is inserted as is if does not exist or last.seen is updated
+            // ioc has to be inserted before blacklist record, because it needs the documentId to be computed
+            archiveService.archiveReceivedIoCRecord(ioc);
+            blacklistCacheService.addToCache(ioc);
+        } else {
+            ioc.setWhitelistName(white.getSourceName());
+            ioc.getTime().setWhitelisted(receivedByCore);
+            archiveService.archiveReceivedIoCRecord(ioc);
+        }
         return ioc;
     }
 
@@ -112,7 +145,7 @@ public class CoreServiceEJB implements CoreService {
             iocs = archiveService.findIoCsForDeactivation(iocActiveHours);
             if (!iocs.isEmpty()) {
                 for (IoCRecord ioc : iocs) {
-                    cacheService.removeFromCache(ioc);
+                    blacklistCacheService.removeFromCache(ioc);
                     archiveService.deactivateRecord(ioc);
                 }
                 deactivated += iocs.size();
@@ -129,7 +162,6 @@ public class CoreServiceEJB implements CoreService {
 
     @Override
     public boolean runCacheRebuilding() {
-
         if (cacheBuilder.isCacheRebuildRunning()) {
             log.info("Cache rebuilding still in process -> skipping");
             return false;
@@ -142,5 +174,85 @@ public class CoreServiceEJB implements CoreService {
     @Override
     public void enrich() {
         throw new UnsupportedOperationException("VirusTotal enricher is handled by Clustered HA Singleton Timer Service. This API call is currently disabled.");
+    }
+
+    @Override
+    public boolean processWhitelistIoCRecord(final IoCRecord whiteIoC) throws IoCValidationException, ArchiveException {
+        IoCValidator.validateWhitelistIoCRecord(whiteIoC);
+        IoCSourceId sid = IoCSourceIdBuilder.build(whiteIoC);
+        whiteIoC.getSource().setId(sid);
+        // TODO: remove when ttl is received from IntelMQ
+        whiteIoC.getSource().setTTL(whitelistValidSeconds);
+        WhitelistedRecord white = whitelistCacheService.get(whiteIoC.getSource().getId().getValue());
+        boolean putToCacheBefore = true;
+        if (white != null) {
+            Calendar expiresAt = Calendar.getInstance();
+            expiresAt.add(Calendar.SECOND, whiteIoC.getSource().getTTL().intValue());
+            // if old whitelist record needs update
+            if (expiresAt.after(white.getExpiresAt())) {
+                // if old whitelist record was completely processed during last run just update it and quit the process
+                if (white.isCompleted()) {
+                    if (whitelistCacheService.put(whiteIoC, true) == null) {
+                        log.log(Level.SEVERE, "Cannot update whitelist record. Aborting process...");
+                        return false;
+                    } else {
+                        return true;
+                    }
+                } else { // else the whitelisted record will be updated outside these 'ifs'
+                    putToCacheBefore = true;
+                }
+            } else { // else old whitelist record doesn't need update
+                // if old whitelist record was completely processed during last run and doesn't need update
+                // then nothing else has to be done
+                if (white.isCompleted()) {
+                    return true;
+                } else {
+                    putToCacheBefore = false;
+                }
+            }
+        }
+        if (putToCacheBefore) {
+            white = whitelistCacheService.put(whiteIoC, false);
+            if (white == null) {
+                log.log(Level.SEVERE, "Cannot put whitelist record to whitelist cache. Aborting process...");
+                return false;
+            }
+        }
+        List<IoCRecord> iocs = archiveService.findIoCsForWhitelisting(white.getRawId());
+        for (IoCRecord iocRecord : iocs) {
+            if (!blacklistCacheService.removeWholeObjectFromCache(iocRecord)) {
+                return false;
+            }
+            archiveService.setRecordWhitelisted(iocRecord, white.getSourceName());
+        }
+        return whitelistCacheService.setCompleted(white) != null;
+    }
+
+    @Override
+    public WhitelistedRecord getWhitelistedRecord(String id) {
+        if (id == null) {
+            log.log(Level.SEVERE, "getWhitelistedRecord: cannot search whitelist, id is null");
+            return null;
+        }
+        return whitelistCacheService.get(id);
+    }
+
+    @Override
+    public boolean removeWhitelistedRecord(String id) {
+        if (id == null) {
+            log.log(Level.SEVERE, "removeWhitelistedRecord: cannot remove whitelist entry, id is null");
+            return false;
+        }
+        return false;
+    }
+
+    @Override
+    public int getWhitelistStats() {
+        return whitelistCacheService.getStats();
+    }
+
+    @Override
+    public void setWhitelistValidSeconds(long whitelistValidSeconds) {
+        this.whitelistValidSeconds = whitelistValidSeconds;
     }
 }

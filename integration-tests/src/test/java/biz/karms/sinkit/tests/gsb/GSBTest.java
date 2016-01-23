@@ -93,11 +93,16 @@ public class GSBTest extends Arquillian {
         LOGGER.info("removeHashPrefixTest Response:" + responseBody);
         String expected = "true";
         assertTrue(responseBody.contains(expected), "Should have contained " + expected + ", but got: " + responseBody);
-        Thread.sleep(1000);
         requestSettings = new WebRequest(new URL(context + "rest/gsb/stats"), HttpMethod.GET);
         requestSettings.setAdditionalHeader("Content-Type", "application/json");
         requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
         page = webClient.getPage(requestSettings);
+        int counter = 0;
+        while (page.getWebResponse().getStatusCode() != 200 && counter < 10) {
+            Thread.sleep(100);
+            page = webClient.getPage(requestSettings);
+            counter++;
+        }
         assertEquals(200, page.getWebResponse().getStatusCode());
         responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("removeHashPrefixTest Response:" + responseBody);

@@ -4,6 +4,7 @@ import biz.karms.sinkit.tests.api.ApiIntegrationTest;
 import biz.karms.sinkit.tests.core.CoreTest;
 import biz.karms.sinkit.tests.gsb.GSBTest;
 import biz.karms.sinkit.tests.util.IoCFactory;
+import biz.karms.sinkit.tests.whitelist.WhitelistCacheServiceTest;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import org.eu.ingwar.tools.arquillian.extension.suite.annotations.ArquillianSuiteDeployment;
 import org.jboss.arquillian.container.test.api.Deployment;
@@ -29,6 +30,7 @@ public class SinkitDeployment {
                 .addClass(ApiIntegrationTest.class)
                 .addClass(CoreTest.class)
                 .addClass(GSBTest.class)
+                .addClass(WhitelistCacheServiceTest.class)
                 .addClass(IoCFactory.class)
                 .addClass(FailingHttpStatusCodeException.class);
                 //.addClass(DeploymentException.class);

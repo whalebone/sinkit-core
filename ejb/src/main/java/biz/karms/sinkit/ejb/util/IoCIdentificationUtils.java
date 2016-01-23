@@ -39,7 +39,7 @@ public class IoCIdentificationUtils {
             return null;
         }
 
-        return IoCIdentificationUtils.hashString(idString.getBytes());
+        return IoCIdentificationUtils.hashString(idString.getBytes(), HASH_ALG);
     }
 
     public static String computeUniqueReference(IoCRecord ioc) {
@@ -68,14 +68,14 @@ public class IoCIdentificationUtils {
         byte[] toBeHashed = new byte[uniqueRefBytes.length + salt.length];
         System.arraycopy(uniqueRefBytes, 0, toBeHashed, 0, uniqueRefBytes.length);
         System.arraycopy(salt, 0, toBeHashed, uniqueRefBytes.length, salt.length);
-        return hashString(toBeHashed);
+        return hashString(toBeHashed, HASH_ALG);
     }
 
-    private static String hashString(byte[] toBeHashed) {
+    public static String hashString(byte[] toBeHashed, String hashAlg) {
         String hashString = null;
         MessageDigest md;
         try {
-            md = MessageDigest.getInstance(HASH_ALG);
+            md = MessageDigest.getInstance(hashAlg);
             md.update(toBeHashed);
             hashString = new BigInteger(1, md.digest()).toString(16);
         } catch (NoSuchAlgorithmException e) {

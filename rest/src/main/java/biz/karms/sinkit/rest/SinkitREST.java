@@ -6,6 +6,7 @@ import com.google.gson.JsonSyntaxException;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.ejb.EJB;
+import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.FormParam;
@@ -26,6 +27,7 @@ import java.util.logging.Logger;
  *         TODO: Validation :-)
  *         TODO: OAuth
  */
+@RequestScoped
 @Path("/")
 public class SinkitREST {
 
@@ -124,6 +126,60 @@ public class SinkitREST {
             ex.printStackTrace();
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex.getMessage()).build();
         }
+    }
+
+    @POST
+    @Path("/whitelist/ioc/")
+    @Produces({"application/json;charset=UTF-8"})
+    //@Consumes({"application/json;charset=UTF-8"})
+    public Response putWhitelistIoCRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, String ioc) {
+        if (!StupidAuthenticator.isAuthenticated(token)) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity(AUTH_FAIL).build();
+        }
+        try {
+            String response = sinkitService.processWhitelistIoCRecord(ioc);
+            return Response.status(Response.Status.OK).entity(response).build();
+        } catch (IoCValidationException | JsonSyntaxException ex) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(ex.getMessage() + " JSON was:" + ioc).build();
+        } catch (Exception ex) {
+            log.severe("Processiong whitelist entry went wrong: " + ex.getMessage());
+            log.severe("IoC: " + ioc);
+            ex.printStackTrace();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex.getMessage()).build();
+        }
+    }
+
+    @GET
+    @Path("/whitelist/stats/")
+    @Produces({"application/json;charset=UTF-8"})
+    //@Consumes({"application/json;charset=UTF-8"})
+    public String getWhitelistStats(@HeaderParam(AUTH_HEADER_PARAM) String token) {
+        if (!StupidAuthenticator.isAuthenticated(token)) {
+            return AUTH_FAIL;
+        }
+        return sinkitService.getWhitelistStats();
+    }
+
+    @GET
+    @Path("/whitelist/record/{key}")
+    @Produces({"application/json;charset=UTF-8"})
+    //@Consumes({"application/json;charset=UTF-8"})
+    public String getWhitelistedRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("key") String key) {
+        if (!StupidAuthenticator.isAuthenticated(token)) {
+            return AUTH_FAIL;
+        }
+        return sinkitService.getWhitelistedRecord(key);
+    }
+
+    @DELETE
+    @Path("/whitelist/record/{key}")
+    @Produces({"application/json;charset=UTF-8"})
+    //@Consumes({"application/json;charset=UTF-8"})
+    public String removeWhitelistedRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("key") String key) {
+        if (!StupidAuthenticator.isAuthenticated(token)) {
+            return AUTH_FAIL;
+        }
+        return sinkitService.getWhitelistedRecord(key);
     }
 
     @POST

@@ -18,6 +18,7 @@ public class IoCTime implements Serializable {
     @SerializedName("received_by_core")
     private Date receivedByCore;
     private Date deactivated;
+    private Date whitelisted;
 
     public Date getSource() {
         return source;
@@ -51,6 +52,14 @@ public class IoCTime implements Serializable {
         this.deactivated = deactivated;
     }
 
+    public Date getWhitelisted() {
+        return whitelisted;
+    }
+
+    public void setWhitelisted(Date whitelisted) {
+        this.whitelisted = whitelisted;
+    }
+
     @Override
     public String toString() {
         return "IoCTime{" +
@@ -58,6 +67,7 @@ public class IoCTime implements Serializable {
                 ", observation=" + observation +
                 ", receivedByCore=" + receivedByCore +
                 ", deactivated=" + deactivated +
+                ", whitelisted=" + whitelisted +
                 '}';
     }
 }

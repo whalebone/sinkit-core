@@ -29,6 +29,8 @@ public class IoCRecord implements Indexable {
     private IoCTime time;
     private IoCSeen seen;
     private Boolean active;
+    @SerializedName("whitelist_name")
+    private String whitelistName;
 
     @SerializedName("virus_total_reports")
     private IoCVirusTotalReport[] virusTotalReports;
@@ -123,6 +125,14 @@ public class IoCRecord implements Indexable {
         this.active = active;
     }
 
+    public String getWhitelistName() {
+        return whitelistName;
+    }
+
+    public void setWhitelistName(String whitelistName) {
+        this.whitelistName = whitelistName;
+    }
+
     public IoCVirusTotalReport[] getVirusTotalReports() {
         return virusTotalReports;
     }
@@ -135,6 +145,7 @@ public class IoCRecord implements Indexable {
     public String toString() {
         return "IoCRecord{" +
                 "documentId='" + documentId + '\'' +
+                ", uniqueRef='" + uniqueRef + '\'' +
                 ", feed=" + feed +
                 ", description=" + description +
                 ", classification=" + classification +
@@ -144,6 +155,7 @@ public class IoCRecord implements Indexable {
                 ", time=" + time +
                 ", seen=" + seen +
                 ", active=" + active +
+                ", whitelistName='" + whitelistName + '\'' +
                 ", virusTotalReports=" + Arrays.toString(virusTotalReports) +
                 '}';
     }

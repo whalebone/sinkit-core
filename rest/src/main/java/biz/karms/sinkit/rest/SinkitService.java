@@ -5,6 +5,7 @@ import biz.karms.sinkit.ejb.DNSApi;
 import biz.karms.sinkit.ejb.GSBService;
 import biz.karms.sinkit.ejb.WebApi;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
+import biz.karms.sinkit.ejb.cache.pojo.WhitelistedRecord;
 import biz.karms.sinkit.ejb.dto.AllDNSSettingDTO;
 import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
 import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
@@ -109,14 +110,38 @@ public class SinkitService implements Serializable {
     }
 
     String processIoCRecord(final String jsonIoCRecord) throws IoCValidationException, ArchiveException {
-
         IoCRecord ioc = new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().fromJson(jsonIoCRecord, IoCRecord.class);
         ioc = coreService.processIoCRecord(ioc);
         return new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().toJson(ioc);
     }
 
-    String runCacheRebuilding() {
+    String processWhitelistIoCRecord(final String jsonIoCRecord) throws IoCValidationException, ArchiveException {
+        IoCRecord ioc = new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().fromJson(jsonIoCRecord, IoCRecord.class);
+        boolean response = coreService.processWhitelistIoCRecord(ioc);
+        return new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().toJson(response);
+    }
 
+    String getWhitelistedRecord(String id) {
+        if (id == null) {
+            return new GsonBuilder().create().toJson(ERR_MSG);
+        }
+        WhitelistedRecord white = coreService.getWhitelistedRecord(id);
+        return new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().toJson(white);
+    }
+
+    String removeWhitelistedRecord(String id) {
+        if (id == null) {
+            return new GsonBuilder().create().toJson(ERR_MSG);
+        }
+        boolean response = coreService.removeWhitelistedRecord(id);
+        return new GsonBuilder().create().toJson(response);
+    }
+
+    String getWhitelistStats() {
+        return new GsonBuilder().create().toJson(coreService.getWhitelistStats());
+    }
+
+    String runCacheRebuilding() {
         String response;
         if (coreService.runCacheRebuilding()) {
             response = "Cache rebuilding started";

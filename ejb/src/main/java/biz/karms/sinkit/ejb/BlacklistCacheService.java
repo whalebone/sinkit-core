@@ -8,10 +8,12 @@ import javax.ejb.Local;
  * @author Michal Karm Babacek
  */
 @Local
-public interface CacheService {
+public interface BlacklistCacheService {
     boolean addToCache(final IoCRecord ioCRecord);
 
     boolean removeFromCache(final IoCRecord ioCRecord);
+
+    boolean removeWholeObjectFromCache(final IoCRecord record);
 
     boolean dropTheWholeCache();
 }

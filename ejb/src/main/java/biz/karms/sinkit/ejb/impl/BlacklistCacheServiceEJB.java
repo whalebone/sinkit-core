@@ -1,11 +1,12 @@
 package biz.karms.sinkit.ejb.impl;
 
-import biz.karms.sinkit.ejb.CacheService;
+import biz.karms.sinkit.ejb.BlacklistCacheService;
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCache;
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCacheName;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ioc.IoCRecord;
+import org.apache.commons.lang3.StringUtils;
 import org.infinispan.Cache;
 import org.jboss.marshalling.Pair;
 
@@ -20,7 +21,7 @@ import java.util.logging.Logger;
  * @author Michal Karm Babacek
  */
 @Stateless
-public class CacheServiceEJB implements CacheService {
+public class BlacklistCacheServiceEJB implements BlacklistCacheService {
 
     @Inject
     private Logger log;
@@ -130,7 +131,7 @@ public class CacheServiceEJB implements CacheService {
             return false;
         }
 
-        if (ioCRecord.getSource().getId() == null && ioCRecord.getSource().getId().getValue() == null) {
+        if (ioCRecord.getSource().getId() == null || ioCRecord.getSource().getId().getValue() == null) {
             log.log(Level.SEVERE, "removeFromCache: ioCRecord can't have source id null.");
             /*try {
                 if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
@@ -178,6 +179,25 @@ public class CacheServiceEJB implements CacheService {
                 }*/
                 return false;
             }
+        }
+        return true;
+    }
+
+    @Override
+    public boolean removeWholeObjectFromCache(final IoCRecord iocRecord) {
+        if (iocRecord == null || iocRecord.getSource() == null || iocRecord.getSource().getId() == null ||
+                StringUtils.isBlank(iocRecord.getSource().getId().getValue())) {
+            log.log(Level.SEVERE, "removeWholeObjectFromCache: ioc or ioc.source.id.value is null or blank");
+            return false;
+        }
+        final String key = iocRecord.getSource().getId().getValue();
+        try {
+            if (blacklistCache.containsKey(key)) {
+                blacklistCache.removeAsync(key);
+            }
+        } catch (Exception e) {
+            log.log(Level.SEVERE, "removeFromCache", e);
+            return false;
         }
         return true;
     }

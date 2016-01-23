@@ -5,7 +5,7 @@ import biz.karms.sinkit.ejb.dto.AllDNSSettingDTO;
 import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
 import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
 
-import javax.ejb.Remote;
+import javax.ejb.Local;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +14,7 @@ import java.util.Set;
 /**
  * @author Michal Karm Babacek
  */
-@Remote
+@Local
 public interface WebApi {
     String sayHello(final String queryString);
 

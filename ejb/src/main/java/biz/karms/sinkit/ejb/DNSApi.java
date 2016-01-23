@@ -4,13 +4,13 @@ import biz.karms.sinkit.ejb.dto.Sinkhole;
 import biz.karms.sinkit.eventlog.EventLogAction;
 import biz.karms.sinkit.exception.ArchiveException;
 
-import javax.ejb.Remote;
+import javax.ejb.Local;
 import java.util.Set;
 
 /**
  * @author Michal Karm Babacek
  */
-@Remote
+@Local
 public interface DNSApi {
     Sinkhole getSinkHole(final String clientIPAddress, final String fqdnOrIp, String fqdn);
 
