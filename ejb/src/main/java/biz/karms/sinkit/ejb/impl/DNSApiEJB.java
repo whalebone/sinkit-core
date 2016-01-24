@@ -3,6 +3,7 @@ package biz.karms.sinkit.ejb.impl;
 import biz.karms.sinkit.ejb.ArchiveService;
 import biz.karms.sinkit.ejb.CoreService;
 import biz.karms.sinkit.ejb.DNSApi;
+import biz.karms.sinkit.ejb.GSBService;
 import biz.karms.sinkit.ejb.WebApi;
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCache;
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCacheName;
@@ -20,6 +21,8 @@ import biz.karms.sinkit.eventlog.VirusTotalRequestStatus;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.ioc.IoCRecord;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.validator.routines.DomainValidator;
 import org.infinispan.Cache;
 import org.infinispan.query.Search;
@@ -67,6 +70,9 @@ public class DNSApiEJB implements DNSApi {
     @EJB
     private ArchiveService archiveService;
 
+    @EJB //TODO: https://github.com/whalebone/sinkit-core/issues/81
+    private GSBService gsbService;
+
     @Inject
     @SinkitCache(SinkitCacheName.BLACKLIST_CACHE)
     private Cache<String, BlacklistedRecord> blacklistCache;
@@ -87,9 +93,9 @@ public class DNSApiEJB implements DNSApi {
     @SinkitCache(SinkitCacheName.RULES_LOCAL_CACHE)
     private Cache<String, List<Rule>> ruleLocalCache;
 
-    private static final List<String> feedTypes = Arrays.asList("c&c", "malware", "ransomware", "malware configuration", "phishing", "blacklist");
-    private static final String ipv6Sinkhole = System.getenv("SINKIT_SINKHOLE_IPV6");
-    private static final String ipv4Sinkhole = System.getenv("SINKIT_SINKHOLE_IP");
+    private static final List<String> FEEDTYPES = Arrays.asList("c&c", "malware", "ransomware", "malware configuration", "phishing", "blacklist");
+    private static final String IPV6SINKHOLE = System.getenv("SINKIT_SINKHOLE_IPV6");
+    private static final String IPV4SINKHOLE = System.getenv("SINKIT_SINKHOLE_IP");
 
     // TODO: List? Array? Map with additional data? Let's think this over.
     // TODO: Replace/factor out duplicated code in .getRules out of webApiEJB
@@ -185,7 +191,7 @@ public class DNSApiEJB implements DNSApi {
             try {
                 clientIPAddressPaddedBigInt = CIDRUtils.getStartEndAddresses(fqdnOrIp).getA();
             } catch (UnknownHostException e) {
-                log.log(Level.SEVERE, "customListsLookup: " + fqdnOrIp + " in not a valid IP address nor a valid FQDN.");
+                log.log(Level.FINE, "customListsLookup: " + fqdnOrIp + " in not a valid IP address nor a valid FQDN.");
                 return null;
             }
 
@@ -227,8 +233,8 @@ public class DNSApiEJB implements DNSApi {
         //TODO logic about B|W lists
         //TODO logic about *something.foo.com being less important then bar.something.foo.com
         //TODO This is just a stupid dummy/mock
-        List<CustomList> customLists = customListsLookup(customerId, isFQDN, fqdnOrIp);
-        return (customLists == null || customLists.isEmpty()) ? null : customLists.get(0);
+        final List<CustomList> customLists = customListsLookup(customerId, isFQDN, fqdnOrIp);
+        return (CollectionUtils.isEmpty(customLists)) ? null : customLists.get(0);
     }
 
     /**
@@ -256,11 +262,10 @@ public class DNSApiEJB implements DNSApi {
         // Lookup Rules (gives customerId, feeds and their settings)
         //TODO: Add test that all such found rules have the same customerId
         //TODO: factor .getRules out of webApiEJB
-        //@SuppressWarnings("unchecked")
         final List<Rule> rules = rulesLookup(clientIPAddressPaddedBigInt);
 
         //If there is no rule, we simply don't sinkhole anything.
-        if (rules == null || rules.isEmpty()) {
+        if (CollectionUtils.isEmpty(rules)) {
             //TODO: Distinguish this from an error state.
             return null;
         }
@@ -280,14 +285,14 @@ public class DNSApiEJB implements DNSApi {
         // TODO: Implement logging for whitelisted stuff that's positive on IoC.
         if (customList != null) {
             // Whitelisted
-            if (customList.getWhiteBlackLog().equals("W")) {
+            if ("W".equals(customList.getWhiteBlackLog())) {
                 //TODO: Distinguish this from an error state.
                 return null;
                 //Blacklisted
-            } else if (customList.getWhiteBlackLog().equals("B")) {
-                return new Sinkhole(probablyIsIPv6 ? ipv6Sinkhole : ipv4Sinkhole);
+            } else if ("B".equals(customList.getWhiteBlackLog())) {
+                return new Sinkhole(probablyIsIPv6 ? IPV6SINKHOLE : IPV4SINKHOLE);
                 // L for audit logging is not implemented on purpose. Ask Robert/Karm.
-            } else if (customList.getWhiteBlackLog().equals("L")) {
+            } else if ("L".equals(customList.getWhiteBlackLog())) {
                 // Do nothing
                 log.log(Level.SEVERE, "getSinkHole: getWhiteBlackLog returned L. It shouldn't be used. Something is wrong.");
             } else {
@@ -304,12 +309,19 @@ public class DNSApiEJB implements DNSApi {
         BlacklistedRecord blacklistedRecord = blacklistCache.get(fqdnOrIp);
         if (blacklistedRecord == null) {
             log.log(Level.FINE, "No hit. The requested fqdnOrIp: " + fqdnOrIp + " is clean.");
+
+            // Our IoC cache didn't contain a hit, so we give it a shot with GSB.
+            final Set<String> gsbResults = gsbService.lookup(fqdnOrIp);
+            if (!CollectionUtils.isEmpty(gsbResults)) {
+                // TODO: We should somehow log this the IoC way...
+                log.log(Level.INFO, "fqdnOrIp: " + fqdnOrIp + " found in GSB. Ignoring silently.");
+            }
             return null;
         }
         // Feed UID : Type
         final Map<String, Pair<String, String>> feedTypeMap = blacklistedRecord.getSources();
         //If there is no feed, we simply don't sinkhole anything. It is weird though.
-        if (feedTypeMap == null || feedTypeMap.isEmpty()) {
+        if (MapUtils.isEmpty(feedTypeMap)) {
             log.log(Level.WARNING, "getSinkHole: IoC without feed settings.");
             return null;
         }
@@ -320,7 +332,7 @@ public class DNSApiEJB implements DNSApi {
             for (String uuid : rule.getSources().keySet()) {
                 // feed uuid : [type , docID], so "getA()" means get type
                 Pair<String, String> typeDocId = feedTypeMap.get(uuid);
-                if (typeDocId != null && feedTypes.contains(typeDocId.getA())) {
+                if (typeDocId != null && FEEDTYPES.contains(typeDocId.getA())) {
                     String tmpMode = rule.getSources().get(uuid);
                     if (mode == null || ("S".equals(tmpMode) && !"D".equals(mode)) || "D".equals(tmpMode)) {
                         //D >= S >= L >= null, i.e. if a feed is Disabled, we don't switch to Sinkhole.
@@ -346,7 +358,7 @@ public class DNSApiEJB implements DNSApi {
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging BLOCK failed: ", e);
             } finally {
-                return new Sinkhole(probablyIsIPv6 ? ipv6Sinkhole : ipv4Sinkhole);
+                return new Sinkhole(probablyIsIPv6 ? IPV6SINKHOLE : IPV4SINKHOLE);
             }
         } else if ("L".equals(mode)) {
             //Log it for customer
@@ -356,7 +368,6 @@ public class DNSApiEJB implements DNSApi {
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging AUDIT failed: ", e);
             } finally {
-                //log.log(Level.INFO,"BLOCK9 took: " + (System.currentTimeMillis()-start));
                 //TODO: Distinguish this from an error state.
                 return null;
             }
