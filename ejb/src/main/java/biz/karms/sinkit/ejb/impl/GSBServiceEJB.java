@@ -8,6 +8,7 @@ import biz.karms.sinkit.ejb.gsb.GSBClient;
 import biz.karms.sinkit.ejb.gsb.dto.FullHashLookupResponse;
 import biz.karms.sinkit.ejb.gsb.util.GSBCachePOJOFactory;
 import biz.karms.sinkit.ejb.util.GSBUrl;
+import org.apache.commons.collections.MapUtils;
 import org.infinispan.Cache;
 import org.infinispan.commons.util.concurrent.NotifyingFuture;
 
@@ -45,67 +46,70 @@ public class GSBServiceEJB implements GSBService {
     }
 
     @Override
-    public Set<String> lookup(String url) {
-        if (url == null) {
+    public Set<String> lookup(final String ipOrFQDN) {
+        if (ipOrFQDN == null) {
             throw new IllegalArgumentException("lookup: URL must not be null, cannot perform lookup.");
         }
-        GSBUrl gsbUrl = new GSBUrl(url); //canonicalization is done here
+        //canonicalization is done here
+        final String gsbUrl = GSBUrl.getUrl(ipOrFQDN);
+        final byte[] hash = GSBUrl.getHash(gsbUrl);
+        final String fullHashString = GSBUrl.getHashString(hash);
+        // TODO Might not be 4 bytes in future
+        final String hashStringPrefix = GSBUrl.getHashStringPrefix(4, fullHashString);
+        final byte[] hashPrefix = GSBUrl.getHashPrefix(4, hash);
 
-        String fullHashString = gsbUrl.getHashString(); // TODO
-        String hashStringPrefix = gsbUrl.getHashStringPrefix(4); // TODO
-        byte[] hashPrefix = gsbUrl.getHashPrefix(4);
-        logger.log(Level.INFO, "lookup: lookup for hashPrefix " + hashStringPrefix);
-        Set<String> matchedBlacklists = new HashSet<>();
+        logger.log(Level.FINE, "lookup: lookup for hashPrefix " + hashStringPrefix);
 
         GSBRecord gsbRecord = gsbCache.get(hashStringPrefix);
-        // if hash prefix is not in cash then URL is not blacklisted for sure
+        // if hash prefix is not in the cache then URL is not blacklisted for sure
         if (gsbRecord == null) {
-            logger.log(Level.INFO, "lookup: hashPrefix " + hashStringPrefix + " was not found in cache.");
-            return matchedBlacklists; //return empty list
+            logger.log(Level.FINE, "lookup: hashPrefix " + hashStringPrefix + " was not found in cache.");
+            return null;
         }
-        HashMap<String, HashSet<String>> fullHashes;
+
+        final HashMap<String, HashSet<String>> fullHashes;
         if (Calendar.getInstance().before(gsbRecord.getFullHashesExpireAt())) {
-            logger.log(Level.INFO, "lookup: Full hashes for prefix " + hashStringPrefix + " are valid.");
+            logger.log(Level.FINE, "lookup: Full hashes for prefix " + hashStringPrefix + " are valid.");
             fullHashes = gsbRecord.getFullHashes();
         } else {
-            logger.log(Level.INFO, "lookup: Full hashes for prefix " + hashStringPrefix + " expired -> updating.");
+            logger.log(Level.FINE, "lookup: Full hashes for prefix " + hashStringPrefix + " expired -> updating.");
             FullHashLookupResponse resposne = gsbClient.getFullHashes(hashPrefix);
             gsbRecord = GSBCachePOJOFactory.createFullHashes(resposne);
             gsbCache.putAsync(hashStringPrefix, gsbRecord);
             fullHashes = gsbRecord.getFullHashes();
         }
 
-        // if fullHashes are empty then return empty matched blacklists
-        if (fullHashes.isEmpty()) {
-            logger.log(Level.INFO, "lookup: Valid full hashes for prefix " + hashStringPrefix + " are empty.");
-            return matchedBlacklists;
+        // if fullHashes are empty then return null, i.e. no matched blacklists
+        if (MapUtils.isEmpty(fullHashes)) {
+            logger.log(Level.FINE, "lookup: Valid full hashes for prefix " + hashStringPrefix + " are empty.");
+            return null;
         } else {
+            final Set<String> matchedBlacklists = new HashSet<>();
             for (String blacklist : fullHashes.keySet()) {
-                Set<String> fullHashesOnBlacklist = fullHashes.get(blacklist);
+                final Set<String> fullHashesOnBlacklist = fullHashes.get(blacklist);
                 if (fullHashesOnBlacklist != null && fullHashesOnBlacklist.contains(fullHashString)) {
                     logger.log(Level.FINEST, "lookup: got hit for hash prefix " + hashStringPrefix + " and full hash " + fullHashString + ": " + blacklist);
                     matchedBlacklists.add(blacklist);
                 }
             }
+            return matchedBlacklists;
         }
-        return matchedBlacklists;
     }
 
     @Override
-    public boolean putHashPrefix(String hashPrefix) {
+    public boolean putHashPrefix(final String hashPrefix) {
         if (hashPrefix == null) {
             logger.log(Level.SEVERE, "putHashPrefix: Got null hash prefix. Can't process this.");
             return false;
         }
 
         if (!gsbCache.containsKey(hashPrefix))  {
-
-            Calendar fullHashesExpireAt = Calendar.getInstance();
+            final Calendar fullHashesExpireAt = Calendar.getInstance();
             // set to past to enforce update full hashes when hit by lookup for the first time
             fullHashesExpireAt.add(Calendar.SECOND, -1);
             HashMap<String, HashSet<String>> fullHashes =  new HashMap<>();
 
-            GSBRecord gsbRecord = new GSBRecord(hashPrefix, fullHashesExpireAt, fullHashes);
+            final GSBRecord gsbRecord = new GSBRecord(hashPrefix, fullHashesExpireAt, fullHashes);
             gsbCache.putAsync(hashPrefix, gsbRecord);
             logger.log(Level.FINEST, "putHashPrefix: Hash prefix " + hashPrefix + " added into cache.");
         } else {
@@ -117,7 +121,7 @@ public class GSBServiceEJB implements GSBService {
     }
 
     @Override
-    public boolean removeHashPrefix(String hashPrefix) {
+    public boolean removeHashPrefix(final String hashPrefix) {
         if (hashPrefix == null) {
             logger.log(Level.SEVERE, "removeHashPrefix: Got null hash prefix. Can't process this.");
             return false;
