@@ -6,7 +6,7 @@ import biz.karms.sinkit.ejb.cache.annotations.SinkitCacheName;
 import biz.karms.sinkit.ejb.cache.pojo.WhitelistedRecord;
 import biz.karms.sinkit.ejb.util.WhitelistUtils;
 import biz.karms.sinkit.ioc.IoCRecord;
-import biz.karms.sinkit.ioc.IoCSourceIdType;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.infinispan.Cache;
 
@@ -31,18 +31,18 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
     private Cache<String, WhitelistedRecord> whitelistCache;
 
     @Override
-    public WhitelistedRecord put(final IoCRecord iocRecord, boolean completed) {
+    public WhitelistedRecord put(final IoCRecord iocRecord, final boolean completed) {
         if (!isIoCValidForPut(iocRecord)) {
             return null;
         }
 
-        WhitelistedRecord white = WhitelistUtils.createWhitelistedRecord(iocRecord, completed);
-        String key = WhitelistUtils.computeHashedId(white.getRawId());
+        final WhitelistedRecord white = WhitelistUtils.createWhitelistedRecord(iocRecord, completed);
+        final String key = DigestUtils.md5Hex(white.getRawId());
         try {
             if (!whitelistCache.containsKey(key)) {
-                whitelistCache.put(key, white, iocRecord.getSource().getTTL(), TimeUnit.SECONDS);
+                whitelistCache.putAsync(key, white, iocRecord.getSource().getTTL(), TimeUnit.SECONDS);
             } else {
-                whitelistCache.replace(key, white, iocRecord.getSource().getTTL(), TimeUnit.SECONDS);
+                whitelistCache.replaceAsync(key, white, iocRecord.getSource().getTTL(), TimeUnit.SECONDS);
             }
         } catch (Exception e) {
             log.log(Level.SEVERE, "put", e);
@@ -52,7 +52,7 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
     }
 
     @Override
-    public WhitelistedRecord get(String id) {
+    public WhitelistedRecord get(final String id) {
 //        if(iocRecord == null || iocRecord.getSource() == null || iocRecord.getSource().getId() == null ||
 //                StringUtils.isBlank(iocRecord.getSource().getId().getValue())) {
 //            log.log(Level.SEVERE, "add: Cannot search whitelist. Object ioc or ioc.source.id.value is null or blank");
@@ -63,7 +63,7 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
             return null;
         }
 
-        String key = WhitelistUtils.computeHashedId(id);
+        final String key = DigestUtils.md5Hex(id);
         if (!whitelistCache.containsKey(key)) {
             return null;
         }
@@ -84,17 +84,16 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
     }
 
     @Override
-    public WhitelistedRecord setCompleted(WhitelistedRecord partialWhite) {
-        if (partialWhite == null || partialWhite.getRawId() == null || StringUtils.isBlank(partialWhite.getSourceName()) ||
-                partialWhite.getExpiresAt() == null) {
+    public WhitelistedRecord setCompleted(final WhitelistedRecord partialWhite) {
+        if (partialWhite == null || partialWhite.getRawId() == null || StringUtils.isBlank(partialWhite.getSourceName()) || partialWhite.getExpiresAt() == null) {
             log.log(Level.SEVERE, "put: Cannot set whiltelist entry as completed - missing mandatory fields");
             return null;
         }
-        String key = WhitelistUtils.computeHashedId(partialWhite.getRawId());
+        final String key = DigestUtils.md5Hex(partialWhite.getRawId());
         if (!whitelistCache.containsKey(key)) {
             return null;
         }
-        long ttl = (partialWhite.getExpiresAt().getTimeInMillis() - Calendar.getInstance().getTimeInMillis());
+        final long ttl = (partialWhite.getExpiresAt().getTimeInMillis() - Calendar.getInstance().getTimeInMillis());
         if (ttl < 0) {
             return null;
         }
@@ -103,9 +102,9 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
     }
 
     @Override
-    public boolean remove(String id) {
+    public boolean remove(final String id) {
         log.log(Level.INFO, "remove: removing whitelist entry manually, key: " + id);
-        String key = WhitelistUtils.computeHashedId(id);
+        final String key = DigestUtils.md5Hex(id);
         if (!whitelistCache.containsKey(key)) {
             log.log(Level.INFO, "remove: entry not found, key: " + id);
             return false;
@@ -119,13 +118,12 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
         return whitelistCache.size();
     }
 
-    private boolean isIoCValidForPut(IoCRecord iocRecord) {
-        if(iocRecord == null || iocRecord.getSource() == null || iocRecord.getSource().getId() == null ||
-                StringUtils.isBlank(iocRecord.getSource().getId().getValue())) {
+    private boolean isIoCValidForPut(final IoCRecord iocRecord) {
+        if (iocRecord == null || iocRecord.getSource() == null || iocRecord.getSource().getId() == null || StringUtils.isBlank(iocRecord.getSource().getId().getValue())) {
             log.log(Level.SEVERE, "put: Cannot put entry to whitelist - ioc or ioc.source.id.value is null or blank");
             return false;
         }
-        if(iocRecord.getSource().getTTL() == null) {
+        if (iocRecord.getSource().getTTL() == null) {
             log.log(Level.SEVERE, "put: Cannot put entry to whitelist - ioc.source.ttl is null");
             return false;
         }
