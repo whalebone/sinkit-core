@@ -418,7 +418,7 @@ public class WebApiEJB implements WebApi {
                 customList.setClientStartAddress(dnsClientStartAddress);
                 customList.setClientEndAddress(dnsClientEndAddress);
                 final String blacklistWhitelistLog = customerCustomList.getLists().get(fqdnOrCIDR);
-                if (!(blacklistWhitelistLog != null && (blacklistWhitelistLog.equals("B") || blacklistWhitelistLog.equals("W") || blacklistWhitelistLog.equals("L")))) {
+                if (!(blacklistWhitelistLog != null && ("B".equals(blacklistWhitelistLog) || "W".equals(blacklistWhitelistLog) || "L".equals(blacklistWhitelistLog)))) {
                     log.log(Level.SEVERE, "putCustomLists: Expected one of <B|W|L> but got: " + blacklistWhitelistLog + ". customListsElementCounter: " + customListsElementCounter);
                     // TODO: Proper Error codes.
                     return null;
