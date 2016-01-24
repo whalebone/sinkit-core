@@ -38,7 +38,7 @@ public class CustomList implements Serializable {
 
     /**
      * Either fqdn or listCidrAddress is set, not both.
-     *
+     * <p>
      * While, Black, Log, defined as either CIDR or FQDN
      */
     @Field(index = Index.YES, analyze = Analyze.NO)
