@@ -7,6 +7,7 @@ import io.searchbox.client.JestClient;
 import io.searchbox.client.JestResult;
 import io.searchbox.core.*;
 import io.searchbox.params.Parameters;
+import org.apache.commons.collections.CollectionUtils;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.Stateless;
@@ -53,10 +54,10 @@ public class ElasticServiceEJB implements ElasticService {
      */
     @Override
     public <T extends Indexable> T searchForSingleHit(String query, String index, String type, Class<T> clazz) throws ArchiveException {
-        List<T> hits = this.search(query, index, type, clazz);
-
-        if (hits.isEmpty()) return null;
-        else if (hits.size() > 1) {
+        final List<T> hits = this.search(query, index, type, clazz);
+        if (CollectionUtils.isEmpty(hits)) {
+            return null;
+        } else if (hits.size() > 1) {
             log.severe("Query returned more than single result: " + query);
             throw new ArchiveException("Search returned " + hits.size() + " hits. Expecting max one -> panic!");
         }
