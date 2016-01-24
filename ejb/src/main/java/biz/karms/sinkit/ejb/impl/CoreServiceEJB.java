@@ -8,7 +8,9 @@ import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCValidationException;
 import biz.karms.sinkit.ioc.*;
 import biz.karms.sinkit.ioc.util.IoCSourceIdBuilder;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.lucene.util.CollectionUtil;
 import sun.rmi.runtime.Log;
 
 import javax.annotation.PostConstruct;
@@ -17,6 +19,7 @@ import javax.ejb.Stateless;
 import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
@@ -143,7 +146,7 @@ public class CoreServiceEJB implements CoreService {
         // this has to be done in multiple runs until search returns 0 results
         do {
             iocs = archiveService.findIoCsForDeactivation(iocActiveHours);
-            if (!iocs.isEmpty()) {
+            if (!CollectionUtils.isEmpty(iocs)) {
                 for (IoCRecord ioc : iocs) {
                     blacklistCacheService.removeFromCache(ioc);
                     archiveService.deactivateRecord(ioc);

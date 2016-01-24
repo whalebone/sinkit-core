@@ -47,7 +47,6 @@ public class SchedulerDemoBean implements SchedulerDemo {
     @Override
     public void initialize(String info) {
         ScheduleExpression sexpr = new ScheduleExpression();
-        // set schedule to every 10 seconds for demonstration
         sexpr.hour("*").minute("*").second("0/55");
         // persistent must be false because the timer is started by the HASingleton service
         timerService.createCalendarTimer(sexpr, new TimerConfig(info, false));
