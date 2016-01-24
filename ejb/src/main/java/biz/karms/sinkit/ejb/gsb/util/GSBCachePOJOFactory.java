@@ -3,7 +3,12 @@ package biz.karms.sinkit.ejb.gsb.util;
 import biz.karms.sinkit.ejb.cache.pojo.GSBRecord;
 import biz.karms.sinkit.ejb.gsb.dto.FullHashLookupResponse;
 
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 
 /**
  * Created by tom on 12/20/15.
@@ -12,8 +17,8 @@ import java.util.*;
  */
 public class GSBCachePOJOFactory {
 
-    public static GSBRecord createFullHashes(FullHashLookupResponse response)  {
-        GSBRecord gsbRecord = new GSBRecord();
+    public static GSBRecord createFullHashes(FullHashLookupResponse response) {
+        final GSBRecord gsbRecord = new GSBRecord();
         Calendar c = Calendar.getInstance();
         c.add(Calendar.SECOND, response.getValidSeconds());
         gsbRecord.setFullHashesExpireAt(c);

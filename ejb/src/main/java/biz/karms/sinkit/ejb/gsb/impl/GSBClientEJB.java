@@ -3,20 +3,15 @@ package biz.karms.sinkit.ejb.gsb.impl;
 import biz.karms.sinkit.ejb.gsb.GSBClient;
 import biz.karms.sinkit.ejb.gsb.dto.FullHashLookupResponse;
 import biz.karms.sinkit.ejb.gsb.util.FullHashLookupResponseReader;
-import biz.karms.sinkit.ejb.util.GSBUrl;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.annotation.PostConstruct;
-import javax.ejb.BeforeCompletion;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import java.io.*;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
