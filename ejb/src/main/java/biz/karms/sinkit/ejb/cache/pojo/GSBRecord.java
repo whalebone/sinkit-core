@@ -1,38 +1,23 @@
 package biz.karms.sinkit.ejb.cache.pojo;
 
-import biz.karms.sinkit.ejb.util.FullHashesMapBridge;
-import org.hibernate.search.annotations.*;
-
-import javax.persistence.Entity;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.HashSet;
 
 /**
  * Created by tom on 11/27/15.
+ *
  * @author Tomas Kozel
  */
-@Indexed(index = "GSBRecord")
-@Entity
+
 public class GSBRecord implements Serializable {
 
-    private static final long serialVersionUID = -7345339434457942885L;
+    private static final long serialVersionUID = -7345339432357942885L;
 
-    @Field(index = Index.YES, analyze = Analyze.NO)
-    String hashPrefix;
-
-    @Field
-    @CalendarBridge(resolution = Resolution.SECOND)
-    Calendar fullHashesExpireAt;
-
-    /**
-     * blacklistName -> [FullHash]
-     */
-    @FieldBridge(impl = FullHashesMapBridge.class)
-    @Field(index = Index.YES, analyze = Analyze.YES)
-    HashMap<String, HashSet<String>> fullHashes;
+    private String hashPrefix;
+    private Calendar fullHashesExpireAt;
+    private HashMap<String, HashSet<String>> fullHashes;
 
     public GSBRecord() {
     }
