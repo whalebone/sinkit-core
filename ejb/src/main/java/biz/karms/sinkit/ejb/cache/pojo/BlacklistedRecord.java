@@ -9,26 +9,17 @@ import java.util.HashMap;
 /**
  * @author Michal Karm Babacek
  */
-/*
-@Indexed(index = "BlacklistedRecord")
-@Entity
-*/
 public class BlacklistedRecord implements Serializable {
 
     private static final long serialVersionUID = 2184999923427771L;
 
-    //@Field(index = Index.YES, analyze = Analyze.NO)
     private String blackListedDomainOrIP;
 
-    //@Field
-    //@CalendarBridge(resolution = Resolution.HOUR)
     private Calendar listed;
 
     /**
      * Feed : {Type, IoCID}
      */
-    //@FieldBridge(impl = SettingsMapBridge.class)
-    //@Field(index = Index.YES, analyze = Analyze.YES)
     private HashMap<String, Pair<String, String>> sources;
 
     public BlacklistedRecord(String blackListedDomainOrIP, Calendar listed, HashMap<String, Pair<String, String>> sources) {
