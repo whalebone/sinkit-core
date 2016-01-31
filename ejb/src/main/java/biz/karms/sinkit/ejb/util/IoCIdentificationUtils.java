@@ -2,10 +2,9 @@ package biz.karms.sinkit.ejb.util;
 
 import biz.karms.sinkit.ioc.IoCRecord;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.codec.digest.Md5Crypt;
 
 /**
- * Created by tom on 11/7/15.
+ * @author Tomas Kozel
  */
 public class IoCIdentificationUtils {
 
@@ -32,7 +31,7 @@ public class IoCIdentificationUtils {
             return null;
         }
 
-        return DigestUtils.md5Hex(Md5Crypt.md5Crypt(idString.toString().getBytes()));
+        return DigestUtils.md5Hex(idString.toString());
     }
 
     public static String computeUniqueReference(final IoCRecord ioc) {
@@ -58,6 +57,6 @@ public class IoCIdentificationUtils {
             return null;
         }
 
-        return DigestUtils.md5Hex(Md5Crypt.md5Crypt(uniqueRef.toString().getBytes()));
+        return DigestUtils.md5Hex(uniqueRef.toString());
     }
 }
