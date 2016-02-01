@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.Calendar;
 
 /**
- * Created by tkozel on 1/9/16.
+ * @author Tomas Kozel
  */
 public class WhitelistedRecord implements Serializable {
 

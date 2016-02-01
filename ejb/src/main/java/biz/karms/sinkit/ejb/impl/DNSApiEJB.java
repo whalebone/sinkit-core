@@ -12,6 +12,7 @@ import biz.karms.sinkit.ejb.cache.pojo.CustomList;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ejb.dto.Sinkhole;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
+import biz.karms.sinkit.ejb.util.IoCIdentificationUtils;
 import biz.karms.sinkit.eventlog.EventDNSRequest;
 import biz.karms.sinkit.eventlog.EventLogAction;
 import biz.karms.sinkit.eventlog.EventLogRecord;
@@ -19,10 +20,19 @@ import biz.karms.sinkit.eventlog.EventReason;
 import biz.karms.sinkit.eventlog.VirusTotalRequest;
 import biz.karms.sinkit.eventlog.VirusTotalRequestStatus;
 import biz.karms.sinkit.exception.ArchiveException;
+import biz.karms.sinkit.exception.IoCSourceIdException;
+import biz.karms.sinkit.ioc.IoCClassification;
+import biz.karms.sinkit.ioc.IoCFeed;
 import biz.karms.sinkit.ioc.IoCRecord;
+import biz.karms.sinkit.ioc.IoCSeen;
+import biz.karms.sinkit.ioc.IoCSource;
+import biz.karms.sinkit.ioc.IoCSourceId;
+import biz.karms.sinkit.ioc.IoCTime;
+import biz.karms.sinkit.ioc.util.IoCSourceIdBuilder;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.validator.routines.DomainValidator;
 import org.infinispan.Cache;
 import org.infinispan.query.Search;
@@ -42,6 +52,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -96,6 +107,10 @@ public class DNSApiEJB implements DNSApi {
     private static final List<String> FEEDTYPES = Arrays.asList("c&c", "malware", "ransomware", "malware configuration", "phishing", "blacklist");
     private static final String IPV6SINKHOLE = System.getenv("SINKIT_SINKHOLE_IPV6");
     private static final String IPV4SINKHOLE = System.getenv("SINKIT_SINKHOLE_IP");
+    private static final String GSB_FEED_NAME = (System.getenv().containsKey("SINKIT_GSB_FEED_NAME")) ? System.getenv("SINKIT_GSB_FEED_NAME") : "google-safebrowsing-api";
+    private static final String GSB_IOC_DOES_NOT_EXIST = "GSB-IOC-FAKE-ID";
+    private static final int ARCHIVE_FAILED_TRIALS = 10;
+    //private static final String TOKEN = System.getenv("SINKIT_ACCESS_TOKEN");
 
     // TODO: List? Array? Map with additional data? Let's think this over.
     // TODO: Replace/factor out duplicated code in .getRules out of webApiEJB
@@ -147,7 +162,6 @@ public class DNSApiEJB implements DNSApi {
             if (cached != null) {
                 return cached;
             } else {
-
                 query = qf.from(CustomList.class)
                         .having("customerId").eq(customerId)
                         .and()
@@ -191,7 +205,6 @@ public class DNSApiEJB implements DNSApi {
                 return null;
             }
         }
-        //return searchManager.getQuery(luceneQuery, CustomList.class).list();
     }
 
     private CustomList retrieveOneCustomList(final Integer customerId, final boolean isFQDN, final String fqdnOrIp) {
@@ -270,29 +283,44 @@ public class DNSApiEJB implements DNSApi {
          * Now it's the time to search IoC cache
          */
         // Lookup BlacklistedRecord from IoC cache (gives feeds)
-        log.log(Level.FINE, "getSinkHole: getting key " + fqdnOrIp);
-        BlacklistedRecord blacklistedRecord = blacklistCache.get(fqdnOrIp);
-        if (blacklistedRecord == null) {
-            log.log(Level.FINE, "No hit. The requested fqdnOrIp: " + fqdnOrIp + " is clean.");
+        log.log(Level.FINE, "getSinkHole: getting IoC key " + fqdnOrIp);
+        final BlacklistedRecord blacklistedRecord = blacklistCache.get(fqdnOrIp);
 
-            // Our IoC cache didn't contain a hit, so we give it a shot with GSB.
-            final Set<String> gsbResults = gsbService.lookup(fqdnOrIp);
-            if (!CollectionUtils.isEmpty(gsbResults)) {
-                // TODO: We should somehow log this the IoC way...
-                log.log(Level.INFO, "fqdnOrIp: " + fqdnOrIp + " found in GSB. Ignoring silently.");
-            }
+        Set<String> gsbResults = null;
+        if (isFQDN) {
+            /**
+             * Let's search GSB cache
+             */
+            log.log(Level.FINE, "getSinkHole: getting GSB key " + fqdnOrIp);
+            gsbResults = gsbService.lookup(fqdnOrIp);
+        }
+
+        if (blacklistedRecord == null && CollectionUtils.isEmpty(gsbResults)) {
+            log.log(Level.FINE, "No hit. The requested fqdnOrIp: " + fqdnOrIp + " is clean.");
             return null;
         }
-        // Feed UID : Type
-        final Map<String, Pair<String, String>> feedTypeMap = blacklistedRecord.getSources();
+
+        // Feed UID : {Type, IoCID}
+        final Map<String, Pair<String, String>> feedTypeMap = new HashMap<>();
+
+        if (blacklistedRecord != null) {
+            feedTypeMap.putAll(blacklistedRecord.getSources());
+        }
+
+        if (CollectionUtils.isNotEmpty(gsbResults)) {
+            // GSB_IOC_DOES_NOT_EXIST - the IoC doesn't exist at this time. It will be created at Logging time.
+            feedTypeMap.put(GSB_FEED_NAME, new Pair<>(FEEDTYPES.get(1), GSB_IOC_DOES_NOT_EXIST));
+        }
+
         //If there is no feed, we simply don't sinkhole anything. It is weird though.
         if (MapUtils.isEmpty(feedTypeMap)) {
             log.log(Level.WARNING, "getSinkHole: IoC without feed settings.");
             return null;
         }
+
         // Feed UID, Mode <L|S|D>. In the end, we operate on a one selected Feed:mode pair only.
         String mode = null;
-        //TODO: Nested cycles, worth profiling.
+        //TODO: Nested cycles, could we do better here?
         for (Rule rule : rules) {
             for (String uuid : rule.getSources().keySet()) {
                 // feed uuid : [type , docID], so "getA()" means get type
@@ -304,10 +332,11 @@ public class DNSApiEJB implements DNSApi {
                         mode = tmpMode;
                     }
                 } else {
-                    log.log(Level.FINE, "getSinkHole: BlacklistedRecord " + blacklistedRecord.getBlackListedDomainOrIP() + " for feed " + uuid + " does not have Type nor DocID.");
+                    log.log(Level.FINE, "getSinkHole: BlacklistedRecord/GSB Rcord " + fqdnOrIp + " for feed " + uuid + " does not have Type nor DocID.");
                 }
             }
         }
+
         log.log(Level.FINE, "getSinkHole: Feed mode decision:");
         // Let's decide on feed mode:
         if (mode == null) {
@@ -318,7 +347,7 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.FINE, "getSinkHole: Sinkhole.");
             try {
                 log.log(Level.FINE, "getSinkHole: Calling coreService.logDNSEvent(EventLogAction.BLOCK,...");
-                logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()));
+                logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()), archiveService, log);
                 log.log(Level.FINE, "getSinkHole: coreService.logDNSEvent returned.");
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging BLOCK failed: ", e);
@@ -329,7 +358,7 @@ public class DNSApiEJB implements DNSApi {
             //Log it for customer
             log.log(Level.FINE, "getSinkHole: Log.");
             try {
-                logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()));
+                logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()), archiveService, log);
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging AUDIT failed: ", e);
             } finally {
@@ -340,7 +369,7 @@ public class DNSApiEJB implements DNSApi {
             //Log it for us
             log.log(Level.FINE, "getSinkHole: Log internally.");
             try {
-                logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()));
+                logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()), archiveService, log);
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging INTERNAL failed: ", e);
             } finally {
@@ -354,12 +383,15 @@ public class DNSApiEJB implements DNSApi {
 
     }
 
-    private Set<String> unwrapDocumentIds(Collection<Pair<String, String>> pairs) {
+    private static Set<String> unwrapDocumentIds(Collection<Pair<String, String>> pairs) {
         return pairs.stream().map(Pair::getB).collect(Collectors.toCollection(HashSet::new));
     }
 
     /**
      * Fire and Forget pattern
+     * <p>
+     * This is called only when there is a match for an IoC, it is not called
+     * on each request.
      *
      * @param action      BLOCK|AUDIT|INTERNAL
      * @param clientUid   Client's UID
@@ -372,27 +404,28 @@ public class DNSApiEJB implements DNSApi {
      * @throws ArchiveException
      */
     @Asynchronous
-    @Override
     public void logDNSEvent(
-            EventLogAction action,
-            String clientUid,
-            String requestIp,
-            String requestFqdn,
-            String requestType,
-            String reasonFqdn,
-            String reasonIp,
-            Set<String> matchedIoCs
+            final EventLogAction action,
+            final String clientUid,
+            final String requestIp,
+            final String requestFqdn,
+            final String requestType,
+            final String reasonFqdn,
+            final String reasonIp,
+            final Set<String> matchedIoCs,
+            final ArchiveService archiveService,
+            final Logger log
     ) throws ArchiveException {
         log.log(Level.FINE, "Logging DNS event. clientUid: " + clientUid + ", requestIp: " + requestIp + ", requestFqdn: " + requestFqdn + ", requestType: " + requestType + ", reasonFqdn: " + reasonFqdn + ", reasonIp: " + reasonIp);
-        EventLogRecord logRecord = new EventLogRecord();
+        final EventLogRecord logRecord = new EventLogRecord();
 
-        EventDNSRequest request = new EventDNSRequest();
+        final EventDNSRequest request = new EventDNSRequest();
         request.setIp(requestIp);
         request.setFqdn(requestFqdn);
         request.setType(requestType);
         logRecord.setRequest(request);
 
-        EventReason reason = new EventReason();
+        final EventReason reason = new EventReason();
         reason.setIp(reasonIp);
         reason.setFqdn(reasonFqdn);
         logRecord.setReason(reason);
@@ -401,28 +434,153 @@ public class DNSApiEJB implements DNSApi {
         logRecord.setClient(clientUid);
         logRecord.setLogged(Calendar.getInstance().getTime());
 
-        List<IoCRecord> matchedIoCsList = new ArrayList<>();
+        final List<IoCRecord> matchedIoCsList = new ArrayList<>();
         log.log(Level.FINE, "Iterating matchedIoCs...");
-        for (String iocId : matchedIoCs) {
-            IoCRecord ioc = archiveService.getIoCRecordById(iocId);
-            if (ioc == null) {
-                log.warning("Match IoC with id " + iocId + " was not found (deactivated??) -> skipping.");
-                continue;
+        for (final String iocId : matchedIoCs) {
+            if (StringUtils.isNotBlank(iocId)) {
+                IoCRecord ioCRecord;
+                if (GSB_IOC_DOES_NOT_EXIST.equals(iocId) && StringUtils.isNotBlank(reasonFqdn)) {
+                    // Nope, no IP, just FQDN for GSB
+                    ioCRecord = processNonExistingGSBIoC(reasonFqdn, archiveService, log);
+                } else {
+                    ioCRecord = processRegularIoCId(iocId, archiveService, log);
+                }
+                if (ioCRecord != null) {
+                    matchedIoCsList.add(ioCRecord);
+                }
             }
-            ioc.setVirusTotalReports(null);
-            ioc.getSeen().setLast(null);
-            ioc.setRaw(null);
-            ioc.setActive(null);
-            ioc.setDocumentId(null); //documentId will changed whe ioc is deactivated so it's useless to have it here. Ioc.uniqueRef will be used for referencing ioc
-
-            matchedIoCsList.add(ioc);
         }
-        IoCRecord[] matchedIoCsArray = matchedIoCsList.toArray(new IoCRecord[matchedIoCsList.size()]);
+        final IoCRecord[] matchedIoCsArray = matchedIoCsList.toArray(new IoCRecord[matchedIoCsList.size()]);
         logRecord.setMatchedIocs(matchedIoCsArray);
 
-        VirusTotalRequest vtReq = new VirusTotalRequest();
+        final VirusTotalRequest vtReq = new VirusTotalRequest();
         vtReq.setStatus(VirusTotalRequestStatus.WAITING);
         logRecord.setVirusTotalRequest(vtReq);
         archiveService.archiveEventLogRecord(logRecord);
+    }
+
+    private static IoCRecord processRegularIoCId(final String iocId, ArchiveService archiveService, Logger log) throws ArchiveException {
+        final IoCRecord ioc = archiveService.getIoCRecordById(iocId);
+        if (ioc == null) {
+            log.warning("Match IoC with id " + iocId + " was not found (deactivated??) -> skipping.");
+            return null;
+        }
+        ioc.setVirusTotalReports(null);
+        ioc.getSeen().setLast(null);
+        ioc.setRaw(null);
+        ioc.setActive(null);
+        //documentId will changed whe ioc is deactivated so it's useless to have it here. Ioc.uniqueRef will be used for referencing ioc
+        ioc.setDocumentId(null);
+        return ioc;
+    }
+
+    /**
+     * TODO: This implementation is a WIP.
+     * The commented out code deals with remote logging to remote Core - Core machines.
+     * For the time being, it is discarded due to cumbersomeness of the API with regard to DocumentID
+     * and the fact that we will start having the keys in our IoC cache.
+     * Furthermore, it might be a premature optimization.
+     */
+    private static IoCRecord processNonExistingGSBIoC(final String matchedFQDN, ArchiveService archiveService, Logger log) {
+        //HttpURLConnection coreServerConnection = null;
+        //BufferedWriter jsonContentBuffer = null;
+        //final Gson gson = new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create();
+
+        final IoCRecord ioc = new IoCRecord();
+        final IoCFeed feed = new IoCFeed();
+        feed.setName(GSB_FEED_NAME);
+        ioc.setFeed(feed);
+        final IoCClassification classification = new IoCClassification();
+        classification.setType(FEEDTYPES.get(1));
+        ioc.setClassification(classification);
+        final IoCSource source = new IoCSource();
+        source.setFQDN(matchedFQDN);
+        ioc.setSource(source);
+        final IoCTime time = new IoCTime();
+        time.setObservation(Calendar.getInstance().getTime());
+        time.setSource(time.getObservation());
+        ioc.setTime(time);
+        //final String serializedPayload = gson.toJson(ioc);
+
+        try {
+            /*
+            coreServerConnection = (HttpURLConnection) new URL("http://feedcore-lb:8080/sinkit/rest/blacklist/ioc/").openConnection();
+            coreServerConnection.setDoOutput(true);
+            coreServerConnection.setRequestMethod(HttpMethod.POST);
+
+            coreServerConnection.setRequestProperty("Content-Length", "" + Integer.toString(serializedPayload.getBytes().length));
+            coreServerConnection.setRequestProperty("Content-Type", "application/json");
+            coreServerConnection.setRequestProperty("X-sinkit-token", TOKEN);
+
+            jsonContentBuffer = new BufferedWriter(new OutputStreamWriter(coreServerConnection.getOutputStream()));
+            jsonContentBuffer.write(serializedPayload);
+            jsonContentBuffer.flush();
+
+            if (coreServerConnection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                log.log(Level.SEVERE, "logGSBEventRemotely: Creting IoC for GSB log failed.");
+                return;
+            }
+            */
+
+            final IoCSourceId sid = IoCSourceIdBuilder.build(ioc);
+            ioc.getSource().setId(sid);
+            ioc.setActive(true);
+
+            final IoCSeen seen = new IoCSeen();
+            seen.setLast(time.getObservation());
+            seen.setFirst(time.getObservation());
+            ioc.setSeen(seen);
+            ioc.getTime().setReceivedByCore(time.getObservation());
+            ioc.setDocumentId(IoCIdentificationUtils.computeHashedId(ioc));
+
+            archiveService.archiveReceivedIoCRecord(ioc);
+
+            IoCRecord retrievedIoC = archiveService.getIoCRecordById(ioc.getDocumentId());
+
+            for (int i = 0; retrievedIoC == null && i < ARCHIVE_FAILED_TRIALS; i++) {
+                try {
+                    Thread.sleep(200);
+                } catch (InterruptedException e) {
+                    log.log(Level.SEVERE, "Waiting for Archived IoC was interrupted.", e);
+                }
+                retrievedIoC = archiveService.getIoCRecordById(ioc.getDocumentId());
+            }
+
+            if (retrievedIoC == null) {
+                return null;
+            }
+
+            retrievedIoC.setVirusTotalReports(null);
+            retrievedIoC.getSeen().setLast(null);
+            retrievedIoC.setRaw(null);
+            retrievedIoC.setActive(null);
+            //documentId will changed whe ioc is deactivated so it's useless to have it here. Ioc.uniqueRef will be used for referencing ioc
+            retrievedIoC.setDocumentId(null);
+
+            return retrievedIoC;
+        /*} catch (ProtocolException e) {
+            log.log(Level.SEVERE, "logGSBEventRemotely: Request construction failed.", e);
+        } catch (MalformedURLException e) {
+            log.log(Level.SEVERE, "logGSBEventRemotely: URL co call Core servers is malformed.", e);
+        } catch (IOException e) {
+            log.log(Level.SEVERE, "logGSBEventRemotely: Failed to contact Core servers and log GSB event.", e);
+        */
+        } catch (IoCSourceIdException e) {
+            log.log(Level.SEVERE, "logGSBEventRemotely: IoC construction failed.", e);
+        } catch (ArchiveException e) {
+            log.log(Level.SEVERE, "logGSBEventRemotely: Archive communication failed.", e);
+        } /*finally {
+            if (jsonContentBuffer != null) {
+                try {
+                    jsonContentBuffer.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (coreServerConnection != null) {
+                coreServerConnection.disconnect();
+            }
+        }*/
+        return null;
     }
 }

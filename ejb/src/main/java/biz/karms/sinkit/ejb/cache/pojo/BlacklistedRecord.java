@@ -13,6 +13,9 @@ public class BlacklistedRecord implements Serializable {
 
     private static final long serialVersionUID = 2184999923427771L;
 
+    /**
+     * Stored as an MD5 hash
+     */
     private String blackListedDomainOrIP;
 
     private Calendar listed;
