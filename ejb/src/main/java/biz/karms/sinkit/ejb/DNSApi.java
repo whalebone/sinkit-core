@@ -6,6 +6,7 @@ import biz.karms.sinkit.exception.ArchiveException;
 
 import javax.ejb.Local;
 import java.util.Set;
+import java.util.logging.Logger;
 
 /**
  * @author Michal Karm Babacek
@@ -22,6 +23,8 @@ public interface DNSApi {
             String requestType,
             String reasonFqdn,
             String reasonIp,
-            Set<String> matchedIoCs
+            Set<String> matchedIoCs,
+            ArchiveService archiveService,
+            Logger logger
     ) throws ArchiveException;
 }
