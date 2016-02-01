@@ -1,5 +1,6 @@
 package biz.karms.sinkit.rest;
 
+import biz.karms.sinkit.ejb.ArchiveService;
 import biz.karms.sinkit.ejb.CoreService;
 import biz.karms.sinkit.ejb.DNSApi;
 import biz.karms.sinkit.ejb.GSBService;
@@ -49,6 +50,9 @@ public class SinkitService implements Serializable {
 
     @EJB
     private GSBService gsbService;
+
+    @EJB
+    private ArchiveService archiveService;
 
     @Inject
     private Logger log;
@@ -239,7 +243,9 @@ public class SinkitService implements Serializable {
                 logRec.getRequest().getType(),
                 logRec.getReason().getFqdn(),
                 logRec.getReason().getIp(),
-                ids);
+                ids,
+                archiveService,
+                log);
     }
 
     public void enrich() {
