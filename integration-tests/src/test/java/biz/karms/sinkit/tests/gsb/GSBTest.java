@@ -12,6 +12,7 @@ import org.jboss.arquillian.testng.Arquillian;
 import org.testng.annotations.Test;
 
 import javax.ejb.EJB;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -40,7 +41,7 @@ public class GSBTest extends Arquillian {
         requestSettings.setAdditionalHeader("Content-Type", "application/json");
         requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
         Page page = webClient.getPage(requestSettings);
-        assertEquals(200, page.getWebResponse().getStatusCode());
+        assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("clear gsb cache Response: " + responseBody);
         String expected = "true";
@@ -56,7 +57,7 @@ public class GSBTest extends Arquillian {
         requestSettings.setAdditionalHeader("Content-Type", "application/json");
         requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
         Page page = webClient.getPage(requestSettings);
-        assertEquals(200, page.getWebResponse().getStatusCode());
+        assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("hashPrefixTest Response:" + responseBody);
         String expected = "true";
@@ -72,7 +73,7 @@ public class GSBTest extends Arquillian {
         requestSettings.setAdditionalHeader("Content-Type", "application/json");
         requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
         Page page = webClient.getPage(requestSettings);
-        assertEquals(200, page.getWebResponse().getStatusCode());
+        assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("getStatsTest Response:" + responseBody);
         String expected = "{\"gsbRecords\":1}";
@@ -88,7 +89,7 @@ public class GSBTest extends Arquillian {
         requestSettings.setAdditionalHeader("Content-Type", "application/json");
         requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
         Page page = webClient.getPage(requestSettings);
-        assertEquals(200, page.getWebResponse().getStatusCode());
+        assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("removeHashPrefixTest Response:" + responseBody);
         String expected = "true";
@@ -98,12 +99,12 @@ public class GSBTest extends Arquillian {
         requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
         page = webClient.getPage(requestSettings);
         int counter = 0;
-        while (page.getWebResponse().getStatusCode() != 200 && counter < 10) {
+        while (page.getWebResponse().getStatusCode() != HttpURLConnection.HTTP_OK && counter < 10) {
             Thread.sleep(100);
             page = webClient.getPage(requestSettings);
             counter++;
         }
-        assertEquals(200, page.getWebResponse().getStatusCode());
+        assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("removeHashPrefixTest Response:" + responseBody);
         expected = "{\"gsbRecords\":0}";
@@ -120,7 +121,7 @@ public class GSBTest extends Arquillian {
         requestSettings.setAdditionalHeader("Content-Type", "application/json");
         requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
         Page page = webClient.getPage(requestSettings);
-        assertEquals(200, page.getWebResponse().getStatusCode());
+        assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("removeHashPrefixTest Response:" + responseBody);
         String expected = "true";
@@ -130,7 +131,7 @@ public class GSBTest extends Arquillian {
         requestSettings.setAdditionalHeader("Content-Type", "application/json");
         requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
         page = webClient.getPage(requestSettings);
-        assertEquals(200, page.getWebResponse().getStatusCode());
+        assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("removeHashPrefixTest Response:" + responseBody);
         expected = "[\"goog-malware-shavar\"]";
@@ -146,7 +147,7 @@ public class GSBTest extends Arquillian {
         requestSettings.setAdditionalHeader("Content-Type", "application/json");
         requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
         Page page = webClient.getPage(requestSettings);
-        assertEquals(200, page.getWebResponse().getStatusCode());
+        assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("clear gsb cache Response: " + responseBody);
         String expected = "true";
@@ -156,7 +157,7 @@ public class GSBTest extends Arquillian {
         requestSettings.setAdditionalHeader("Content-Type", "application/json");
         requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
         page = webClient.getPage(requestSettings);
-        assertEquals(200, page.getWebResponse().getStatusCode());
+        assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("getStatsTest Response:" + responseBody);
         expected = "{\"gsbRecords\":0}";
