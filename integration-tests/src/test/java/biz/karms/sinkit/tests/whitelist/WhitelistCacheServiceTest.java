@@ -17,6 +17,7 @@ import org.jboss.arquillian.testng.Arquillian;
 import org.testng.annotations.Test;
 
 import javax.ejb.EJB;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -401,7 +402,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         requestSettingsFeed.setAdditionalHeader("X-sinkit-token", TOKEN);
         requestSettingsFeed.setRequestBody("[{\"dns_client\":\"254.1.1.1/32\",\"settings\":{\"some-intelmq-feed-to-sink\":\"S\", \"feed\":\"S\"},\"customer_id\":111,\"customer_name\":\"Whitelist User\"}]");
         Page pageFeed = webClient.getPage(requestSettingsFeed);
-        assertEquals(200, pageFeed.getWebResponse().getStatusCode());
+        assertEquals(HttpURLConnection.HTTP_OK, pageFeed.getWebResponse().getStatusCode());
         String responseBodyFeed = pageFeed.getWebResponse().getContentAsString();
         LOGGER.info("endToEnd Response:" + responseBodyFeed);
         assertTrue(responseBodyFeed.contains("1 RULES PROCESSED"));
@@ -415,7 +416,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         requestSettingsIoC.setAdditionalHeader("X-sinkit-token", TOKEN);
         requestSettingsIoC.setRequestBody("{\"feed\":{\"name\":\"some-intelmq-feed-to-sink\",\"url\":\"http://example.com/feed.txt\"},\"classification\":{\"type\": \"phishing\",\"taxonomy\": \"Fraud\"},\"raw\":\"aHwwwwfdfBmODQ2N244iNGZiNS8=\",\"source\":{\"fqdn\":\"trusted.domain.to.be.whitelisted.cz\",\"bgp_prefix\":\"some_prefix\",\"asn\":\"3355556\",\"asn_name\":\"any_name\",\"geolocation\":{\"cc\":\"RU\",\"city\":\"City\",\"latitude\":\"85.12645\",\"longitude\":\"-12.9788\"}},\"time\":{\"observation\":\"" + observation + "\"},\"protocol\":{\"application\":\"ssh\"},\"description\":{\"text\":\"description\"}}");
         Page pageIoC = webClient.getPage(requestSettingsIoC);
-        assertEquals(200, pageIoC.getWebResponse().getStatusCode());
+        assertEquals(HttpURLConnection.HTTP_OK, pageIoC.getWebResponse().getStatusCode());
         String responseBodyIoC = pageIoC.getWebResponse().getContentAsString();
         LOGGER.info("endToEndIoC Response:" + responseBodyIoC);
         assertTrue(responseBodyIoC.contains("\"fqdn\":\"trusted.domain.to.be.whitelisted.cz\""));
@@ -425,7 +426,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         requestSettingsDNS.setAdditionalHeader("Content-Type", "application/json");
         requestSettingsDNS.setAdditionalHeader("X-sinkit-token", TOKEN);
         Page pageDNS = webClient.getPage(requestSettingsDNS);
-        assertEquals(200, pageDNS.getWebResponse().getStatusCode());
+        assertEquals(HttpURLConnection.HTTP_OK, pageDNS.getWebResponse().getStatusCode());
         String responseBodyDNS = pageDNS.getWebResponse().getContentAsString();
         LOGGER.info("endToEndDNS Response:" + responseBodyDNS);
         assertTrue(responseBodyDNS.contains("{\"sinkhole\":\"" + System.getenv("SINKIT_SINKHOLE_IP") + "\"}"));
@@ -437,7 +438,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         requestSettingsWhite.setAdditionalHeader("X-sinkit-token", TOKEN);
         requestSettingsWhite.setRequestBody("{\"feed\":{\"name\":\"end2endWhitelist\"},\"source\":{\"fqdn\":\"trusted.domain.to.be.whitelisted.cz\"}}");
         Page pageWhite = webClient.getPage(requestSettingsWhite);
-        assertEquals(200, pageWhite.getWebResponse().getStatusCode());
+        assertEquals(HttpURLConnection.HTTP_OK, pageWhite.getWebResponse().getStatusCode());
         String responseBodyWhite = pageWhite.getWebResponse().getContentAsString();
         LOGGER.info("endToEndWhite Response:" + responseBodyWhite);
         assertTrue(responseBodyIoC.contains("true"));
@@ -445,7 +446,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         //add whitelist entry IP
         requestSettingsWhite.setRequestBody("{\"feed\":{\"name\":\"end2endWhitelist\"},\"source\":{\"ip\":\"83.215.22.31\"}}");
         pageWhite = webClient.getPage(requestSettingsWhite);
-        assertEquals(200, pageWhite.getWebResponse().getStatusCode());
+        assertEquals(HttpURLConnection.HTTP_OK, pageWhite.getWebResponse().getStatusCode());
         responseBodyWhite = pageWhite.getWebResponse().getContentAsString();
         LOGGER.info("endToEndWhite Response:" + responseBodyWhite);
         assertTrue(responseBodyIoC.contains("true"));
@@ -453,14 +454,14 @@ public class WhitelistCacheServiceTest extends Arquillian {
         //add ioc IP
         requestSettingsIoC.setRequestBody("{\"feed\":{\"name\":\"some-intelmq-feed-to-sink\",\"url\":\"http://example.com/feed.txt\"},\"classification\":{\"type\": \"phishing\",\"taxonomy\": \"Fraud\"},\"raw\":\"aHwwwwfdfBmODQ2N244iNGZiNS8=\",\"source\":{\"ip\":\"83.215.22.31\",\"bgp_prefix\":\"some_prefix\",\"asn\":\"3355556\",\"asn_name\":\"any_name\",\"geolocation\":{\"cc\":\"RU\",\"city\":\"City\",\"latitude\":\"85.12645\",\"longitude\":\"-12.9788\"}},\"time\":{\"observation\":\"" + observation + "\"},\"protocol\":{\"application\":\"ssh\"},\"description\":{\"text\":\"description\"}}");
         pageIoC = webClient.getPage(requestSettingsIoC);
-        assertEquals(200, pageIoC.getWebResponse().getStatusCode());
+        assertEquals(HttpURLConnection.HTTP_OK, pageIoC.getWebResponse().getStatusCode());
         responseBodyIoC = pageIoC.getWebResponse().getContentAsString();
         LOGGER.info("endToEndIoC Response:" + responseBodyIoC);
         assertTrue(responseBodyIoC.contains("\"ip\":\"83.215.22.31\""));
 
         //dns query (FQDN) should be whitelisted (not sinkholed)
         pageDNS = webClient.getPage(requestSettingsDNS);
-        assertEquals(200, pageDNS.getWebResponse().getStatusCode());
+        assertEquals(HttpURLConnection.HTTP_OK, pageDNS.getWebResponse().getStatusCode());
         responseBodyDNS = pageDNS.getWebResponse().getContentAsString();
         LOGGER.info("endToEndDNSWhitelisted Response:" + responseBodyDNS);
         assertTrue(responseBodyDNS.contains("null"));
@@ -470,7 +471,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         requestSettingsDNS.setAdditionalHeader("Content-Type", "application/json");
         requestSettingsDNS.setAdditionalHeader("X-sinkit-token", TOKEN);
         pageDNS = webClient.getPage(requestSettingsDNS);
-        assertEquals(200, pageDNS.getWebResponse().getStatusCode());
+        assertEquals(HttpURLConnection.HTTP_OK, pageDNS.getWebResponse().getStatusCode());
         responseBodyDNS = pageDNS.getWebResponse().getContentAsString();
         LOGGER.info("endToEndDNSWhitelisted Response:" + responseBodyDNS);
         assertTrue(responseBodyDNS.contains("null"));
@@ -481,7 +482,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
 //        requestSettingsDNS.setAdditionalHeader("Content-Type", "application/json");
 //        requestSettingsDNS.setAdditionalHeader("X-sinkit-token", TOKEN);
 //        pageDNS = webClient.getPage(requestSettingsDNS);
-//        assertEquals(200, pageDNS.getWebResponse().getStatusCode());
+//        assertEquals(HttpURLConnection.HTTP_OK, pageDNS.getWebResponse().getStatusCode());
 //        responseBodyDNS = pageDNS.getWebResponse().getContentAsString();
 //        LOGGER.info("endToEndDNSWhitelisted Response:" + responseBodyDNS);
 //        assertTrue(responseBodyIoC.contains("\"ip\":\"83.215.22.31\""));
@@ -497,7 +498,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         request.setAdditionalHeader("Content-Type", "application/json");
         request.setAdditionalHeader("X-sinkit-token", TOKEN);
         Page page = webClient.getPage(request);
-        assertEquals(200, page.getWebResponse().getStatusCode());
+        assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("RESTApi Response:" + responseBody);
         assertTrue(responseBody.contains("trusted.domain.to.be.whitelisted.cz"));
@@ -506,7 +507,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         request.setAdditionalHeader("Content-Type", "application/json");
         request.setAdditionalHeader("X-sinkit-token", TOKEN);
         page = webClient.getPage(request);
-        assertEquals(200, page.getWebResponse().getStatusCode());
+        assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("RESTApi Response:" + responseBody);
         assertTrue(responseBody.contains("trusted.domain.to.be.whitelisted.cz"));
@@ -515,7 +516,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         request.setAdditionalHeader("Content-Type", "application/json");
         request.setAdditionalHeader("X-sinkit-token", TOKEN);
         page = webClient.getPage(request);
-        assertEquals(200, page.getWebResponse().getStatusCode());
+        assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("RESTApi Response:" + responseBody);
         assertTrue(responseBody.contains("true"));
@@ -524,7 +525,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         request.setAdditionalHeader("Content-Type", "application/json");
         request.setAdditionalHeader("X-sinkit-token", TOKEN);
         page = webClient.getPage(request);
-        assertEquals(200, page.getWebResponse().getStatusCode());
+        assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("RESTApi Response:" + responseBody);
         assertTrue(responseBody.contains("5"));
