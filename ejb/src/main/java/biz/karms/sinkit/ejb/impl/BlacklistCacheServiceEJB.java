@@ -6,7 +6,6 @@ import biz.karms.sinkit.ejb.cache.annotations.SinkitCacheName;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ioc.IoCRecord;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.infinispan.Cache;
@@ -53,30 +52,28 @@ public class BlacklistCacheServiceEJB implements BlacklistCacheService {
         final String key = ioCRecord.getSource().getId().getValue();
         if (key != null) {
             try {
-                if (key != null) {
-                    if (blacklistCache.containsKey(key)) {
-                        BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
-                        HashMap<String, Pair<String, String>> feedToTypeUpdate = blacklistedRecord.getSources();
-                        if (ioCRecord.getFeed().getName() != null && ioCRecord.getClassification().getType() != null) {
-                            feedToTypeUpdate.putIfAbsent(ioCRecord.getFeed().getName(), new Pair<>(ioCRecord.getClassification().getType(), ioCRecord.getDocumentId()));
-                        } else {
-                            log.log(Level.SEVERE, "addToCache: ioCRecord's feed or classification type were null");
-                        }
-                        blacklistedRecord.setSources(feedToTypeUpdate);
-                        blacklistedRecord.setListed(Calendar.getInstance());
-                        log.log(Level.FINE, "Replacing key [" + key + "]");
-                        blacklistCache.replaceAsync(key, blacklistedRecord);
+                if (blacklistCache.containsKey(key)) {
+                    final BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
+                    final HashMap<String, Pair<String, String>> feedToTypeUpdate = blacklistedRecord.getSources();
+                    if (ioCRecord.getFeed().getName() != null && ioCRecord.getClassification().getType() != null) {
+                        feedToTypeUpdate.putIfAbsent(ioCRecord.getFeed().getName(), new Pair<>(ioCRecord.getClassification().getType(), ioCRecord.getDocumentId()));
                     } else {
-                        HashMap<String, Pair<String, String>> feedToType = new HashMap<>();
-                        if (ioCRecord.getFeed().getName() != null && ioCRecord.getClassification().getType() != null) {
-                            feedToType.put(ioCRecord.getFeed().getName(), new Pair<>(ioCRecord.getClassification().getType(), ioCRecord.getDocumentId()));
-                        } else {
-                            log.log(Level.SEVERE, "addToCache: ioCRecord's feed or classification type were null");
-                        }
-                        BlacklistedRecord blacklistedRecord = new BlacklistedRecord(key, Calendar.getInstance(), feedToType);
-                        log.log(Level.FINE, "Putting new key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
-                        blacklistCache.putAsync(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
+                        log.log(Level.SEVERE, "addToCache: ioCRecord's feed or classification type were null");
                     }
+                    blacklistedRecord.setSources(feedToTypeUpdate);
+                    blacklistedRecord.setListed(Calendar.getInstance());
+                    log.log(Level.FINE, "Replacing key [" + key + "]");
+                    blacklistCache.replaceAsync(key, blacklistedRecord);
+                } else {
+                    HashMap<String, Pair<String, String>> feedToType = new HashMap<>();
+                    if (ioCRecord.getFeed().getName() != null && ioCRecord.getClassification().getType() != null) {
+                        feedToType.put(ioCRecord.getFeed().getName(), new Pair<>(ioCRecord.getClassification().getType(), ioCRecord.getDocumentId()));
+                    } else {
+                        log.log(Level.SEVERE, "addToCache: ioCRecord's feed or classification type were null");
+                    }
+                    BlacklistedRecord blacklistedRecord = new BlacklistedRecord(key, Calendar.getInstance(), feedToType);
+                    log.log(Level.FINE, "Putting new key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
+                    blacklistCache.putAsync(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
                 }
             } catch (Exception e) {
                 log.log(Level.SEVERE, "addToCache", e);

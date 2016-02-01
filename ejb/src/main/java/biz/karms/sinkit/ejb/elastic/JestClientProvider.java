@@ -10,7 +10,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Created by tkozel on 24.6.15.
+ * @author Tomas Kozel
  */
 @ApplicationScoped
 public class JestClientProvider {
