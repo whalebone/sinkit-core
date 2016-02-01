@@ -41,7 +41,7 @@ public class MyCacheManagerProvider implements Serializable {
 
     private static final long serialVersionUID = 45216839143257496L;
 
-    private static final long ENTRY_LIFESPAN = 60 * 1000; //ms
+    private static final long ENTRY_LIFESPAN = 2 * 60 * 1000; //ms
     private static final long ENTRY_LIFESPAN_NEVER = -1;
     private static final int CONCURRENCY_LEVEL = 1000;
 
@@ -81,11 +81,12 @@ public class MyCacheManagerProvider implements Serializable {
                 .transaction().transactionMode(TransactionMode.NON_TRANSACTIONAL)
                         //If you put or remove, the returned object might not be what you expect.
                 .unsafe().unreliableReturnValues(true)
-                .persistence()
+                /*.persistence()
                 .addSingleFileStore()
                 .location(System.getProperty("java.io.tmpdir"))
                 .async()
                 .enabled(true)
+                */
                 /*.persistence().addStore(JdbcStringBasedStoreConfigurationBuilder.class)
                         //.persistence().addStore(JdbcBinaryStoreConfigurationBuilder.class)
                 .fetchPersistentState(true)
@@ -124,11 +125,12 @@ public class MyCacheManagerProvider implements Serializable {
                 .transaction().transactionMode(TransactionMode.NON_TRANSACTIONAL)
                         //If you put or remove, the returned object might not be what you expect.
                 .unsafe().unreliableReturnValues(true)
-                .persistence()
+                /*.persistence()
                 .addSingleFileStore()
                 .location(System.getProperty("java.io.tmpdir"))
                 .async()
                 .enabled(true)
+                */
                 /*.persistence().addStore(JdbcStringBasedStoreConfigurationBuilder.class)
                         //.persistence().addStore(JdbcBinaryStoreConfigurationBuilder.class)
                 .fetchPersistentState(true)
