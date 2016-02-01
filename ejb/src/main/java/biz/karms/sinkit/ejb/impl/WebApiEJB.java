@@ -11,6 +11,7 @@ import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
 import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
 import com.google.common.collect.Lists;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.validator.routines.DomainValidator;
 import org.infinispan.Cache;
 import org.infinispan.commons.util.concurrent.NotifyingFuture;
@@ -18,7 +19,6 @@ import org.infinispan.query.Search;
 import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
 import org.jboss.marshalling.Pair;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.ejb.Stateless;
 import javax.inject.Inject;
@@ -496,6 +496,6 @@ public class WebApiEJB implements WebApi {
     @Override
     public String postCreateFeedSettings(FeedSettingCreateDTO feedSettingCreate) {
         //TODO
-        throw new NotImplementedException();
+        throw new NotImplementedException("We are sorry, this is not suported at the moment.");
     }
 }
