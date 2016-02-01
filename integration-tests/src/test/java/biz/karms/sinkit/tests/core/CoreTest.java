@@ -3,7 +3,7 @@ package biz.karms.sinkit.tests.core;
 import biz.karms.sinkit.ejb.ArchiveService;
 import biz.karms.sinkit.ejb.CoreService;
 import biz.karms.sinkit.ejb.DNSApi;
-import biz.karms.sinkit.ejb.impl.ArchiveServiceEJB;
+import biz.karms.sinkit.ejb.impl.DNSApiEJB;
 import biz.karms.sinkit.eventlog.EventLogAction;
 import biz.karms.sinkit.exception.TooOldIoCException;
 import biz.karms.sinkit.ioc.IoCRecord;
@@ -24,6 +24,7 @@ import org.jboss.arquillian.testng.Arquillian;
 import org.testng.annotations.Test;
 
 import javax.ejb.EJB;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -182,7 +183,7 @@ public class CoreTest extends Arquillian {
         Page page;
         try {
             page = webClient.getPage(requestSettings);
-            assertEquals(200, page.getWebResponse().getStatusCode());
+            assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         } catch (FailingHttpStatusCodeException ex) {
             //NO-OP index does not exist yet, but it's ok
         }
@@ -203,12 +204,13 @@ public class CoreTest extends Arquillian {
                 "requestType",
                 "seznam.cz",
                 "10.1.1.3",
-                new HashSet<String>(Arrays.asList(iocId1, iocId2))
-        );
+                new HashSet<>(Arrays.asList(iocId1, iocId2)),
+                archiveService,
+                LOGGER);
         // The async task follows Fire and Forget. TODO: dnsEventLogTestAssert must wait
     }
 
-//    Circle CI has a problem with this test -> temporarily ignored until fixed
+    //    Circle CI has a problem with this test -> temporarily ignored until fixed
 //    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 19)
 //    @OperateOnDeployment("ear")
 //    @RunAsClient
