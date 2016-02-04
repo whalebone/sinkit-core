@@ -242,7 +242,7 @@ public class DNSApiEJB implements DNSApi {
         //TODO: Add test that all such found rules have the same customerId
         //TODO: factor .getRules out of webApiEJB
         final List<Rule> rules = rulesLookup(clientIPAddressPaddedBigInt);
-        log.log(Level.INFO, "getSinkHole rulesLookup took: " + (System.currentTimeMillis() - start) + " ms.");
+        log.log(Level.INFO, "rulesLookup took: " + (System.currentTimeMillis() - start) + " ms.");
 
         //If there is no rule, we simply don't sinkhole anything.
         if (CollectionUtils.isEmpty(rules)) {
@@ -261,7 +261,7 @@ public class DNSApiEJB implements DNSApi {
          */
         start = System.currentTimeMillis();
         final CustomList customList = retrieveOneCustomList(customerId, isFQDN, fqdnOrIp);
-        log.log(Level.INFO, "getSinkHole retrieveOneCustomList took: " + (System.currentTimeMillis() - start) + " ms.");
+        log.log(Level.INFO, "retrieveOneCustomList took: " + (System.currentTimeMillis() - start) + " ms.");
 
         // Was it found in any of customer's Black/White/Log lists?
         // TODO: Implement logging for whitelisted stuff that's positive on IoC.
@@ -290,7 +290,7 @@ public class DNSApiEJB implements DNSApi {
         log.log(Level.FINE, "getSinkHole: getting IoC key " + fqdnOrIp);
         start = System.currentTimeMillis();
         final BlacklistedRecord blacklistedRecord = blacklistCache.get(DigestUtils.md5Hex(fqdnOrIp));
-        log.log(Level.INFO, "getSinkHole blacklistCache.get took: " + (System.currentTimeMillis() - start) + " ms.");
+        log.log(Level.INFO, "blacklistCache.get took: " + (System.currentTimeMillis() - start) + " ms.");
 
         Set<String> gsbResults = null;
         if (isFQDN) {
@@ -300,7 +300,7 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.FINE, "getSinkHole: getting GSB key " + fqdnOrIp);
             start = System.currentTimeMillis();
             gsbResults = gsbService.lookup(fqdnOrIp);
-            log.log(Level.INFO, "getSinkHole gsbService.lookup took: " + (System.currentTimeMillis() - start) + " ms.");
+            log.log(Level.INFO, "gsbService.lookup took: " + (System.currentTimeMillis() - start) + " ms.");
         }
 
         if (blacklistedRecord == null && CollectionUtils.isEmpty(gsbResults)) {

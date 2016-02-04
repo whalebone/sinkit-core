@@ -67,10 +67,12 @@ public class GSBServiceEJB implements GSBService {
         GSBRecord gsbRecord = gsbCache.get(hashStringPrefix);
         // if hash prefix is not in the cache then URL is not blacklisted for sure
         if (gsbRecord == null) {
-            logger.log(Level.INFO, "lookup: hashPrefix " + hashStringPrefix + " was not found in cache. It was made off: " + fullHashString + " which is gsbURL: " + gsbUrl);
+            //logger.log(Level.INFO, "lookup: hashPrefix " + hashStringPrefix + " was not found in cache. It was made off: " + fullHashString + " which is gsbURL: " + gsbUrl);
             //DEBUG!!!
             //logger.log(Level.INFO, "DEBUG: Although, let's ask google: " + gsbClient.getFullHashes(hashPrefix).getFullHashes().size());
             return null;
+        } else {
+            logger.log(Level.INFO, "lookup: hashPrefix " + hashStringPrefix + " was found in cache. It was made off: " + fullHashString + " which is gsbURL: " + gsbUrl);
         }
 
         final HashMap<String, HashSet<String>> fullHashes;
