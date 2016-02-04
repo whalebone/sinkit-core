@@ -16,7 +16,10 @@ import javax.annotation.PostConstruct;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
-import java.util.*;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -58,12 +61,15 @@ public class GSBServiceEJB implements GSBService {
         final String hashStringPrefix = GSBUrl.getHashStringPrefix(4, fullHashString);
         final byte[] hashPrefix = GSBUrl.getHashPrefix(4, hash);
 
-        logger.log(Level.FINE, "lookup: lookup for hashPrefix " + hashStringPrefix);
+        //DEBUG!!!
+        //logger.log(Level.INFO, "DEBUG: lookup: lookup for hashPrefix " + hashStringPrefix + " in cache of size " + gsbCache.size());
 
         GSBRecord gsbRecord = gsbCache.get(hashStringPrefix);
         // if hash prefix is not in the cache then URL is not blacklisted for sure
         if (gsbRecord == null) {
-            logger.log(Level.FINE, "lookup: hashPrefix " + hashStringPrefix + " was not found in cache.");
+            logger.log(Level.INFO, "lookup: hashPrefix " + hashStringPrefix + " was not found in cache. It was made off: " + fullHashString + " which is gsbURL: " + gsbUrl);
+            //DEBUG!!!
+            //logger.log(Level.INFO, "DEBUG: Although, let's ask google: " + gsbClient.getFullHashes(hashPrefix).getFullHashes().size());
             return null;
         }
 
@@ -103,18 +109,18 @@ public class GSBServiceEJB implements GSBService {
             return false;
         }
 
-        if (!gsbCache.containsKey(hashPrefix))  {
+        if (!gsbCache.containsKey(hashPrefix)) {
             final Calendar fullHashesExpireAt = Calendar.getInstance();
             // set to past to enforce update full hashes when hit by lookup for the first time
             fullHashesExpireAt.add(Calendar.SECOND, -1);
-            HashMap<String, HashSet<String>> fullHashes =  new HashMap<>();
+            HashMap<String, HashSet<String>> fullHashes = new HashMap<>();
 
             final GSBRecord gsbRecord = new GSBRecord(hashPrefix, fullHashesExpireAt, fullHashes);
             gsbCache.putAsync(hashPrefix, gsbRecord);
             logger.log(Level.FINEST, "putHashPrefix: Hash prefix " + hashPrefix + " added into cache.");
         } else {
             //Should not have happened often
-            logger.log(Level.INFO, "putHashPrefix: Hash prefix " + hashPrefix + " already contained in cache.");
+            logger.log(Level.FINE, "putHashPrefix: Hash prefix " + hashPrefix + " already contained in cache.");
         }
 
         return true;
