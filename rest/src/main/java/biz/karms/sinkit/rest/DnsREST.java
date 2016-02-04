@@ -7,7 +7,6 @@ import javax.ws.rs.HeaderParam;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import java.util.logging.Logger;
 
 /**
  * @author Michal Karm Babacek
@@ -21,9 +20,6 @@ public class DnsREST {
 
     @Inject
     DnsService dnsService;
-
-    @Inject
-    private Logger log;
 
     public static final String AUTH_HEADER_PARAM = "X-sinkit-token";
     public static final String AUTH_FAIL = "❤ AUTH ERROR ❤";
@@ -41,6 +37,19 @@ public class DnsREST {
     public String getSinkHole(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("client") String client, @PathParam("key") String key, @PathParam("fqdn") String fqdn) {
         if (StupidAuthenticator.isAuthenticated(token)) {
             return dnsService.getSinkHole(client, key, fqdn);
+        } else {
+            return AUTH_FAIL;
+        }
+    }
+
+    @GET
+    @Path("/async/{client}/{key}/{fqdn}")
+    @Produces({"application/json;charset=UTF-8"})
+    public String getAsyncSinkHole(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("client") String client, @PathParam("key") String key, @PathParam("fqdn") String fqdn) {
+        if (StupidAuthenticator.isAuthenticated(token)) {
+            dnsService.getAsyncSinkHole(client, key, fqdn);
+            // TODO: API FTW
+            return "";
         } else {
             return AUTH_FAIL;
         }
