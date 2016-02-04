@@ -237,10 +237,12 @@ public class DNSApiEJB implements DNSApi {
         }
         final boolean probablyIsIPv6 = fqdnOrIp.contains(":");
 
+        long start = System.currentTimeMillis();
         // Lookup Rules (gives customerId, feeds and their settings)
         //TODO: Add test that all such found rules have the same customerId
         //TODO: factor .getRules out of webApiEJB
         final List<Rule> rules = rulesLookup(clientIPAddressPaddedBigInt);
+        log.log(Level.INFO, "rulesLookup took: " + (System.currentTimeMillis() - start) + " ms.");
 
         //If there is no rule, we simply don't sinkhole anything.
         if (CollectionUtils.isEmpty(rules)) {
@@ -257,7 +259,9 @@ public class DNSApiEJB implements DNSApi {
         /**
          * Next we fetch one and only one or none CustomList for a given fqdnOrIp
          */
+        start = System.currentTimeMillis();
         final CustomList customList = retrieveOneCustomList(customerId, isFQDN, fqdnOrIp);
+        log.log(Level.INFO, "retrieveOneCustomList took: " + (System.currentTimeMillis() - start) + " ms.");
 
         // Was it found in any of customer's Black/White/Log lists?
         // TODO: Implement logging for whitelisted stuff that's positive on IoC.
@@ -284,7 +288,9 @@ public class DNSApiEJB implements DNSApi {
          */
         // Lookup BlacklistedRecord from IoC cache (gives feeds)
         log.log(Level.FINE, "getSinkHole: getting IoC key " + fqdnOrIp);
-        final BlacklistedRecord blacklistedRecord = blacklistCache.get(fqdnOrIp);
+        start = System.currentTimeMillis();
+        final BlacklistedRecord blacklistedRecord = blacklistCache.get(DigestUtils.md5Hex(fqdnOrIp));
+        log.log(Level.INFO, "blacklistCache.get took: " + (System.currentTimeMillis() - start) + " ms.");
 
         Set<String> gsbResults = null;
         if (isFQDN) {
@@ -292,7 +298,9 @@ public class DNSApiEJB implements DNSApi {
              * Let's search GSB cache
              */
             log.log(Level.FINE, "getSinkHole: getting GSB key " + fqdnOrIp);
+            start = System.currentTimeMillis();
             gsbResults = gsbService.lookup(fqdnOrIp);
+            log.log(Level.INFO, "gsbService.lookup took: " + (System.currentTimeMillis() - start) + " ms.");
         }
 
         if (blacklistedRecord == null && CollectionUtils.isEmpty(gsbResults)) {
@@ -308,8 +316,11 @@ public class DNSApiEJB implements DNSApi {
         }
 
         if (CollectionUtils.isNotEmpty(gsbResults)) {
+            log.log(Level.FINE, "getSinkHole: gsbResults contains records: " + gsbResults.size());
             // GSB_IOC_DOES_NOT_EXIST - the IoC doesn't exist at this time. It will be created at Logging time.
             feedTypeMap.put(GSB_FEED_NAME, new Pair<>(FEEDTYPES.get(1), GSB_IOC_DOES_NOT_EXIST));
+        } else {
+            log.log(Level.FINE, "getSinkHole: gsbResults contains no record");
         }
 
         //If there is no feed, we simply don't sinkhole anything. It is weird though.
