@@ -6,6 +6,7 @@ import biz.karms.sinkit.ejb.cache.annotations.SinkitCacheName;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ioc.IoCRecord;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.infinispan.Cache;
@@ -48,8 +49,7 @@ public class BlacklistCacheServiceEJB implements BlacklistCacheService {
             return false;
         }
 
-        // TODO: Should we use hashes? Is thus constructed key <= 255?
-        final String key = ioCRecord.getSource().getId().getValue();
+        final String key = DigestUtils.md5Hex(ioCRecord.getSource().getId().getValue());
         if (key != null) {
             try {
                 if (blacklistCache.containsKey(key)) {
@@ -62,7 +62,7 @@ public class BlacklistCacheServiceEJB implements BlacklistCacheService {
                     }
                     blacklistedRecord.setSources(feedToTypeUpdate);
                     blacklistedRecord.setListed(Calendar.getInstance());
-                    log.log(Level.FINE, "Replacing key [" + key + "]");
+                    log.log(Level.FINE, "Replacing key [" + ioCRecord.getSource().getId().getValue() + "], hashed: " + key);
                     blacklistCache.replaceAsync(key, blacklistedRecord);
                 } else {
                     HashMap<String, Pair<String, String>> feedToType = new HashMap<>();
@@ -72,7 +72,7 @@ public class BlacklistCacheServiceEJB implements BlacklistCacheService {
                         log.log(Level.SEVERE, "addToCache: ioCRecord's feed or classification type were null");
                     }
                     BlacklistedRecord blacklistedRecord = new BlacklistedRecord(key, Calendar.getInstance(), feedToType);
-                    log.log(Level.FINE, "Putting new key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
+                    log.log(Level.FINE, "Putting new key [" + ioCRecord.getSource().getId().getValue() + "], hashed: " + key);
                     blacklistCache.putAsync(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
                 }
             } catch (Exception e) {
@@ -95,7 +95,7 @@ public class BlacklistCacheServiceEJB implements BlacklistCacheService {
             return false;
         }
 
-        final String key = ioCRecord.getSource().getId().getValue();
+        final String key = DigestUtils.md5Hex(ioCRecord.getSource().getId().getValue());
         if (key != null) {
             try {
                 if (blacklistCache.containsKey(key)) {
@@ -130,7 +130,7 @@ public class BlacklistCacheServiceEJB implements BlacklistCacheService {
             log.log(Level.SEVERE, "removeWholeObjectFromCache: ioc or ioc.source.id.value is null or blank");
             return false;
         }
-        final String key = iocRecord.getSource().getId().getValue();
+        final String key = DigestUtils.md5Hex(iocRecord.getSource().getId().getValue());
         try {
             if (blacklistCache.containsKey(key)) {
                 blacklistCache.removeAsync(key);

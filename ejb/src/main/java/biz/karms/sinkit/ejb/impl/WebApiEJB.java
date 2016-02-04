@@ -11,6 +11,7 @@ import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
 import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
 import com.google.common.collect.Lists;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.validator.routines.DomainValidator;
 import org.infinispan.Cache;
@@ -91,7 +92,7 @@ public class WebApiEJB implements WebApi {
             log.log(Level.FINE, "Putting key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
             blacklistCache.put(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
             // TODO: Is this O.K.? Maybe we should just return the same instance.
-            return blacklistCache.get(blacklistedRecord.getBlackListedDomainOrIP());
+            return blacklistCache.get(DigestUtils.md5Hex(blacklistedRecord.getBlackListedDomainOrIP()));
         } catch (Exception e) {
             log.log(Level.SEVERE, "putBlacklistedRecord", e);
             // TODO: Proper Error codes.
@@ -102,7 +103,7 @@ public class WebApiEJB implements WebApi {
     @Override
     public BlacklistedRecord getBlacklistedRecord(final String key) {
         log.log(Level.FINE, "getting key [" + key + "]");
-        return blacklistCache.get(key);
+        return blacklistCache.get(DigestUtils.md5Hex(key));
     }
 
     @Override
@@ -114,8 +115,9 @@ public class WebApiEJB implements WebApi {
     public String deleteBlacklistedRecord(final String key) {
         try {
             String response;
-            if (blacklistCache.containsKey(key)) {
-                blacklistCache.remove(key);
+            final String hashedKey = DigestUtils.md5Hex(key);
+            if (blacklistCache.containsKey(hashedKey)) {
+                blacklistCache.remove(hashedKey);
                 response = key + " DELETED";
             } else {
                 response = key + " DOES NOT EXIST";
@@ -203,7 +205,6 @@ public class WebApiEJB implements WebApi {
             final String clientIPAddressPaddedBigInt = startEndAddresses.getA();
             log.log(Level.FINE, "Deleting key [" + cidrAddress + "] which actually translates to BigInteger zero padded representation " +
                     "[" + clientIPAddressPaddedBigInt + "]");
-            //utx.begin();
             String response;
             if (ruleCache.containsKey(clientIPAddressPaddedBigInt)) {
                 ruleCache.remove(clientIPAddressPaddedBigInt);
@@ -211,7 +212,6 @@ public class WebApiEJB implements WebApi {
             } else {
                 response = clientIPAddressPaddedBigInt + " DOES NOT EXIST";
             }
-            //utx.commit();
             return response;
         } catch (Exception e) {
             log.log(Level.SEVERE, "deleteRule", e);
