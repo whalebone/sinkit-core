@@ -86,7 +86,7 @@ public class ArchiveServiceEJB implements ArchiveService {
                 "               }\n" +
                 "           }\n" +
                 "       }\n" +
-                "   }\n"+
+                "   }\n" +
                 "}\n";
 
         return elasticService.search(query, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, IoCRecord.class);
@@ -102,7 +102,7 @@ public class ArchiveServiceEJB implements ArchiveService {
         final String upsertScript = "{\n" +
                 "    \"script\" : \"ctx._source.seen.last = seenLast\"\n," +
                 "    \"params\" : {\n" +
-                "        \"seenLast\" : \"" +seenLast + "\"\n" +
+                "        \"seenLast\" : \"" + seenLast + "\"\n" +
                 "    },\n" +
                 "   \"upsert\" : " + new GsonBuilder()
                 .setDateFormat(ELASTIC_DATE_FORMAT)
@@ -114,7 +114,7 @@ public class ArchiveServiceEJB implements ArchiveService {
     }
 
     @Override
-    public boolean setVirusTotalReportToIoCRecord(final IoCRecord ioc, final IoCVirusTotalReport[] reports) throws ArchiveException{
+    public boolean setVirusTotalReportToIoCRecord(final IoCRecord ioc, final IoCVirusTotalReport[] reports) throws ArchiveException {
         final String updateScript = "{\n" +
                 "   \"doc\" : {\n" +
                 "       \"virus_total_reports\" : " +
@@ -159,7 +159,7 @@ public class ArchiveServiceEJB implements ArchiveService {
     public EventLogRecord archiveEventLogRecord(final EventLogRecord logRecord) throws ArchiveException {
         final DateFormat df = new SimpleDateFormat("YYYY-MM-dd");
         final String index = ELASTIC_LOG_INDEX + "-" + df.format(logRecord.getLogged());
-        log.log(Level.FINE, "elasticService.index logging logrecord, index="+index);
+        log.log(Level.FINE, "elasticService.index logging logrecord, index=" + index);
         return elasticService.index(logRecord, index, ELASTIC_LOG_TYPE);
     }
 
@@ -213,7 +213,7 @@ public class ArchiveServiceEJB implements ArchiveService {
     }
 
     @Override
-    public EventLogRecord getLogRecordWaitingForVTScan(int notAllowedFailedMinutes) throws ArchiveException {
+    public EventLogRecord getLogRecordWaitingForVTScan(final int notAllowedFailedMinutes) throws ArchiveException {
         String query = "{\n" +
                 getWaitingLogRecordQuery(VirusTotalRequestStatus.WAITING, notAllowedFailedMinutes) + ",\n" +
                 "   \"sort\":{\n" +
@@ -232,7 +232,7 @@ public class ArchiveServiceEJB implements ArchiveService {
     }
 
     @Override
-    public EventLogRecord getLogRecordWaitingForVTReport(int notAllowedFailedMinutes) throws ArchiveException {
+    public EventLogRecord getLogRecordWaitingForVTReport(final int notAllowedFailedMinutes) throws ArchiveException {
         String query = "{\n" +
                 getWaitingLogRecordQuery(VirusTotalRequestStatus.WAITING_FOR_REPORT, notAllowedFailedMinutes) + ",\n" +
                 "   \"sort\":{\n" +
@@ -251,5 +251,26 @@ public class ArchiveServiceEJB implements ArchiveService {
         }
 
         return logRecords.get(0);
+    }
+
+    private String getWaitingLogRecordQuery(final VirusTotalRequestStatus status, final int notAllowedFailedMinutes) {
+        final String statusTerm = new GsonBuilder().create().toJson(status);
+        final String notAllowedFailedRange = "\"now-" + notAllowedFailedMinutes + "m\"";
+        return "    \"query\":{\n" +
+                "        \"bool\":{\n" +
+                "            \"filter\":{\n" +
+                "                \"term\":{\n" +
+                "                    \"virus_total_request.status\":" + statusTerm + "\n" +
+                "                }\n" +
+                "            },\n" +
+                "            \"must_not\":{\n" +
+                "                \"range\":{\n" +
+                "                    \"virus_total_request.failed\":{\n" +
+                "                        \"gt\":" + notAllowedFailedRange + "\n" +
+                "                    }\n" +
+                "                }\n" +
+                "            }\n" +
+                "        }\n" +
+                "    }";
     }
 }
