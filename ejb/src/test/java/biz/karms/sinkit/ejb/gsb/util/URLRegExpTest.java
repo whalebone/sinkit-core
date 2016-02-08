@@ -52,7 +52,7 @@ public class URLRegExpTest {
         this.expectedPath = expectedPath;
         this.expectedQuery = expectedQuery;
     }
-
+/*
     @Test
     public void testURLRegExp() {
         Pattern urlPattern = Pattern.compile(GSBUtils.URL_REGEXP);
@@ -65,5 +65,5 @@ public class URLRegExpTest {
         assertEquals(expectedPath, matcher.group(GSBUtils.PATH_GROUP));
         assertEquals(expectedQuery, matcher.group(GSBUtils.QUERY_GROUP));
     }
-
+*/
 }
