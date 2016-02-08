@@ -29,11 +29,26 @@ public class FullHashLookupResponseReader implements MessageBodyReader<FullHashL
     }
 
     @Override
-    public FullHashLookupResponse readFrom(Class<FullHashLookupResponse> type, Type genericType, Annotation[] annotations,
-                                           MediaType mediaType, MultivaluedMap<String, String> httpHeaders,
+    public FullHashLookupResponse readFrom(Class<FullHashLookupResponse> type,
+                                           Type genericType,
+                                           Annotation[] annotations,
+                                           MediaType mediaType,
+                                           MultivaluedMap<String, String> httpHeaders,
                                            InputStream entityStream) throws IOException, WebApplicationException {
         BufferedInputStream bis = new BufferedInputStream(entityStream);
         FullHashLookupResponse response = new FullHashLookupResponse();
+
+        //DEBUGing bytes
+        /*
+        bis.mark(0);
+        StringBuilder s = new StringBuilder();
+        while(bis.available() > 0) {
+            s.append((char) bis.read());
+        }
+        bis.reset();
+        System.out.println("FullHashLookupResponseReader: BEGIN"+s.toString()+"END");
+        */
+
         String cacheLifetime = readLine(bis);
 
         try {
