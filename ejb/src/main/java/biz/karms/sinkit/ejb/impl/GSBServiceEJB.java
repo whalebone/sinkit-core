@@ -7,8 +7,10 @@ import biz.karms.sinkit.ejb.cache.pojo.GSBRecord;
 import biz.karms.sinkit.ejb.gsb.GSBClient;
 import biz.karms.sinkit.ejb.gsb.dto.FullHashLookupResponse;
 import biz.karms.sinkit.ejb.gsb.util.GSBCachePOJOFactory;
-import biz.karms.sinkit.ejb.util.GSBUrl;
+import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.infinispan.Cache;
 import org.infinispan.commons.util.concurrent.NotifyingFuture;
 
@@ -54,22 +56,15 @@ public class GSBServiceEJB implements GSBService {
             throw new IllegalArgumentException("lookup: URL must not be null, cannot perform lookup.");
         }
         //canonicalization is done here
-        final String gsbUrl = GSBUrl.getUrl(ipOrFQDN);
-        final byte[] hash = GSBUrl.getHash(gsbUrl);
-        final String fullHashString = GSBUrl.getHashString(hash);
-        // TODO Might not be 4 bytes in future
-        final String hashStringPrefix = GSBUrl.getHashStringPrefix(4, fullHashString);
-        final byte[] hashPrefix = GSBUrl.getHashPrefix(4, hash);
-
-        //DEBUG!!!
-        //logger.log(Level.INFO, "DEBUG: lookup: lookup for hashPrefix " + hashStringPrefix + " in cache of size " + gsbCache.size());
+        final String gsbUrl = ipOrFQDN + '/';
+        final byte[] hash = DigestUtils.sha256(gsbUrl);
+        final byte[] hashPrefix = ArrayUtils.subarray(hash, 0, 4);
+        final String fullHashString = Hex.encodeHexString(hash);
+        final String hashStringPrefix = fullHashString.substring(0, 8);
 
         GSBRecord gsbRecord = gsbCache.get(hashStringPrefix);
         // if hash prefix is not in the cache then URL is not blacklisted for sure
         if (gsbRecord == null) {
-            //logger.log(Level.INFO, "lookup: hashPrefix " + hashStringPrefix + " was not found in cache. It was made off: " + fullHashString + " which is gsbURL: " + gsbUrl);
-            //DEBUG!!!
-            //logger.log(Level.INFO, "DEBUG: Although, let's ask google: " + gsbClient.getFullHashes(hashPrefix).getFullHashes().size());
             return null;
         } else {
             logger.log(Level.INFO, "lookup: hashPrefix " + hashStringPrefix + " was found in cache. It was made off: " + fullHashString + " which is gsbURL: " + gsbUrl);
