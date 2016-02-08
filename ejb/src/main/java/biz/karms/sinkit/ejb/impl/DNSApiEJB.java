@@ -111,6 +111,7 @@ public class DNSApiEJB implements DNSApi {
     private static final String GSB_IOC_DOES_NOT_EXIST = "GSB-IOC-FAKE-ID";
     private static final int ARCHIVE_FAILED_TRIALS = 10;
     //private static final String TOKEN = System.getenv("SINKIT_ACCESS_TOKEN");
+    private static final boolean DNS_REQUEST_LOGGING_ENABLED = Boolean.parseBoolean((System.getenv().containsKey("SINKIT_DNS_REQUEST_LOGGING_ENABLED")) ? System.getenv("SINKIT_DNS_REQUEST_LOGGING_ENABLED") : "true");
 
     // TODO: List? Array? Map with additional data? Let's think this over.
     // TODO: Replace/factor out duplicated code in .getRules out of webApiEJB
@@ -242,7 +243,7 @@ public class DNSApiEJB implements DNSApi {
         //TODO: Add test that all such found rules have the same customerId
         //TODO: factor .getRules out of webApiEJB
         final List<Rule> rules = rulesLookup(clientIPAddressPaddedBigInt);
-        log.log(Level.INFO, "rulesLookup took: " + (System.currentTimeMillis() - start) + " ms.");
+        log.log(Level.FINE, "rulesLookup took: " + (System.currentTimeMillis() - start) + " ms.");
 
         //If there is no rule, we simply don't sinkhole anything.
         if (CollectionUtils.isEmpty(rules)) {
@@ -261,7 +262,7 @@ public class DNSApiEJB implements DNSApi {
          */
         start = System.currentTimeMillis();
         final CustomList customList = retrieveOneCustomList(customerId, isFQDN, fqdnOrIp);
-        log.log(Level.INFO, "retrieveOneCustomList took: " + (System.currentTimeMillis() - start) + " ms.");
+        log.log(Level.FINE, "retrieveOneCustomList took: " + (System.currentTimeMillis() - start) + " ms.");
 
         // Was it found in any of customer's Black/White/Log lists?
         // TODO: Implement logging for whitelisted stuff that's positive on IoC.
@@ -290,7 +291,7 @@ public class DNSApiEJB implements DNSApi {
         log.log(Level.FINE, "getSinkHole: getting IoC key " + fqdnOrIp);
         start = System.currentTimeMillis();
         final BlacklistedRecord blacklistedRecord = blacklistCache.get(DigestUtils.md5Hex(fqdnOrIp));
-        log.log(Level.INFO, "blacklistCache.get took: " + (System.currentTimeMillis() - start) + " ms.");
+        log.log(Level.FINE, "blacklistCache.get took: " + (System.currentTimeMillis() - start) + " ms.");
 
         Set<String> gsbResults = null;
         if (isFQDN) {
@@ -300,7 +301,7 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.FINE, "getSinkHole: getting GSB key " + fqdnOrIp);
             start = System.currentTimeMillis();
             gsbResults = gsbService.lookup(fqdnOrIp);
-            log.log(Level.INFO, "gsbService.lookup took: " + (System.currentTimeMillis() - start) + " ms.");
+            log.log(Level.FINE, "gsbService.lookup took: " + (System.currentTimeMillis() - start) + " ms.");
         }
 
         if (blacklistedRecord == null && CollectionUtils.isEmpty(gsbResults)) {
@@ -358,7 +359,9 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.FINE, "getSinkHole: Sinkhole.");
             try {
                 log.log(Level.FINE, "getSinkHole: Calling coreService.logDNSEvent(EventLogAction.BLOCK,...");
-                logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()), archiveService, log);
+                if(DNS_REQUEST_LOGGING_ENABLED) {
+                    logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()), archiveService, log);
+                }
                 log.log(Level.FINE, "getSinkHole: coreService.logDNSEvent returned.");
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging BLOCK failed: ", e);
@@ -369,7 +372,9 @@ public class DNSApiEJB implements DNSApi {
             //Log it for customer
             log.log(Level.FINE, "getSinkHole: Log.");
             try {
-                logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()), archiveService, log);
+                if(DNS_REQUEST_LOGGING_ENABLED) {
+                    logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()), archiveService, log);
+                }
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging AUDIT failed: ", e);
             } finally {
@@ -380,7 +385,9 @@ public class DNSApiEJB implements DNSApi {
             //Log it for us
             log.log(Level.FINE, "getSinkHole: Log internally.");
             try {
-                logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()), archiveService, log);
+                if(DNS_REQUEST_LOGGING_ENABLED) {
+                    logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()), archiveService, log);
+                }
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging INTERNAL failed: ", e);
             } finally {
