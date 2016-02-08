@@ -12,7 +12,7 @@ import java.net.URISyntaxException;
  * @author Michal Karm Babacek
  */
 public class GSBUrl {
-
+/*
     private GSBUrl() {
     }
 
@@ -57,5 +57,5 @@ public class GSBUrl {
         }
         return GSBUtils.computeHash(canonicalizedURL);
     }
-
+*/
 }
