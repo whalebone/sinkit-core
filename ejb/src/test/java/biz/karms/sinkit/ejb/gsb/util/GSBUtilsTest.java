@@ -14,6 +14,7 @@ import static org.junit.Assert.assertEquals;
  */
 public class GSBUtilsTest {
 
+    /*
     // Testing data provided by google -> ensuring our hashing works the same way as theirs.
     @Test
     public void testHashing() throws Exception {
@@ -81,4 +82,5 @@ public class GSBUtilsTest {
         assertEquals("255.255.255.255", GSBUtils.longToIPv4(4294967295l));
         assertEquals("0", GSBUtils.longToIPv4(0l));
     }
+    */
 }

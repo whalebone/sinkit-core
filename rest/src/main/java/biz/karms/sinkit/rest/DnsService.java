@@ -33,8 +33,8 @@ public class DnsService implements Serializable {
 
     String getSinkHole(final String client, final String key, final String fqdn) {
         long start = System.currentTimeMillis();
-        String returned = gson.toJson(dnsApi.getSinkHole(client, key, fqdn));
-        log.log(Level.INFO, "getSinkHole took: " + (System.currentTimeMillis() - start) + " ms.");
+        final String returned = gson.toJson(dnsApi.getSinkHole(client, key, fqdn));
+        log.log(Level.FINE, "getSinkHole took: " + (System.currentTimeMillis() - start) + " ms.");
         return returned;
     }
 
