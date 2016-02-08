@@ -22,6 +22,7 @@ import java.util.regex.Pattern;
  */
 public class GSBUtils {
 
+    /*
     private static final String HASH_ALGORITHM = "SHA-256";
     private static final String ENCODING = "UTF-8";
 
@@ -187,5 +188,5 @@ public class GSBUtils {
                 (ip >> 16 & 0xff),
                 (ip >> 8 & 0xff),
                 (ip & 0xff)).replaceAll("^(0\\.)+", "");
-    }
+    }*/
 }

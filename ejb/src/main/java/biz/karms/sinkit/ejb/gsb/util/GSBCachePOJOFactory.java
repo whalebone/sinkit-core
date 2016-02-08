@@ -2,6 +2,7 @@ package biz.karms.sinkit.ejb.gsb.util;
 
 import biz.karms.sinkit.ejb.cache.pojo.GSBRecord;
 import biz.karms.sinkit.ejb.gsb.dto.FullHashLookupResponse;
+import org.apache.commons.codec.binary.Hex;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -28,7 +29,7 @@ public class GSBCachePOJOFactory {
             HashSet<String> fullHashes = new HashSet<>(entry.getValue().size());
             blackLists.put(entry.getKey(), fullHashes);
             for (AbstractMap.SimpleEntry<byte[], byte[]> fullHash : entry.getValue()) {
-                fullHashes.add(GSBUtils.hashToString(fullHash.getKey()));
+                fullHashes.add(Hex.encodeHexString(fullHash.getKey()));
             }
         }
         return gsbRecord;
