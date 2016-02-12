@@ -33,6 +33,14 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
 
     // we can call the Virus Total API only 4 times per minute
     private static final int SHOTS_PER_RUN = 4;
+    // max attempts of VT enrichment before VT request status is set to FAILED
+    private static final int MAX_FAILED_ATTEMPTS = 3;
+    // minutes that have to last after unsuccessful VT enrichment attempt than VT request can be processed again
+    // this prevents the VT request to be processed immediately again after it fails
+    private static final int NOT_ALLOWED_FAILED_MINUTES = 2;
+    // max of VT request that can be processed whiting single run of enrichment
+    // this prevents enrichment to go through all requests in archive within single run in case that each VT request fails
+    private static final int MAX_RECORDS_PER_RUN = 50;
 
     @Inject
     private Logger log;
@@ -66,50 +74,67 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
     @Timeout
     public void scheduler(Timer timer) {
         log.info("VirusTotalEnricher HASingletonTimer: Info=" + timer.getInfo());
-        if (Boolean.parseBoolean(System.getenv("SINKIT_VIRUS_TOTAL_SKIP"))) {
-            return;
+        if (!Boolean.parseBoolean(System.getenv("SINKIT_VIRUS_TOTAL_SKIP"))) {
+            doEnrichment();
         }
-        int availableVTCalls = SHOTS_PER_RUN;
+    }
 
+    public void doEnrichment() {
+        int availableVTCalls = SHOTS_PER_RUN;
+        int recordsToProcess = MAX_RECORDS_PER_RUN;
         boolean reportRequestQueueEmpty = false;
         try {
-            while (availableVTCalls > 0) {
+            while (availableVTCalls > 0 && recordsToProcess > 0) {
                 if (!reportRequestQueueEmpty) {
-                    EventLogRecord reportRequest = archiveService.getLogRecordWaitingForVTReport();
+                    EventLogRecord reportRequest = archiveService.getLogRecordWaitingForVTReport(NOT_ALLOWED_FAILED_MINUTES);
                     if (reportRequest != null) {
-                        availableVTCalls--;
-                        processUrlScanReportRequest(reportRequest);
-                        reportRequest.getVirusTotalRequest().setStatus(VirusTotalRequestStatus.FINISHED);
-                        reportRequest.getVirusTotalRequest().setReportReceived(new Date());
+                        try {
+                            processUrlScanReportRequest(reportRequest);
+                            availableVTCalls--;
+                            reportRequest.getVirusTotalRequest().setStatus(VirusTotalRequestStatus.FINISHED);
+                            reportRequest.getVirusTotalRequest().setReportReceived(new Date());
+                        } catch (VirusTotalException e) {
+                            if (e.isApiCalled()) {
+                                availableVTCalls--;
+                            }
+                            setFailedAttempt(reportRequest, e.getMessage());
+                        }
                         archiveService.archiveEventLogRecord(reportRequest);
                     } else {
                         reportRequestQueueEmpty = true;
                     }
                 } else {
-                    EventLogRecord scanRequest = archiveService.getLogRecordWaitingForVTScan();
+                    EventLogRecord scanRequest = archiveService.getLogRecordWaitingForVTScan(NOT_ALLOWED_FAILED_MINUTES);
                     if (scanRequest != null) {
 
                         boolean needEnrichment = false;
-                        availableVTCalls--;
-                        // the API is called here
-                        needEnrichment = processUrlScanRequest(scanRequest);
-
-                        if (needEnrichment) {
-                            scanRequest.getVirusTotalRequest().setStatus(VirusTotalRequestStatus.WAITING_FOR_REPORT);
-                        } else {
-                            scanRequest.getVirusTotalRequest().setStatus(VirusTotalRequestStatus.NOT_NEEDED);
+                        try {
+                            // API is being called here
+                            needEnrichment = processUrlScanRequest(scanRequest);
+                            if (needEnrichment) {
+                                availableVTCalls--;
+                                scanRequest.getVirusTotalRequest().setStatus(VirusTotalRequestStatus.WAITING_FOR_REPORT);
+                            } else {
+                                scanRequest.getVirusTotalRequest().setStatus(VirusTotalRequestStatus.NOT_NEEDED);
+                            }
+                            scanRequest.getVirusTotalRequest().setProcessed(new Date());
+                        } catch (VirusTotalException e) {
+                            if (e.isApiCalled()) {
+                                availableVTCalls--;
+                            }
+                            setFailedAttempt(scanRequest, e.getMessage());
                         }
-                        scanRequest.getVirusTotalRequest().setProcessed(new Date());
                         archiveService.archiveEventLogRecord(scanRequest);
                     } else {
-                        // there is no record for waiting for processing nor waiting for report -> need to break the cycle
+                        // there is no more records waiting for processing nor waiting for report in this run -> we can end the whole process
                         break;
                     }
                 }
+                recordsToProcess--;
             }
         } catch (QuotaExceededException e) {
             log.warning("VirusTutotal enrichment: quota exceeded before than expected -> skipping next runs in batch");
-        } catch (ArchiveException | VirusTotalException e) {
+        } catch (ArchiveException e) {
             log.severe("Virus Total enrichment went wrong: " + e.getMessage());
             e.printStackTrace();
         }
@@ -120,16 +145,15 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
 
         String scanTarget = getScanTarget(enrichmentRequest);
         if (scanTarget == null) {
-            throw new VirusTotalException("EventLog can't have both reason.fqdn and reason.ip set as null");
+            throw new VirusTotalException("EventLog can't have both reason.fqdn and reason.ip set as null", false);
         }
         boolean needEnrichment = false;
-
+        String uniqueRef;
+        IoCRecord ioc;
         iocsLoop:
         for (IoCRecord matchedIoC : enrichmentRequest.getMatchedIocs()) {
-
-            String uniqueRef = matchedIoC.getUniqueRef();
-
-            IoCRecord ioc = archiveService.getIoCRecordByUniqueRef(uniqueRef);
+            uniqueRef = matchedIoC.getUniqueRef();
+            ioc = archiveService.getIoCRecordByUniqueRef(uniqueRef);
             if (ioc == null) {
                 log.warning("VirusTotal: IoC with uniqueRef: " + uniqueRef + " does not exist -> skipping scan request.");
                 continue;
@@ -171,8 +195,10 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
         if (needEnrichment) {
             try {
                 virusTotalService.scanUrl("http://" + scanTarget + "/");
-            } catch (InvalidArguentsException | UnauthorizedAccessException | IOException e) {
-                throw new VirusTotalException(e);
+            } catch (InvalidArguentsException | UnauthorizedAccessException e) {
+                throw new VirusTotalException(e, true);
+            } catch (IOException e)  {
+                throw new VirusTotalException(e, false);
             }
         } else {
             log.finest("Enrichment is not needed.");
@@ -186,14 +212,16 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
 
         String scanTarget = getScanTarget(enrichmentRequest);
         if (scanTarget == null) {
-            throw new VirusTotalException("EventLog can't have both reason.fqdn and reason.ip set as null");
+            throw new VirusTotalException("EventLog can't have both reason.fqdn and reason.ip set as null", false);
         }
 
         FileScanReport report;
         try {
             report = virusTotalService.getUrlScanReport("http://" + scanTarget + "/");
-        } catch (InvalidArguentsException | UnauthorizedAccessException | IOException e) {
-            throw new VirusTotalException(e);
+        } catch (InvalidArguentsException | UnauthorizedAccessException e) {
+            throw new VirusTotalException(e, true);
+        } catch (IOException e) {
+            throw new VirusTotalException(e, false);
         }
 
         IoCVirusTotalReport total = new IoCVirusTotalReport();
@@ -203,16 +231,18 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
             total.setIp(scanTarget);
         }
         total.setUrlReport(report);
+        if (report.getScanDate() == null) {
+            throw new VirusTotalException("Receiving scan report failed: received scan date is null, something is really wrong", true);
+        }
         try {
             total.setScanDate(virusTotalService.parseDate(report.getScanDate()));
         } catch (ParseException e) {
-            throw new VirusTotalException("Cannot parse scan date of report: " + report.getScanDate(), e);
+            throw new VirusTotalException("Cannot parse scan date of report: " + report.getScanDate(), e, true);
         }
 
+        String uniqueRef;
         for (IoCRecord matchedIoC : enrichmentRequest.getMatchedIocs()) {
-
-            //String iocId = matchedIoC.getDocumentId();
-            String uniqueRef = matchedIoC.getUniqueRef();
+            uniqueRef = matchedIoC.getUniqueRef();
 
             IoCRecord ioc = archiveService.getIoCRecordByUniqueRef(uniqueRef);
             if (ioc == null) {
@@ -221,20 +251,14 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
             }
 
             if (ioc.getVirusTotalReports() == null || ioc.getVirusTotalReports().length == 0) {
-                //ioc.setVirusTotalReports(new IoCVirusTotalReport[]{total});
                 log.finest("IoC does not have any report yet -> adding new one");
                 archiveService.setVirusTotalReportToIoCRecord(ioc, new IoCVirusTotalReport[]{total});
             } else {
                 List<IoCVirusTotalReport> reportsList = new ArrayList<>(Arrays.asList(ioc.getVirusTotalReports()));
                 reportsList.add(total);
-                //ioc.setVirusTotalReports(reportsList.toArray(new IoCVirusTotalReport[reportsList.size()]));
                 archiveService.setVirusTotalReportToIoCRecord(ioc,reportsList.toArray(new IoCVirusTotalReport[reportsList.size()]));
                 log.finest("IoC does have some reports already -> adding new one");
             }
-
-            //archiveService.archiveVirusTotalReports(ioc);
-
-            //archiveService.archiveIoCRecord(ioc);
         }
     }
 
@@ -247,5 +271,18 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
             scanTarget = request.getReason().getIp();
         }
         return scanTarget;
+    }
+
+    private void setFailedAttempt(EventLogRecord record, String causeOfFailure) {
+        int failedAttempts = 0;
+        if (record.getVirusTotalRequest().getFailedAttempts() != null) {
+            failedAttempts = record.getVirusTotalRequest().getFailedAttempts();
+        }
+        record.getVirusTotalRequest().setFailedAttempts(++failedAttempts);
+        record.getVirusTotalRequest().setCauseOfFailure(causeOfFailure);
+        record.getVirusTotalRequest().setFailed(Calendar.getInstance().getTime());
+        if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+            record.getVirusTotalRequest().setStatus(VirusTotalRequestStatus.FAILED);
+        }
     }
 }

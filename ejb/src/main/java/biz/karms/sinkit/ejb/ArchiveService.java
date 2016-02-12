@@ -32,9 +32,9 @@ public interface ArchiveService {
 
     IoCRecord getIoCRecordByUniqueRef(String uniqueRef) throws ArchiveException;
 
-    EventLogRecord getLogRecordWaitingForVTScan() throws ArchiveException;
+    EventLogRecord getLogRecordWaitingForVTScan(int notAllowedFailedMinutes) throws ArchiveException;
 
-    EventLogRecord getLogRecordWaitingForVTReport() throws ArchiveException;
+    EventLogRecord getLogRecordWaitingForVTReport(int notAllowedFailedMinutes) throws ArchiveException;
 
     boolean setVirusTotalReportToIoCRecord(IoCRecord ioc, IoCVirusTotalReport[] reports) throws ArchiveException;
 }

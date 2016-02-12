@@ -219,12 +219,12 @@ public class ArchiveServiceEJB implements ArchiveService {
                 "               \"term\": {\n" +
                 "                   \"unique_ref\": \"" + uniqueRef + "\"\n" +
                 "               }\n" +
-                "   },\n" +
-                "   \"sort\": { \"time.received_by_core\": { \"order\": \"desc\" }}\n" +
+                "   }\n" +
                 "}\n";
         List<IoCRecord> iocs = elasticService.search(query, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, IoCRecord.class);
-        if (iocs.isEmpty()) return null;
-        if (iocs.size() > 1) {
+        if (iocs.isEmpty()) {
+            return null;
+        } else if (iocs.size() > 1) {
             log.warning("Search for IoC with uniqueRef: " + uniqueRef + " returned " + iocs.size() + " records, expected max one. " +
                     "Record with document_id: " + iocs.get(0).getDocumentId() + " was used as a  reference. Please fix this inconsistency.");
         }
@@ -232,45 +232,65 @@ public class ArchiveServiceEJB implements ArchiveService {
     }
 
     @Override
-    public EventLogRecord getLogRecordWaitingForVTScan() throws ArchiveException {
-        String status = new GsonBuilder().create().toJson(VirusTotalRequestStatus.WAITING);
+    public EventLogRecord getLogRecordWaitingForVTScan(int notAllowedFailedMinutes) throws ArchiveException {
         String query = "{\n" +
-                "   \"query\": {\n" +
-                "               \"term\": {\n" +
-                "                   \"virus_total_request.status\": " + status + "\n" +
-                "               }\n" +
-                "   },\n" +
-                "   \"sort\": { \"logged\": { \"order\": \"asc\" }}\n" +
-                "}\n";
-
+                getWaitingLogRecordQuery(VirusTotalRequestStatus.WAITING, notAllowedFailedMinutes) + ",\n" +
+                "   \"sort\":{\n" +
+                "       \"logged\":{\n" +
+                "           \"order\":\"asc\"\n" +
+                "       }\n" +
+                "   }\n" +
+                "}";
         List<EventLogRecord> logRecords =
                 elasticService.search(query, ELASTIC_LOG_INDEX + "-*",
                         ELASTIC_LOG_TYPE, 0, 1, EventLogRecord.class);
 
-        if (logRecords.size() == 0) return null;
-
+        if (logRecords.size() == 0) {
+            return null;
+        }
         return logRecords.get(0);
     }
 
     @Override
-    public EventLogRecord getLogRecordWaitingForVTReport() throws ArchiveException {
-        String status = new GsonBuilder().create().toJson(VirusTotalRequestStatus.WAITING_FOR_REPORT);
-
+    public EventLogRecord getLogRecordWaitingForVTReport(int notAllowedFailedMinutes) throws ArchiveException {
         String query = "{\n" +
-                "   \"query\": {\n" +
-                "               \"term\": {\n" +
-                "                   \"virus_total_request.status\": " + status + "\n" +
-                "               }\n" +
-                "   },\n" +
-                "   \"sort\": { \"virus_total_request.processed\": { \"order\": \"asc\", \"ignore_unmapped\" : true}}\n" +
-                "}\n";
+                getWaitingLogRecordQuery(VirusTotalRequestStatus.WAITING_FOR_REPORT, notAllowedFailedMinutes) + ",\n" +
+                "   \"sort\":{\n" +
+                "       \"virus_total_request.processed\":{\n" +
+                "           \"order\": \"asc\",\n" +
+                "           \"ignore_unmapped\" : true\n" +
+                "       }\n" +
+                "   }\n" +
+                "}";
 
         List<EventLogRecord> logRecords =
                 elasticService.search(query, ELASTIC_LOG_INDEX + "-*",
                         ELASTIC_LOG_TYPE, 0, 1, EventLogRecord.class);
 
-        if (logRecords.size() == 0) return null;
-
+        if (logRecords.size() == 0) {
+            return null;
+        }
         return logRecords.get(0);
+    }
+
+    private String getWaitingLogRecordQuery(VirusTotalRequestStatus status, int notAllowedFailedMinutes) {
+        String statusTerm = new GsonBuilder().create().toJson(status);
+        String notAllowedFailedRange = "\"now-" + notAllowedFailedMinutes + "m\"";
+        return  "    \"query\":{\n" +
+                "        \"bool\":{\n" +
+                "            \"filter\":{\n" +
+                "                \"term\":{\n" +
+                "                    \"virus_total_request.status\":" + statusTerm + "\n" +
+                "                }\n" +
+                "            },\n" +
+                "            \"must_not\":{\n" +
+                "                \"range\":{\n" +
+                "                    \"virus_total_request.failed\":{\n" +
+                "                        \"gt\":" + notAllowedFailedRange + "\n" +
+                "                    }\n" +
+                "                }\n" +
+                "            }\n" +
+                "        }\n" +
+                "    }";
     }
 }
