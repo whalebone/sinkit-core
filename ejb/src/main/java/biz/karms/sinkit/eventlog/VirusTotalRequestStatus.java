@@ -23,5 +23,9 @@ public enum VirusTotalRequestStatus {
     // there is already actual report from Virus Total in Core and it's not necessary to ask Virus Total
     // this is end state
     @SerializedName("not_needed")
-    NOT_NEEDED
+    NOT_NEEDED,
+
+    // something went wrong and VT enrichment is not possible
+    @SerializedName("failed")
+    FAILED
 }
