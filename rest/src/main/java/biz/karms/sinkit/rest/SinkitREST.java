@@ -1,11 +1,8 @@
 package biz.karms.sinkit.rest;
 
-import biz.karms.sinkit.ejb.gsb.GSBClient;
 import biz.karms.sinkit.exception.IoCValidationException;
 import com.google.gson.JsonSyntaxException;
-import org.apache.commons.lang3.ArrayUtils;
 
-import javax.ejb.EJB;
 import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
 import javax.ws.rs.DELETE;
@@ -18,7 +15,6 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Response;
-import java.util.Random;
 import java.util.logging.Logger;
 
 /**

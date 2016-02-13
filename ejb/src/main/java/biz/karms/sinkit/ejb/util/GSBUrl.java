@@ -1,6 +1,7 @@
 package biz.karms.sinkit.ejb.util;
 
 import biz.karms.sinkit.ejb.gsb.util.GSBUtils;
+import org.apache.commons.lang3.ArrayUtils;
 
 import java.net.URISyntaxException;
 
@@ -8,65 +9,53 @@ import java.net.URISyntaxException;
  * Created by tom on 11/29/15.
  *
  * @author Tomas Kozel
+ * @author Michal Karm Babacek
  */
 public class GSBUrl {
+/*
+    private GSBUrl() {
+    }
 
-    private String url;
-    private byte[] hash;
-    private String hashString;
-
-    public GSBUrl(String url) {
-        if (url == null) {
-            throw new IllegalArgumentException("URL is null!");
+    public static String getUrl(final String ipOrFQDN) {
+        if (ipOrFQDN == null) {
+            throw new IllegalArgumentException("ipOrFQDN is null.");
         }
-
         try {
-            this.url = GSBUtils.canonicalizeUrl(url);
+            return GSBUtils.canonicalizeUrl(ipOrFQDN);
         } catch (URISyntaxException ex) {
-            throw new IllegalArgumentException("URL " + url + " has wrong format: " + ex.getMessage(), ex);
+            throw new IllegalArgumentException("ipOrFQDN " + ipOrFQDN + " has wrong format: " + ex.getMessage(), ex);
         }
     }
 
-    public String getUrl() {
-        return url;
-    }
-
-    public String getHashString() {
+    public static String getHashStringPrefix(final int bytes, final String hashString) {
         if (hashString == null) {
-            computeHash();
+            throw new IllegalArgumentException("hashString is null.");
         }
-        return hashString;
+        return (bytes * 2 > hashString.length()) ? hashString : hashString.substring(0, bytes * 2);
     }
 
-    public String getHashStringPrefix(int bytes) {
-        if (hashString == null) {
-            computeHash();
-        }
-        if (bytes * 2 > hashString.length()) return hashString;
-        return hashString.substring(0, bytes * 2);
-    }
-
-    public byte[] getHash() {
+    public static byte[] getHashPrefix(final int length, final byte[] hash) {
         if (hash == null) {
-            computeHash();
-        }
-        return hash;
-    }
-
-    public byte[] getHashPrefix(int length) {
-        if (hash == null) {
-            computeHash();
+            throw new IllegalArgumentException("hash is null.");
         }
         if (hash.length < length) {
             return hash;
         }
-        byte[] hashPrefix = new byte[length];
-        System.arraycopy( hash, 0, hashPrefix, 0, hashPrefix.length);
-        return hashPrefix;
+        return ArrayUtils.subarray(hash, 0, length);
     }
 
-    private void computeHash() {
-        hash = GSBUtils.computeHash(url);
-        hashString = GSBUtils.hashToString(hash);
+    public static String getHashString(final byte[] hash) {
+        if (hash == null) {
+            throw new IllegalArgumentException("hash is null.");
+        }
+        return GSBUtils.hashToString(hash);
     }
+
+    public static byte[] getHash(final String canonicalizedURL) {
+        if (canonicalizedURL == null) {
+            throw new IllegalArgumentException("canonicalizedURL is null.");
+        }
+        return GSBUtils.computeHash(canonicalizedURL);
+    }
+*/
 }

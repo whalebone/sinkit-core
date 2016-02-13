@@ -1,21 +1,27 @@
 package biz.karms.sinkit.ejb.impl;
 
-import biz.karms.sinkit.ejb.*;
+import biz.karms.sinkit.ejb.ArchiveService;
+import biz.karms.sinkit.ejb.BlacklistCacheService;
+import biz.karms.sinkit.ejb.CacheBuilder;
+import biz.karms.sinkit.ejb.CoreService;
+import biz.karms.sinkit.ejb.WhitelistCacheService;
 import biz.karms.sinkit.ejb.cache.pojo.WhitelistedRecord;
 import biz.karms.sinkit.ejb.util.IoCValidator;
 import biz.karms.sinkit.ejb.util.WhitelistUtils;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCValidationException;
-import biz.karms.sinkit.ioc.*;
+import biz.karms.sinkit.ioc.IoCRecord;
+import biz.karms.sinkit.ioc.IoCSeen;
+import biz.karms.sinkit.ioc.IoCSourceId;
+import biz.karms.sinkit.ioc.IoCSourceIdType;
 import biz.karms.sinkit.ioc.util.IoCSourceIdBuilder;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import sun.rmi.runtime.Log;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -83,7 +89,7 @@ public class CoreServiceEJB implements CoreService {
     }
 
     @Override
-    public IoCRecord processIoCRecord(IoCRecord ioc) throws ArchiveException, IoCValidationException {
+    public IoCRecord processIoCRecord(final IoCRecord ioc) throws ArchiveException, IoCValidationException {
         // validate ioc
         IoCValidator.validateIoCRecord(ioc, iocActiveHours);
 
@@ -100,7 +106,7 @@ public class CoreServiceEJB implements CoreService {
             seenLast = ioc.getTime().getObservation();
         } else {
             seenFirst = ioc.getTime().getSource();
-            seenLast =  ioc.getTime().getSource();
+            seenLast = ioc.getTime().getSource();
         }
         IoCSeen seen = new IoCSeen();
         seen.setLast(seenLast);
@@ -112,7 +118,7 @@ public class CoreServiceEJB implements CoreService {
 
         WhitelistedRecord white = null;
         if (ioc.getSource().getId().getType() == IoCSourceIdType.FQDN) {
-            String[] fqdns = WhitelistUtils.explodeDomains(ioc.getSource().getId().getValue());
+            final String[] fqdns = WhitelistUtils.explodeDomains(ioc.getSource().getId().getValue());
             int i = 0;
             while (i < fqdns.length && white == null) {
                 white = whitelistCacheService.get(fqdns[i++]);
@@ -143,7 +149,7 @@ public class CoreServiceEJB implements CoreService {
         // this has to be done in multiple runs until search returns 0 results
         do {
             iocs = archiveService.findIoCsForDeactivation(iocActiveHours);
-            if (!iocs.isEmpty()) {
+            if (!CollectionUtils.isEmpty(iocs)) {
                 for (IoCRecord ioc : iocs) {
                     blacklistCacheService.removeFromCache(ioc);
                     archiveService.deactivateRecord(ioc);

@@ -10,8 +10,8 @@ import biz.karms.sinkit.ioc.IoCRecord;
 import biz.karms.sinkit.ioc.IoCVirusTotalReport;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.GsonBuilder;
+import org.apache.commons.collections.CollectionUtils;
 
-import javax.annotation.PostConstruct;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
@@ -23,7 +23,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Created by tkozel on 24.6.15.
+ * @author Tomas Kozel
  */
 @Stateless
 public class ArchiveServiceEJB implements ArchiveService {
@@ -34,7 +34,7 @@ public class ArchiveServiceEJB implements ArchiveService {
     public static final String ELASTIC_LOG_TYPE = "match";
 
     private static final String ELASTIC_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
-    private static final DateFormat dateFormatter = new SimpleDateFormat(ELASTIC_DATE_FORMAT);
+    private static final DateFormat DATEFORMATTER = new SimpleDateFormat(ELASTIC_DATE_FORMAT);
 
     @Inject
     private Logger log;
@@ -42,22 +42,14 @@ public class ArchiveServiceEJB implements ArchiveService {
     @EJB
     private ElasticService elasticService;
 
-    @PostConstruct
-    public void setup() {
-        if (elasticService == null) {
-            throw new IllegalArgumentException("ElasticServiceEJB must be injected.");
-        }
-    }
-
     @Override
-    public List<IoCRecord> findIoCsForDeactivation(int hours) throws ArchiveException {
+    public List<IoCRecord> findIoCsForDeactivation(final int hours) throws ArchiveException {
         //log.info("Searching archive for active IoCs with seen.last older than " + hours + " hours.");
-
-        Calendar c = Calendar.getInstance();
+        final Calendar c = Calendar.getInstance();
         c.add(Calendar.HOUR, -hours);
-        String tooOld = dateFormatter.format(c.getTime());
+        final String tooOld = DATEFORMATTER.format(c.getTime());
 
-        String query = "{\n" +
+        final String query = "{\n" +
                 "   \"query\": {\n" +
                 "       \"filtered\": {\n" +
                 "           \"query\": {\n" +
@@ -76,17 +68,15 @@ public class ArchiveServiceEJB implements ArchiveService {
                 "   }\n" +
                 "}\n";
 
-        return elasticService.search(query, ELASTIC_IOC_INDEX,
-                ELASTIC_IOC_TYPE, IoCRecord.class);
+        return elasticService.search(query, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, IoCRecord.class);
     }
 
     @Override
-    public List<IoCRecord> findIoCsForWhitelisting(String sourceId) throws ArchiveException {
+    public List<IoCRecord> findIoCsForWhitelisting(final String sourceId) throws ArchiveException {
         //log.info("Searching archive for active IoCs with seen.last older than " + hours + " hours.");
-        String sourceIdValue = new GsonBuilder().create().toJson(sourceId);
-        String query_string = "\"active: true AND NOT whitelist_name: * AND " +
+        final String query_string = "\"active: true AND NOT whitelist_name: * AND " +
                 "(source.id.value: " + sourceId + " OR source.id.value: *." + sourceId + ")\"";
-        String query = "{\n" +
+        final String query = "{\n" +
                 "   \"query\": {\n" +
                 "       \"filtered\": {\n" +
                 "           \"query\": {\n" +
@@ -96,49 +86,43 @@ public class ArchiveServiceEJB implements ArchiveService {
                 "               }\n" +
                 "           }\n" +
                 "       }\n" +
-                "   }\n"+
+                "   }\n" +
                 "}\n";
 
-        return elasticService.search(query, ELASTIC_IOC_INDEX,
-                ELASTIC_IOC_TYPE, IoCRecord.class);
+        return elasticService.search(query, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, IoCRecord.class);
     }
 
     @Override
-    public boolean archiveReceivedIoCRecord(IoCRecord ioc) throws ArchiveException {
-
+    public boolean archiveReceivedIoCRecord(final IoCRecord ioc) throws ArchiveException {
         //compute documentId
         ioc.setDocumentId(IoCIdentificationUtils.computeHashedId(ioc));
         //compute uniqueReference
         ioc.setUniqueRef(IoCIdentificationUtils.computeUniqueReference(ioc));
-
-        String seenLast = dateFormatter.format(ioc.getSeen().getLast());
-
-        String upsertScript = "{\n" +
+        final String seenLast = DATEFORMATTER.format(ioc.getSeen().getLast());
+        final String upsertScript = "{\n" +
                 "    \"script\" : \"ctx._source.seen.last = seenLast\"\n," +
                 "    \"params\" : {\n" +
-                "        \"seenLast\" : \"" +seenLast + "\"\n" +
+                "        \"seenLast\" : \"" + seenLast + "\"\n" +
                 "    },\n" +
                 "   \"upsert\" : " + new GsonBuilder()
-                            .setDateFormat(ELASTIC_DATE_FORMAT)
-                            .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
-                            .create()
-                            .toJson(ioc) + "\n" +
+                .setDateFormat(ELASTIC_DATE_FORMAT)
+                .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+                .create()
+                .toJson(ioc) + "\n" +
                 "}";
-
         return elasticService.update(ioc.getDocumentId(), upsertScript, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE);
     }
 
     @Override
-    public boolean setVirusTotalReportToIoCRecord(IoCRecord ioc, IoCVirusTotalReport[] reports) throws ArchiveException{
-
-        String updateScript = "{\n" +
+    public boolean setVirusTotalReportToIoCRecord(final IoCRecord ioc, final IoCVirusTotalReport[] reports) throws ArchiveException {
+        final String updateScript = "{\n" +
                 "   \"doc\" : {\n" +
                 "       \"virus_total_reports\" : " +
-                            new GsonBuilder()
-                                .setDateFormat(ELASTIC_DATE_FORMAT)
-                                .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
-                                .create()
-                                .toJson(reports) + "\n" +
+                new GsonBuilder()
+                        .setDateFormat(ELASTIC_DATE_FORMAT)
+                        .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+                        .create()
+                        .toJson(reports) + "\n" +
                 "   }\n" +
                 "}";
         ioc.setVirusTotalReports(reports);
@@ -146,8 +130,7 @@ public class ArchiveServiceEJB implements ArchiveService {
     }
 
     @Override
-    public IoCRecord deactivateRecord(IoCRecord ioc) throws ArchiveException {
-
+    public IoCRecord deactivateRecord(final IoCRecord ioc) throws ArchiveException {
         /**
          * Deactivation in archive: Old active IoC record is deleted and new one inactive is created.
          * This is done because in elastic is not possible to update id of record.
@@ -161,31 +144,29 @@ public class ArchiveServiceEJB implements ArchiveService {
 
         //IMPORTANT - id has to be computed after the deactivated time is set because it's part of the hash
         ioc.setDocumentId(IoCIdentificationUtils.computeHashedId(ioc));
-        ioc = elasticService.index(ioc, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE);
 
-        return ioc;
+        return elasticService.index(ioc, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE);
     }
 
     @Override
-    public IoCRecord setRecordWhitelisted(IoCRecord ioc, String whitelistName) throws ArchiveException {
+    public IoCRecord setRecordWhitelisted(final IoCRecord ioc, final String whitelistName) throws ArchiveException {
         ioc.getTime().setWhitelisted(Calendar.getInstance().getTime());
         ioc.setWhitelistName(whitelistName);
-        ioc = elasticService.index(ioc, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE);
-        return ioc;
+        return elasticService.index(ioc, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE);
     }
 
     @Override
-    public EventLogRecord archiveEventLogRecord(EventLogRecord logRecord) throws ArchiveException {
-        DateFormat df = new SimpleDateFormat("YYYY-MM-dd");
-        String index = ELASTIC_LOG_INDEX + "-" + df.format(logRecord.getLogged());
-        log.log(Level.FINE, "elasticService.index logging logrecord, index="+index);
+    public EventLogRecord archiveEventLogRecord(final EventLogRecord logRecord) throws ArchiveException {
+        final DateFormat df = new SimpleDateFormat("YYYY-MM-dd");
+        final String index = ELASTIC_LOG_INDEX + "-" + df.format(logRecord.getLogged());
+        log.log(Level.FINE, "elasticService.index logging logrecord, index=" + index);
         return elasticService.index(logRecord, index, ELASTIC_LOG_TYPE);
     }
 
     @Override
-    public List<IoCRecord> getActiveNotWhitelistedIoCs(int from, int size) throws ArchiveException {
+    public List<IoCRecord> getActiveNotWhitelistedIoCs(final int from, final int size) throws ArchiveException {
         //log.info("Searching archive for active IoCs with seen.last older than " + hours + " hours.");
-        String query = "{\n" +
+        final String query = "{\n" +
                 "   \"query\":{\n" +
                 "       \"filtered\":{\n" +
                 "           \"query\":{\n" +
@@ -201,38 +182,38 @@ public class ArchiveServiceEJB implements ArchiveService {
                 "       }\n" +
                 "   }\n" +
                 "}\n";
-
-        return elasticService.search(query, ELASTIC_IOC_INDEX,
-                ELASTIC_IOC_TYPE, from, size, IoCRecord.class);
+        return elasticService.search(query, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, from, size, IoCRecord.class);
     }
 
     @Override
-    public IoCRecord getIoCRecordById(String id) throws ArchiveException {
+    public IoCRecord getIoCRecordById(final String id) throws ArchiveException {
         //log.log(Level.WARNING, "getIoCRecordById: id: "+id+", ELASTIC_IOC_INDEX: "+ELASTIC_IOC_INDEX+", ELASTIC_IOC_TYPE: "+ELASTIC_IOC_TYPE);
         return elasticService.getDocumentById(id, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, IoCRecord.class);
     }
 
     @Override
-    public IoCRecord getIoCRecordByUniqueRef(String uniqueRef) throws ArchiveException {
-        String query = "{\n" +
+    public IoCRecord getIoCRecordByUniqueRef(final String uniqueRef) throws ArchiveException {
+        final String query = "{\n" +
                 "   \"query\": {\n" +
                 "               \"term\": {\n" +
                 "                   \"unique_ref\": \"" + uniqueRef + "\"\n" +
                 "               }\n" +
-                "   }\n" +
+                "   },\n" +
+                "   \"sort\": { \"time.received_by_core\": { \"order\": \"desc\" }}\n" +
                 "}\n";
-        List<IoCRecord> iocs = elasticService.search(query, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, IoCRecord.class);
-        if (iocs.isEmpty()) {
+        final List<IoCRecord> iocs = elasticService.search(query, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, IoCRecord.class);
+        if (CollectionUtils.isEmpty(iocs)) {
             return null;
-        } else if (iocs.size() > 1) {
+        }
+        if (iocs.size() > 1) {
             log.warning("Search for IoC with uniqueRef: " + uniqueRef + " returned " + iocs.size() + " records, expected max one. " +
-                    "Record with document_id: " + iocs.get(0).getDocumentId() + " was used as a  reference. Please fix this inconsistency.");
+                    "Record with document_id: " + iocs.get(0).getDocumentId() + " was used as a reference. Please fix this inconsistency.");
         }
         return iocs.get(0);
     }
 
     @Override
-    public EventLogRecord getLogRecordWaitingForVTScan(int notAllowedFailedMinutes) throws ArchiveException {
+    public EventLogRecord getLogRecordWaitingForVTScan(final int notAllowedFailedMinutes) throws ArchiveException {
         String query = "{\n" +
                 getWaitingLogRecordQuery(VirusTotalRequestStatus.WAITING, notAllowedFailedMinutes) + ",\n" +
                 "   \"sort\":{\n" +
@@ -241,18 +222,17 @@ public class ArchiveServiceEJB implements ArchiveService {
                 "       }\n" +
                 "   }\n" +
                 "}";
-        List<EventLogRecord> logRecords =
+        final List<EventLogRecord> logRecords =
                 elasticService.search(query, ELASTIC_LOG_INDEX + "-*",
                         ELASTIC_LOG_TYPE, 0, 1, EventLogRecord.class);
-
-        if (logRecords.size() == 0) {
+        if (CollectionUtils.isEmpty(logRecords)) {
             return null;
         }
         return logRecords.get(0);
     }
 
     @Override
-    public EventLogRecord getLogRecordWaitingForVTReport(int notAllowedFailedMinutes) throws ArchiveException {
+    public EventLogRecord getLogRecordWaitingForVTReport(final int notAllowedFailedMinutes) throws ArchiveException {
         String query = "{\n" +
                 getWaitingLogRecordQuery(VirusTotalRequestStatus.WAITING_FOR_REPORT, notAllowedFailedMinutes) + ",\n" +
                 "   \"sort\":{\n" +
@@ -263,20 +243,20 @@ public class ArchiveServiceEJB implements ArchiveService {
                 "   }\n" +
                 "}";
 
-        List<EventLogRecord> logRecords =
+        final List<EventLogRecord> logRecords =
                 elasticService.search(query, ELASTIC_LOG_INDEX + "-*",
                         ELASTIC_LOG_TYPE, 0, 1, EventLogRecord.class);
-
-        if (logRecords.size() == 0) {
+        if (CollectionUtils.isEmpty(logRecords)) {
             return null;
         }
+
         return logRecords.get(0);
     }
 
-    private String getWaitingLogRecordQuery(VirusTotalRequestStatus status, int notAllowedFailedMinutes) {
-        String statusTerm = new GsonBuilder().create().toJson(status);
-        String notAllowedFailedRange = "\"now-" + notAllowedFailedMinutes + "m\"";
-        return  "    \"query\":{\n" +
+    private String getWaitingLogRecordQuery(final VirusTotalRequestStatus status, final int notAllowedFailedMinutes) {
+        final String statusTerm = new GsonBuilder().create().toJson(status);
+        final String notAllowedFailedRange = "\"now-" + notAllowedFailedMinutes + "m\"";
+        return "    \"query\":{\n" +
                 "        \"bool\":{\n" +
                 "            \"filter\":{\n" +
                 "                \"term\":{\n" +

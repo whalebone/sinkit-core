@@ -1,31 +1,18 @@
 package biz.karms.sinkit.ejb.cache.pojo;
 
-import org.hibernate.search.annotations.*;
-
-import javax.persistence.Entity;
 import java.io.Serializable;
 import java.util.Calendar;
 
 /**
- * Created by tkozel on 1/9/16.
+ * @author Tomas Kozel
  */
-//@Indexed(index = "WhitelistedRecord")
-//@Entity
-public class WhitelistedRecord  implements Serializable {
+public class WhitelistedRecord implements Serializable {
 
     private static final long serialVersionUID = -4530501033533677059L;
-
-    // @Field(index = Index.YES, analyze = Analyze.NO)
-    String rawId;
-
-    // @Field(index = Index.YES, analyze = Analyze.NO)
-    String sourceName;
-
-    // @Field
-    // @CalendarBridge(resolution = Resolution.SECOND)
-    Calendar expiresAt;
-
-    boolean completed;
+    private String rawId;
+    private String sourceName;
+    private Calendar expiresAt;
+    private boolean completed;
 
     public Calendar getExpiresAt() {
         return expiresAt;

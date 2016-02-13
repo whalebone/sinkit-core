@@ -11,6 +11,8 @@ import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
 import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
 import com.google.common.collect.Lists;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.validator.routines.DomainValidator;
 import org.infinispan.Cache;
 import org.infinispan.commons.util.concurrent.NotifyingFuture;
@@ -18,7 +20,6 @@ import org.infinispan.query.Search;
 import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
 import org.jboss.marshalling.Pair;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.ejb.Stateless;
 import javax.inject.Inject;
@@ -60,9 +61,6 @@ public class WebApiEJB implements WebApi {
     @SinkitCache(SinkitCacheName.CUSTOM_LISTS_CACHE)
     private Cache<String, CustomList> customListsCache;
 
-    //@Inject
-    //private javax.transaction.UserTransaction utx;
-
     // Testing/playground purposes
     @Override
     public String sayHello(final String queryString) {
@@ -91,21 +89,12 @@ public class WebApiEJB implements WebApi {
             return null;
         }
         try {
-            //utx.begin();
             log.log(Level.FINE, "Putting key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
             blacklistCache.put(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
-            //utx.commit();
             // TODO: Is this O.K.? Maybe we should just return the same instance.
-            return blacklistCache.get(blacklistedRecord.getBlackListedDomainOrIP());
+            return blacklistCache.get(DigestUtils.md5Hex(blacklistedRecord.getBlackListedDomainOrIP()));
         } catch (Exception e) {
             log.log(Level.SEVERE, "putBlacklistedRecord", e);
-            /*try {
-                if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
-                    utx.rollback();
-                }
-            } catch (Exception e1) {
-                log.log(Level.SEVERE, "putBlacklistedRecord", e1);
-            }*/
             // TODO: Proper Error codes.
             return null;
         }
@@ -114,7 +103,7 @@ public class WebApiEJB implements WebApi {
     @Override
     public BlacklistedRecord getBlacklistedRecord(final String key) {
         log.log(Level.FINE, "getting key [" + key + "]");
-        return blacklistCache.get(key);
+        return blacklistCache.get(DigestUtils.md5Hex(key));
     }
 
     @Override
@@ -125,25 +114,17 @@ public class WebApiEJB implements WebApi {
     @Override
     public String deleteBlacklistedRecord(final String key) {
         try {
-            //utx.begin();
             String response;
-            if (blacklistCache.containsKey(key)) {
-                blacklistCache.remove(key);
+            final String hashedKey = DigestUtils.md5Hex(key);
+            if (blacklistCache.containsKey(hashedKey)) {
+                blacklistCache.remove(hashedKey);
                 response = key + " DELETED";
             } else {
                 response = key + " DOES NOT EXIST";
             }
-            //utx.commit();
             return response;
         } catch (Exception e) {
             log.log(Level.SEVERE, "deleteBlacklistedRecord", e);
-            /*try {
-                if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
-                    utx.rollback();
-                }
-            } catch (Exception e1) {
-                log.log(Level.SEVERE, "deleteBlacklistedRecord", e1);
-            }*/
             // TODO: Proper Error codes.
             return null;
         }
@@ -161,21 +142,6 @@ public class WebApiEJB implements WebApi {
             if (rule != null) {
                 return Collections.singletonList(rule);
             }
-
-            // Let's search subnets
-/*
-            SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
-            QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(Rule.class).get();
-
-            Query luceneQuery = queryBuilder
-                    .bool()
-                    .must(queryBuilder.range().onField("startAddress").below(clientIPAddressPaddedBigInt).createQuery())
-                    .must(queryBuilder.range().onField("endAddress").above(clientIPAddressPaddedBigInt).createQuery())
-                    .createQuery();
-
-            CacheQuery query = searchManager.getQuery(luceneQuery, Rule.class);
-            return query.list();
-*/
 
             QueryFactory qf = Search.getQueryFactory(ruleCache);
             Query query = qf.from(Rule.class)
@@ -239,7 +205,6 @@ public class WebApiEJB implements WebApi {
             final String clientIPAddressPaddedBigInt = startEndAddresses.getA();
             log.log(Level.FINE, "Deleting key [" + cidrAddress + "] which actually translates to BigInteger zero padded representation " +
                     "[" + clientIPAddressPaddedBigInt + "]");
-            //utx.begin();
             String response;
             if (ruleCache.containsKey(clientIPAddressPaddedBigInt)) {
                 ruleCache.remove(clientIPAddressPaddedBigInt);
@@ -247,17 +212,9 @@ public class WebApiEJB implements WebApi {
             } else {
                 response = clientIPAddressPaddedBigInt + " DOES NOT EXIST";
             }
-            //utx.commit();
             return response;
         } catch (Exception e) {
             log.log(Level.SEVERE, "deleteRule", e);
-            /*try {
-                if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
-                    utx.rollback();
-                }
-            } catch (Exception e1) {
-                log.log(Level.SEVERE, "deleteRule", e1);
-            }*/
             // TODO: Proper Error codes.
             return null;
         }
@@ -275,14 +232,7 @@ public class WebApiEJB implements WebApi {
     @Override
     public String putDNSClientSettings(final Integer customerId, final HashMap<String, HashMap<String, String>> customerDNSSetting) {
         try {
-            /*.
-            SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
-            QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(Rule.class).get();
-            Query luceneQuery = queryBuilder.keyword().onField("customerId").matching(customerId).createQuery();
-            CacheQuery query = searchManager.getQuery(luceneQuery, Rule.class);
-            */
             QueryFactory qf = Search.getQueryFactory(ruleCache);
-
             Query query = qf.from(Rule.class)
                     .having("customerId").eq(customerId)
                     .toBuilder().build();
@@ -343,19 +293,10 @@ public class WebApiEJB implements WebApi {
                 rule.setSources(allDNSSettingDTO.getSettings());
                 rule.setStartAddress(startEndAddresses.getA());
                 rule.setEndAddress(startEndAddresses.getB());
-                //utx.begin();
                 log.log(Level.FINE, "Putting key [" + rule.getStartAddress() + "]");
                 ruleCache.put(rule.getStartAddress(), rule);
-                //utx.commit();
             } catch (Exception e) {
                 log.log(Level.SEVERE, "postAllDNSClientSettings", e);
-                /*try {
-                    if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
-                        utx.rollback();
-                    }
-                } catch (Exception e1) {
-                    log.log(Level.SEVERE, "postAllDNSClientSettings", e1);
-                }*/
                 // TODO: Proper Error codes.
                 return null;
             }
@@ -418,7 +359,7 @@ public class WebApiEJB implements WebApi {
                 customList.setClientStartAddress(dnsClientStartAddress);
                 customList.setClientEndAddress(dnsClientEndAddress);
                 final String blacklistWhitelistLog = customerCustomList.getLists().get(fqdnOrCIDR);
-                if (!(blacklistWhitelistLog != null && (blacklistWhitelistLog.equals("B") || blacklistWhitelistLog.equals("W") || blacklistWhitelistLog.equals("L")))) {
+                if (!(blacklistWhitelistLog != null && ("B".equals(blacklistWhitelistLog) || "W".equals(blacklistWhitelistLog) || "L".equals(blacklistWhitelistLog)))) {
                     log.log(Level.SEVERE, "putCustomLists: Expected one of <B|W|L> but got: " + blacklistWhitelistLog + ". customListsElementCounter: " + customListsElementCounter);
                     // TODO: Proper Error codes.
                     return null;
@@ -462,23 +403,13 @@ public class WebApiEJB implements WebApi {
                 final String key = customList.getClientCidrAddress() + ((customList.getFqdn() != null) ? customList.getFqdn() : customList.getListCidrAddress());
 
                 try {
-                    //utx.begin();
                     log.log(Level.FINE, "putCustomLists: Putting key [" + key + "]. customListsElementCounter: " + customListsElementCounter);
                     if (customListsCache.replace(key, customList) == null) {
                         customListsCache.put(key, customList);
                     }
-                    //utx.commit();
                     customListsElementCounter++;
                 } catch (Exception e) {
                     log.log(Level.SEVERE, "putCustomLists: customListsElementCounter: " + customListsElementCounter, e);
-                    /*try {
-                        if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
-                            utx.rollback();
-                        }
-                    } catch (Exception e1) {
-                        log.log(Level.SEVERE, "putCustomLists", e1);
-                        return null; //finally?
-                    }*/
                     // TODO: Proper Error codes.
                     return null;
                 }
@@ -523,33 +454,16 @@ public class WebApiEJB implements WebApi {
      */
     @Override
     public String putFeedSettings(final String feedUid, final HashMap<Integer, HashMap<String, String>> feedSettings) {
-        //CacheQuery query;
         Query query;
         int updated = 0;
         try {
-            /*SearchManager searchManager = org.infinispan.query.Search.getSearchManager(ruleCache);
-            QueryBuilder queryBuilder = searchManager.buildQueryBuilderForClass(Rule.class).get();
-            Query luceneQuery = queryBuilder
-                    .phrase()
-                    .onField("sources")
-                    .sentence(feedUid)
-                    .createQuery();
-                    */
-            //.keyword() //TODO: This would need a new SettingsMapBridge and might not be faster anyway...
-            //.onField("sources")
-            //.matching(feedUid)
-            //.createQuery();
 
             QueryFactory qf = Search.getQueryFactory(ruleCache);
             query = qf.from(Rule.class)
                     .having("sources").contains(feedUid)
                     .toBuilder().build();
 
-            // query = searchManager.getQuery(luceneQuery, Rule.class);
             if (query != null && query.getResultSize() > 0) {
-                //  Iterator itr = query.iterator();
-                // while (itr.hasNext()) {
-                //   Rule rule = (Rule) itr.next();
                 List<Rule> list = query.list();
                 for (Rule rule : list) {
                     HashMap<String, String> cidrMode = feedSettings.get(rule.getCustomerId());
@@ -557,20 +471,10 @@ public class WebApiEJB implements WebApi {
                         //TODO This is certainly wrong and overengineered... Let's talk to Rattus.
                         rule.getSources().replace(feedUid, cidrMode.get(rule.getCidrAddress()));
                         try {
-                            //utx.begin();
                             ruleCache.replace(rule.getStartAddress(), rule);
-                            //utx.commit();
                             updated++;
                         } catch (Exception e) {
                             log.log(Level.SEVERE, "putFeedSettings", e);
-                            /*try {
-                                if (utx.getStatus() != javax.transaction.Status.STATUS_NO_TRANSACTION) {
-                                    utx.rollback();
-                                }
-                            } catch (Exception e1) {
-                                log.log(Level.SEVERE, "putFeedSettings", e1);
-                                return null; //finally?
-                            }*/
                             // TODO: Proper Error codes.
                             return null;
                         }
@@ -592,6 +496,6 @@ public class WebApiEJB implements WebApi {
     @Override
     public String postCreateFeedSettings(FeedSettingCreateDTO feedSettingCreate) {
         //TODO
-        throw new NotImplementedException();
+        throw new NotImplementedException("We are sorry, this is not suported at the moment.");
     }
 }

@@ -1,20 +1,18 @@
 package biz.karms.sinkit.ejb.gsb.util;
 
 import biz.karms.sinkit.ejb.gsb.dto.FullHashLookupResponse;
-import org.apache.commons.lang3.StringUtils;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.ext.MessageBodyReader;
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
-import java.nio.charset.StandardCharsets;
 import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 
 /**
  * Created by tom on 12/13/15.
@@ -31,11 +29,26 @@ public class FullHashLookupResponseReader implements MessageBodyReader<FullHashL
     }
 
     @Override
-    public FullHashLookupResponse readFrom(Class<FullHashLookupResponse> type, Type genericType, Annotation[] annotations,
-                                           MediaType mediaType, MultivaluedMap<String, String> httpHeaders,
+    public FullHashLookupResponse readFrom(Class<FullHashLookupResponse> type,
+                                           Type genericType,
+                                           Annotation[] annotations,
+                                           MediaType mediaType,
+                                           MultivaluedMap<String, String> httpHeaders,
                                            InputStream entityStream) throws IOException, WebApplicationException {
         BufferedInputStream bis = new BufferedInputStream(entityStream);
         FullHashLookupResponse response = new FullHashLookupResponse();
+
+        //DEBUGing bytes
+        /*
+        bis.mark(0);
+        StringBuilder s = new StringBuilder();
+        while(bis.available() > 0) {
+            s.append((char) bis.read());
+        }
+        bis.reset();
+        System.out.println("FullHashLookupResponseReader: BEGIN"+s.toString()+"END");
+        */
+
         String cacheLifetime = readLine(bis);
 
         try {

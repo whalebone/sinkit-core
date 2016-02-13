@@ -1,98 +1,62 @@
 package biz.karms.sinkit.ejb.util;
 
 import biz.karms.sinkit.ioc.IoCRecord;
-
-import java.math.BigInteger;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.util.Random;
+import org.apache.commons.codec.digest.DigestUtils;
 
 /**
- * Created by tom on 11/7/15.
+ * @author Tomas Kozel
  */
 public class IoCIdentificationUtils {
 
-    private static final String HASH_ALG = "MD5";
-    private static final Random RANDOM = new SecureRandom();
+    public static String computeHashedId(final IoCRecord ioc) {
 
-    public static String computeHashedId(IoCRecord ioc) {
-
-        String idString = "";
+        final StringBuilder idString = new StringBuilder();
         if (ioc.getFeed() != null && ioc.getFeed().getName() != null) {
-            idString += ioc.getFeed().getName();
+            idString.append(ioc.getFeed().getName());
         }
 
         if (ioc.getClassification() != null && ioc.getClassification().getType() != null) {
-            idString += ioc.getClassification().getType();
+            idString.append(ioc.getClassification().getType());
         }
 
         if (ioc.getSource() != null && ioc.getSource().getId() != null && ioc.getSource().getId().getValue() != null) {
-            idString += ioc.getSource().getId().getValue();
+            idString.append(ioc.getSource().getId().getValue());
         }
 
         if (ioc.getTime() != null && ioc.getTime().getDeactivated() != null) {
-            idString += ioc.getTime().getDeactivated().getTime();
+            idString.append(ioc.getTime().getDeactivated().getTime());
         }
 
-        if (idString.equals("")) {
+        if (idString.length() == 0) {
             return null;
         }
 
-        return IoCIdentificationUtils.hashString(idString.getBytes(), HASH_ALG);
+        return DigestUtils.md5Hex(idString.toString());
     }
 
-    public static String computeUniqueReference(IoCRecord ioc) {
+    public static String computeUniqueReference(final IoCRecord ioc) {
 
-        String uniqueRef = "";
+        final StringBuilder uniqueRef = new StringBuilder();
         if (ioc.getFeed() != null && ioc.getFeed().getName() != null) {
-            uniqueRef += ioc.getFeed().getName();
+            uniqueRef.append(ioc.getFeed().getName());
         }
 
         if (ioc.getClassification() != null && ioc.getClassification().getType() != null) {
-            uniqueRef += ioc.getClassification().getType();
+            uniqueRef.append(ioc.getClassification().getType());
         }
 
         if (ioc.getSource() != null && ioc.getSource().getId() != null && ioc.getSource().getId().getValue() != null) {
-            uniqueRef += ioc.getSource().getId().getValue();
+            uniqueRef.append(ioc.getSource().getId().getValue());
         }
 
         if (ioc.getTime() != null && ioc.getTime().getReceivedByCore() != null) {
-            uniqueRef += ioc.getTime().getReceivedByCore().getTime();
+            uniqueRef.append(ioc.getTime().getReceivedByCore().getTime());
         }
 
-        if (uniqueRef.equals("")) return null;
-
-        byte[] salt = getNextSalt();
-        byte[] uniqueRefBytes = uniqueRef.getBytes();
-        byte[] toBeHashed = new byte[uniqueRefBytes.length + salt.length];
-        System.arraycopy(uniqueRefBytes, 0, toBeHashed, 0, uniqueRefBytes.length);
-        System.arraycopy(salt, 0, toBeHashed, uniqueRefBytes.length, salt.length);
-        return hashString(toBeHashed, HASH_ALG);
-    }
-
-    public static String hashString(byte[] toBeHashed, String hashAlg) {
-        String hashString = null;
-        MessageDigest md;
-        try {
-            md = MessageDigest.getInstance(hashAlg);
-            md.update(toBeHashed);
-            hashString = new BigInteger(1, md.digest()).toString(16);
-        } catch (NoSuchAlgorithmException e) {
-            //should never be throw since HASH_ALG is hardcoded
-            e.printStackTrace();
+        if (uniqueRef.length() == 0) {
+            return null;
         }
-        return hashString;
-    }
 
-    /**
-     * Returns a random salt to be used to hash a password.
-     *
-     * @return a 16 bytes random salt
-     */
-    public static byte[] getNextSalt() {
-        byte[] salt = new byte[16];
-        RANDOM.nextBytes(salt);
-        return salt;
+        return DigestUtils.md5Hex(uniqueRef.toString());
     }
 }
