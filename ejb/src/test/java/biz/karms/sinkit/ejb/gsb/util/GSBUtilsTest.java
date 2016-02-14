@@ -1,10 +1,13 @@
 package biz.karms.sinkit.ejb.gsb.util;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -12,19 +15,51 @@ import static org.junit.Assert.assertEquals;
  *
  * @author Tomas Kozel
  */
+@RunWith(Parameterized.class)
 public class GSBUtilsTest {
 
+    @Parameterized.Parameters
+    public static Collection<Object[]> data() {
+        return Arrays.asList(new Object[][] {
+                {"a.b.c.d.e.f.g.h", Arrays.asList("a.b.c.d.e.f.g.h/", "g.h/", "f.g.h/", "e.f.g.h/", "d.e.f.g.h/")},
+                {"a.b.c.d.e.f", Arrays.asList("a.b.c.d.e.f/", "e.f/", "d.e.f/", "c.d.e.f/", "b.c.d.e.f/")},
+                {"a.b.c.d.e", Arrays.asList("a.b.c.d.e/", "d.e/", "c.d.e/", "b.c.d.e/")},
+                {"b.c.d.e", Arrays.asList("b.c.d.e/", "d.e/", "c.d.e/")},
+                {"c.d.e", Arrays.asList("c.d.e/", "d.e/")},
+                {"d.e", Arrays.asList("d.e/")},
+                {"1.2.3.4", Arrays.asList("1.2.3.4/")},
+                {"255.255.255.255", Arrays.asList("255.255.255.255/")},
+                {"FE80:0000:0000:0000:0202:B3FF:FE1E:8329", Arrays.asList("FE80:0000:0000:0000:0202:B3FF:FE1E:8329/")},
+                {"FE80::0202:B3FF:FE1E:8329", Arrays.asList("FE80::0202:B3FF:FE1E:8329/")}
+        });
+    }
 
+    private String ipOrFQDN;
+
+    private List<String> expectedLookupVariants;
+
+    public GSBUtilsTest(String ipOrFQDN, List<String> lookupVariants) {
+        this.ipOrFQDN = ipOrFQDN;
+        this.expectedLookupVariants = lookupVariants;
+    }
+
+    @Test
+    public void testLookupVariants() {
+        List<String> lookupVariants = GSBUtils.getLookupVariants(ipOrFQDN);
+        assertEquals(expectedLookupVariants, lookupVariants);
+    }
+
+    /*
     // Testing data provided by google -> ensuring our hashing works the same way as theirs.
     @Test
-    public void testHashing() throws Exception {
+    public void testHashing() {
 
         String message = "abc";
-        byte[] hashPrefix = Arrays.copyOf(GSBUtils.computeHash(message), 4);
+        byte[] hashPrefix = Arrays.copyOf(DigestUtils.sha256(message), 4);
         assertArrayEquals(new byte[]{(byte) 0xba, (byte) 0x78, (byte) 0x16, (byte) 0xbf}, hashPrefix);
 
         String message2 = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
-        byte[] hashPrefix2 = Arrays.copyOf(GSBUtils.computeHash(message2), 6);
+        byte[] hashPrefix2 = Arrays.copyOf(DigestUtils.sha256(message2), 6);
         assertArrayEquals(new byte[]{(byte) 0x24, (byte) 0x8d, (byte) 0x6a, (byte) 0x61, (byte) 0xd2, (byte) 0x06}, hashPrefix2);
     }
 
@@ -82,4 +117,5 @@ public class GSBUtilsTest {
         assertEquals("255.255.255.255", GSBUtils.longToIPv4(4294967295l));
         assertEquals("0", GSBUtils.longToIPv4(0l));
     }
+    */
 }

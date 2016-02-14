@@ -1,19 +1,9 @@
 package biz.karms.sinkit.ejb.gsb.util;
 
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.validator.routines.InetAddressValidator;
 
-import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
-import java.io.UnsupportedEncodingException;
-import java.math.BigInteger;
-import java.net.URISyntaxException;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by tom on 12/6/15.
@@ -21,6 +11,47 @@ import java.util.regex.Pattern;
  * @author Tomas Kozel
  */
 public class GSBUtils {
+
+    // max number of parts(subdomains) extracted from host name
+    // that are used for construct of lookup variants
+    // this is according to google spec
+    private static final int MAX_HOST_PARTS = 5;
+
+    public static List<String> getLookupVariants(final String ipOrFQDN) {
+        final String lookupUrl = ipOrFQDN + '/';  // this is all the canonicalization
+        final List<String> lookupVariants = new ArrayList<>();
+        // original url is used for lookup every time
+        lookupVariants.add(lookupUrl);
+        // if ipOrFQDN is IPv4 or IPv6 then there is only one variant
+        if (InetAddressValidator.getInstance().isValid(ipOrFQDN)) {
+            return lookupVariants;
+        }
+
+        String hostParts[] = lookupUrl.split("\\.");
+        int maxHostParts;
+        if (hostParts.length <= 2) {
+            // if hostname consists of 2 parts (i.e. whalebone.io) or less then no other variant
+            // than whole hostname (which was added to list before) is possible
+            return lookupVariants;
+        } else if (hostParts.length > 2 && hostParts.length <= MAX_HOST_PARTS) {
+            // if hostname contains num of parts between 3 and MAX_HOST_PARTS (inclusive) then
+            // only contained parts - 1 is extracted, since the whole hostname is alredy
+            // added as variant
+            maxHostParts = hostParts.length - 1;
+        } else {
+            // else if hostname contains too much parts than only MAX_HOST_PARTS is extracted
+            maxHostParts = MAX_HOST_PARTS;
+        }
+
+        // construct lookup variants from the end of the hostname and start at 2nd part so for the
+        // hostname a.b.c.d.e we will have d.e, c.d.e, b.c.d.e (a.b.c.d.e has already been added before)
+        String variant = hostParts[hostParts.length - 1];
+        for (int i = hostParts.length - 2; i >= hostParts.length - maxHostParts; i--) {
+            variant = hostParts[i] + "." + variant;
+            lookupVariants.add(variant);
+        }
+        return lookupVariants;
+    }
 
     /*
     private static final String HASH_ALGORITHM = "SHA-256";

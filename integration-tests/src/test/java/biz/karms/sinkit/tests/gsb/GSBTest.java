@@ -14,10 +14,10 @@ import org.testng.annotations.Test;
 import javax.ejb.EJB;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Set;
 import java.util.logging.Logger;
 
-import static org.testng.Assert.*;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
 
 /**
  * Created by tom on 11/28/15.
@@ -117,7 +117,7 @@ public class GSBTest extends Arquillian {
     @RunAsClient
     public void lookupTest(@ArquillianResource URL context) throws Exception {
         WebClient webClient = new WebClient();
-        WebRequest requestSettings = new WebRequest(new URL(context + "rest/gsb/cf4b367e"), HttpMethod.PUT);
+        WebRequest requestSettings = new WebRequest(new URL(context + "rest/gsb/88981e62"), HttpMethod.PUT);
         requestSettings.setAdditionalHeader("Content-Type", "application/json");
         requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
         Page page = webClient.getPage(requestSettings);
@@ -127,7 +127,7 @@ public class GSBTest extends Arquillian {
         String expected = "true";
         assertTrue(responseBody.contains(expected), "Should have contained " + expected + ", but got: " + responseBody);
 
-        requestSettings = new WebRequest(new URL(context + "rest/gsb/lookup/http%3A%2F%2Fgoogle.com%0A"), HttpMethod.GET);
+        requestSettings = new WebRequest(new URL(context + "rest/gsb/lookup/google.com"), HttpMethod.GET);
         requestSettings.setAdditionalHeader("Content-Type", "application/json");
         requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
         page = webClient.getPage(requestSettings);
@@ -135,6 +135,32 @@ public class GSBTest extends Arquillian {
         responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("removeHashPrefixTest Response:" + responseBody);
         expected = "[\"goog-malware-shavar\"]";
+        assertTrue(responseBody.contains(expected), "Should have contained " + expected + ", but got: " + responseBody);
+    }
+
+    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 204)
+    @OperateOnDeployment("ear")
+    @RunAsClient
+    public void lookupVariantTest(@ArquillianResource URL context) throws Exception {
+        WebClient webClient = new WebClient();
+        WebRequest requestSettings = new WebRequest(new URL(context + "rest/gsb/c759a0aa"), HttpMethod.PUT); // prefix of evil.com/
+        requestSettings.setAdditionalHeader("Content-Type", "application/json");
+        requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
+        Page page = webClient.getPage(requestSettings);
+        assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
+        String responseBody = page.getWebResponse().getContentAsString();
+        LOGGER.info("removeHashPrefixTest Response:" + responseBody);
+        String expected = "true";
+        assertTrue(responseBody.contains(expected), "Should have contained " + expected + ", but got: " + responseBody);
+
+        requestSettings = new WebRequest(new URL(context + "rest/gsb/lookup/very.bad.evil.com"), HttpMethod.GET); // should be blacklisted because of evil.com
+        requestSettings.setAdditionalHeader("Content-Type", "application/json");
+        requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
+        page = webClient.getPage(requestSettings);
+        assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
+        responseBody = page.getWebResponse().getContentAsString();
+        LOGGER.info("removeHashPrefixTest Response:" + responseBody);
+        expected = "[\"goog-phish-shavar\"]";
         assertTrue(responseBody.contains(expected), "Should have contained " + expected + ", but got: " + responseBody);
     }
 
