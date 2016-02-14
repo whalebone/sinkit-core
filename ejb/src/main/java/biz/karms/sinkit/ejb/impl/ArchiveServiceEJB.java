@@ -258,7 +258,7 @@ public class ArchiveServiceEJB implements ArchiveService {
         final String notAllowedFailedRange = "\"now-" + notAllowedFailedMinutes + "m\"";
         return "    \"query\":{\n" +
                 "        \"bool\":{\n" +
-                "            \"filter\":{\n" +
+                "            \"must\":{\n" +
                 "                \"term\":{\n" +
                 "                    \"virus_total_request.status\":" + statusTerm + "\n" +
                 "                }\n" +
