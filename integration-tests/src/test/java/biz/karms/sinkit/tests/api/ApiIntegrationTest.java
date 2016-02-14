@@ -8,7 +8,11 @@ import biz.karms.sinkit.ejb.impl.ArchiveServiceEJB;
 import biz.karms.sinkit.ioc.IoCRecord;
 import biz.karms.sinkit.ioc.IoCSourceIdType;
 import biz.karms.sinkit.tests.util.IoCFactory;
-import com.gargoylesoftware.htmlunit.*;
+import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
+import com.gargoylesoftware.htmlunit.HttpMethod;
+import com.gargoylesoftware.htmlunit.Page;
+import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.WebRequest;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -26,7 +30,10 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.logging.Logger;
 
-import static org.testng.Assert.*;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertTrue;
 
 /**
  * @author Michal Karm Babacek
@@ -148,7 +155,7 @@ public class ApiIntegrationTest extends Arquillian {
         assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("getIoCsTest Response:" + responseBody);
-        String expected = "[\"seznam.cz\"]";
+        String expected = "[\"aed14ad7ed6c543f818a4cfe89cb8f20\"]"; // md5 of seznam.cz
         assertTrue(responseBody.contains(expected), "Expected " + expected + ", but got: " + responseBody);
     }
 
@@ -164,7 +171,7 @@ public class ApiIntegrationTest extends Arquillian {
         assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("getIoCTest Response:" + responseBody);
-        String expected = "\"black_listed_domain_or_i_p\":\"seznam.cz\"";
+        String expected = "\"black_listed_domain_or_i_p\":\"aed14ad7ed6c543f818a4cfe89cb8f20\""; // md5 of seznam.cz
         assertTrue(responseBody.contains(expected), "IoC response should have contained " + expected + ", but got:" + responseBody);
         expected = "\"sources\":{\"feed2\":{\"a\":\"blacklist\",\"b\":\"myDocumentId\"}}";
         assertTrue(responseBody.contains(expected), "IoC should have contained " + expected + ", but got: " + responseBody);
@@ -298,7 +305,7 @@ public class ApiIntegrationTest extends Arquillian {
         assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("iocInCacheTest Response:" + responseBody);
-        String expected = "\"black_listed_domain_or_i_p\":\"phishing.ru\"";
+        String expected = "\"black_listed_domain_or_i_p\":\"926dab5157943daed27851a34f30b701\"";  // md5 of phishing.ru
         assertTrue(responseBody.contains(expected), "IoC response should have contained " + expected + ", but got:" + responseBody);
         expected = "\"sources\":{\"integrationTest\":{\"a\":\"phishing\",\"b\":\"";
         assertTrue(responseBody.contains(expected), "IoC should have contained " + expected + ", but got: " + responseBody);

@@ -1,6 +1,10 @@
 package biz.karms.sinkit.tests.whitelist;
 
-import biz.karms.sinkit.ejb.*;
+import biz.karms.sinkit.ejb.ArchiveService;
+import biz.karms.sinkit.ejb.BlacklistCacheService;
+import biz.karms.sinkit.ejb.CoreService;
+import biz.karms.sinkit.ejb.WebApi;
+import biz.karms.sinkit.ejb.WhitelistCacheService;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.WhitelistedRecord;
 import biz.karms.sinkit.ioc.IoCRecord;
@@ -25,7 +29,11 @@ import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static org.testng.Assert.*;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertTrue;
 
 /**
  * Created by tkozel on 1/9/16.
@@ -102,7 +110,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
     /**
      * put whitelist entry
      * put whitelist entry having same fqdn and longer expiration
-     * assert the firstone has been replaced by the second one
+     * assert the first one has been replaced by the second one
      */
     @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 303)
     public void putUpdateTest() throws Exception {
@@ -117,6 +125,12 @@ public class WhitelistCacheServiceTest extends Arquillian {
         before.add(Calendar.SECOND, VALID_HOURS * 3600 - 1);
         assertTrue(coreService.processWhitelistIoCRecord(IoCFactory.getIoCForWhitelist(null, "whalebone.io", "newWhalebone", false)));
         WhitelistedRecord white = whitelistService.get("whalebone.io");
+        int counter = 10;
+        while ((white == null || !"newWhalebone".equals(white.getSourceName())) && counter > 0) {
+            Thread.sleep(100);
+            white = whitelistService.get("whalebone.io");
+            counter--;
+        }
         Calendar after = Calendar.getInstance();
         after.add(Calendar.SECOND, VALID_HOURS * 3600 + 1);
         assertNotNull(white);
