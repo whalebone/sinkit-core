@@ -7,6 +7,7 @@ import biz.karms.sinkit.ejb.cache.pojo.GSBRecord;
 import biz.karms.sinkit.ejb.gsb.GSBClient;
 import biz.karms.sinkit.ejb.gsb.dto.FullHashLookupResponse;
 import biz.karms.sinkit.ejb.gsb.util.GSBCachePOJOFactory;
+import biz.karms.sinkit.ejb.gsb.util.GSBUtils;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.MapUtils;
@@ -21,6 +22,7 @@ import javax.inject.Inject;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -32,6 +34,8 @@ import java.util.logging.Logger;
  */
 @Stateless
 public class GSBServiceEJB implements GSBService {
+
+    private static final int PREFIX_LENGTH = 4;
 
     @Inject
     private Logger logger;
@@ -55,19 +59,31 @@ public class GSBServiceEJB implements GSBService {
         if (ipOrFQDN == null) {
             throw new IllegalArgumentException("lookup: URL must not be null, cannot perform lookup.");
         }
-        //canonicalization is done here
-        final String gsbUrl = ipOrFQDN + '/';
-        final byte[] hash = DigestUtils.sha256(gsbUrl);
-        final byte[] hashPrefix = ArrayUtils.subarray(hash, 0, 4);
+        // canonicalization and prefix/suffix variants for lookup is done here
+        final List<String> lookupVariants = GSBUtils.getLookupVariants(ipOrFQDN);
+        // try to lookup for each variant until first match is found
+        Set<String> gsbBlacklists;
+        for (String lookupVariant : lookupVariants) {
+            gsbBlacklists = lookupSingleVariant(lookupVariant);
+            if (gsbBlacklists != null && !gsbBlacklists.isEmpty()) {
+                return gsbBlacklists;
+            }
+        }
+        return null;
+    }
+
+    private Set<String> lookupSingleVariant(final String lookupVariant) {
+        final byte[] hash = DigestUtils.sha256(lookupVariant);
+        final byte[] hashPrefix = ArrayUtils.subarray(hash, 0, PREFIX_LENGTH);
         final String fullHashString = Hex.encodeHexString(hash);
-        final String hashStringPrefix = fullHashString.substring(0, 8);
+        final String hashStringPrefix = fullHashString.substring(0, PREFIX_LENGTH * 2);
 
         GSBRecord gsbRecord = gsbCache.get(hashStringPrefix);
         // if hash prefix is not in the cache then URL is not blacklisted for sure
         if (gsbRecord == null) {
             return null;
         } else {
-            logger.log(Level.INFO, "lookup: hashPrefix " + hashStringPrefix + " was found in cache. It was made off: " + fullHashString + " which is gsbURL: " + gsbUrl);
+            logger.log(Level.INFO, "lookup: hashPrefix " + hashStringPrefix + " was found in cache. It was made off: " + fullHashString + " which is lookupVariant: " + lookupVariant);
         }
 
         final HashMap<String, HashSet<String>> fullHashes;

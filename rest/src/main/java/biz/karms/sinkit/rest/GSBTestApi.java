@@ -8,6 +8,7 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.xml.bind.DatatypeConverter;
+import java.util.Arrays;
 import java.util.Random;
 
 /**
@@ -23,7 +24,9 @@ public class GSBTestApi {
     @Path("/fullhash")
     @Produces({"application/octet-stream"})
     public byte[] testApiFullHashes(@HeaderParam(SinkitREST.AUTH_HEADER_PARAM) String token, byte[] fullHashRequest) {
-        byte[] hash = DatatypeConverter.parseHexBinary("cf4b367e49bf0b22041c6f065f4aa19f3cfe39c8d5abc0617343d1a66c6a26f5"); // http://google.com/
+        byte[] prefix = ArrayUtils.subarray(fullHashRequest, fullHashRequest.length - 4, fullHashRequest.length);
+        byte[] googleHash = DatatypeConverter.parseHexBinary("88981e6263be34a6c0b53ada73d168b68828dd643723d34a812e9f8a6abb5ee9"); // google.com/
+        byte[] evilHash = DatatypeConverter.parseHexBinary("c759a0aaa49a133ff527065e3d18c51388eae5c72c927b5703d07ca2e80c0f35"); // evil.com/
         byte[] hash2 = new byte[32];
         new Random().nextBytes(hash2);
 
@@ -34,7 +37,16 @@ public class GSBTestApi {
         byte[] metadata2 = new byte[4];
         new Random().nextBytes(metadata2);
 
-        byte[] rawResponse = ArrayUtils.addAll("1\ngoog-malware-shavar:32:2:m\n".getBytes(), hash);
+        byte[] rawResponse;
+        if (Arrays.equals(prefix, ArrayUtils.subarray(googleHash, 0, prefix.length))) {
+            rawResponse = ArrayUtils.addAll("1\ngoog-malware-shavar:32:2:m\n".getBytes(), googleHash);
+        } else if (Arrays.equals(prefix, ArrayUtils.subarray(evilHash, 0, prefix.length))) {
+            rawResponse = ArrayUtils.addAll("1\ngoog-phish-shavar:32:2:m\n".getBytes(), evilHash);
+        } else {
+            rawResponse = "1\n".getBytes();
+            return rawResponse;
+        }
+
         rawResponse = ArrayUtils.addAll(rawResponse, hash2);
         rawResponse = ArrayUtils.addAll(rawResponse, String.valueOf(metadata.length).getBytes());
         rawResponse = ArrayUtils.addAll(rawResponse, "\n".getBytes());
