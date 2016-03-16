@@ -38,6 +38,7 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
 
         final WhitelistedRecord white = WhitelistUtils.createWhitelistedRecord(iocRecord, completed);
         final String key = DigestUtils.md5Hex(white.getRawId());
+        log.log(Level.INFO, "Whitelist key: " + key + ", ttl in s: " + iocRecord.getSource().getTTL());
         try {
             if (!whitelistCache.containsKey(key)) {
                 whitelistCache.putAsync(key, white, iocRecord.getSource().getTTL(), TimeUnit.SECONDS);

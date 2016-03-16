@@ -74,10 +74,11 @@ public class WebApiEJB implements WebApi {
     }
 
     @Override
-    public Map<String, Integer> getStats() {
-        Map<String, Integer> info = new HashMap<String, Integer>();
-        info.put("ioc", blacklistCache.size());
-        info.put("rule", ruleCache.size());
+    public Map<String, Boolean> getStats() {
+        Map<String, Boolean> info = new HashMap<>();
+        info.put("blacklistCache empty?", blacklistCache.isEmpty());
+        info.put("ruleCache empty?", ruleCache.isEmpty());
+        info.put("customListsCache empty?", customListsCache.isEmpty());
         return info;
     }
 
@@ -90,7 +91,7 @@ public class WebApiEJB implements WebApi {
         }
         try {
             log.log(Level.FINE, "Putting key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
-            blacklistCache.put(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
+            blacklistCache.putAsync(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
             // TODO: Is this O.K.? Maybe we should just return the same instance.
             return blacklistCache.get(DigestUtils.md5Hex(blacklistedRecord.getBlackListedDomainOrIP()));
         } catch (Exception e) {
@@ -265,7 +266,7 @@ public class WebApiEJB implements WebApi {
                 rule.setStartAddress(startEndAddresses.getA());
                 rule.setEndAddress(startEndAddresses.getB());
                 log.log(Level.FINE, "Putting key [" + rule.getStartAddress() + "]");
-                ruleCache.put(rule.getStartAddress(), rule);
+                ruleCache.putAsync(rule.getStartAddress(), rule);
             }
 
         } catch (Exception e) {
@@ -294,7 +295,7 @@ public class WebApiEJB implements WebApi {
                 rule.setStartAddress(startEndAddresses.getA());
                 rule.setEndAddress(startEndAddresses.getB());
                 log.log(Level.FINE, "Putting key [" + rule.getStartAddress() + "]");
-                ruleCache.put(rule.getStartAddress(), rule);
+                ruleCache.putAsync(rule.getStartAddress(), rule);
             } catch (Exception e) {
                 log.log(Level.SEVERE, "postAllDNSClientSettings", e);
                 // TODO: Proper Error codes.
@@ -403,9 +404,9 @@ public class WebApiEJB implements WebApi {
                 final String key = customList.getClientCidrAddress() + ((customList.getFqdn() != null) ? customList.getFqdn() : customList.getListCidrAddress());
 
                 try {
-                    log.log(Level.FINE, "putCustomLists: Putting key [" + key + "]. customListsElementCounter: " + customListsElementCounter);
+                    log.log(Level.FINE, "pcustomListsCacheutCustomLists: Putting key [" + key + "]. customListsElementCounter: " + customListsElementCounter);
                     if (customListsCache.replace(key, customList) == null) {
-                        customListsCache.put(key, customList);
+                        customListsCache.putAsync(key, customList);
                     }
                     customListsElementCounter++;
                 } catch (Exception e) {

@@ -177,8 +177,8 @@
             <pools>
                 <bean-instance-pools>
                     <!-- Automatically configure pools. Alternatively, max-pool-size can be set to a specific value -->
-                    <strict-max-pool name="slsb-strict-max-pool" derive-size="from-worker-pools" instance-acquisition-timeout="5" instance-acquisition-timeout-unit="MINUTES"/>
-                    <strict-max-pool name="mdb-strict-max-pool" derive-size="from-cpu-count" instance-acquisition-timeout="5" instance-acquisition-timeout-unit="MINUTES"/>
+                    <strict-max-pool name="slsb-strict-max-pool" derive-size="from-worker-pools" instance-acquisition-timeout="3" instance-acquisition-timeout-unit="MINUTES"/>
+                    <strict-max-pool name="mdb-strict-max-pool" derive-size="from-cpu-count" instance-acquisition-timeout="3" instance-acquisition-timeout-unit="MINUTES"/>
                 </bean-instance-pools>
             </pools>
             <caches>
@@ -213,7 +213,6 @@
             <cache-container name="server" aliases="singleton cluster" default-cache="default" module="org.wildfly.clustering.server">
                 <transport channel="ee"/>
                 <replicated-cache name="default" mode="ASYNC">
-                    <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
                     <transaction mode="NONE"/>
                     <file-store/>
                     <state-transfer timeout="300000"/>
@@ -223,7 +222,6 @@
             <cache-container name="sinkitcontainer" module="org.infinispan.query" default-cache="defaultsinkit">
                 <transport channel="ee"/>
                 <replicated-cache name="defaultsinkit" mode="ASYNC">
-                    <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
                     <transaction mode="NONE"/>
                     <file-store/>
                     <state-transfer timeout="300000"/>
@@ -345,6 +343,12 @@
                         </property>
                         <property name="ip_ttl">
                             64
+                        </property>
+                        <property name="mcast_addr">
+                            230.0.0.4
+                        </property>
+                        <property name="mcast_port">
+                            4570
                         </property>
                         <property name="receive_interfaces">
                             @SINKITNIC@
@@ -491,12 +495,11 @@
         <socket-binding name="ajp" port="${jboss.ajp.port:8009}"/>
         <socket-binding name="http" port="${jboss.http.port:8080}"/>
         <socket-binding name="https" port="${jboss.https.port:8443}"/>
-        <socket-binding name="jgroups-mping" port="0" multicast-address="${jboss.default.multicast.address:230.0.0.4}" multicast-port="45700"/>
-        <socket-binding name="jgroups-tcp" port="7600"/>
-        <socket-binding name="jgroups-tcp-fd" port="57600"/>
-        <socket-binding name="jgroups-udp" port="55200" multicast-address="${jboss.default.multicast.address:230.0.0.4}" multicast-port="45688"/>
-        <socket-binding name="jgroups-udp-fd" port="54200"/>
-        <socket-binding name="modcluster" port="0" multicast-address="224.0.1.105" multicast-port="23364"/>
+        <socket-binding name="jgroups-mping" port="0" multicast-address="${jboss.default.multicast.address:230.0.0.4}" multicast-port="45700" interface="@SINKITNIC@"/>
+        <socket-binding name="jgroups-tcp" port="7600" interface="@SINKITNIC@"/>
+        <socket-binding name="jgroups-tcp-fd" port="57600" interface="@SINKITNIC@"/>
+        <socket-binding name="jgroups-udp" port="55200" multicast-address="${jboss.default.multicast.address:230.0.0.4}" multicast-port="45688" interface="@SINKITNIC@"/>
+        <socket-binding name="jgroups-udp-fd" port="54200" interface="@SINKITNIC@"/>
         <socket-binding name="txn-recovery-environment" port="4712"/>
         <socket-binding name="txn-status-manager" port="4713"/>
         <outbound-socket-binding name="mail-smtp">
