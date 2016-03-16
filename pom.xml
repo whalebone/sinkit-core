@@ -83,9 +83,9 @@
         <infinispan.query.version>8.0.1.Final</infinispan.query.version>
         <hibernate.infinispan.version>5.0.1.Final</hibernate.infinispan.version>
         <hibernate.search.version>5.5.0.Final</hibernate.search.version>
-        <com.mchange.c3p0.version>0.9.5.1</com.mchange.c3p0.version>
+        <com.mchange.c3p0.version>0.9.5.2</com.mchange.c3p0.version>
         <com.google.code.gson.version>2.3.1</com.google.code.gson.version>
-        <postgresql.driver.version>9.2-1004-jdbc41</postgresql.driver.version>
+        <postgresql.driver.version>9.4.1208.jre7</postgresql.driver.version>
         <commons.validator.version>1.4.1</commons.validator.version>
         <commons.codec.version>1.10</commons.codec.version>
     </properties>

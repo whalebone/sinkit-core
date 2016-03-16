@@ -15,6 +15,7 @@ import org.infinispan.configuration.cache.ConfigurationBuilder;
 import org.infinispan.configuration.cache.Index;
 import org.infinispan.eviction.EvictionStrategy;
 import org.infinispan.manager.EmbeddedCacheManager;
+import org.infinispan.persistence.jdbc.configuration.JdbcStringBasedStoreConfigurationBuilder;
 import org.infinispan.transaction.TransactionMode;
 import org.infinispan.util.concurrent.IsolationLevel;
 
@@ -131,8 +132,7 @@ public class MyCacheManagerProvider implements Serializable {
                 .async()
                 .enabled(true)
                 */
-                /*.persistence().addStore(JdbcStringBasedStoreConfigurationBuilder.class)
-                        //.persistence().addStore(JdbcBinaryStoreConfigurationBuilder.class)
+                .persistence().addStore(JdbcStringBasedStoreConfigurationBuilder.class)
                 .fetchPersistentState(true)
                 .ignoreModifications(false)
                 .purgeOnStartup(false)
@@ -150,7 +150,7 @@ public class MyCacheManagerProvider implements Serializable {
                 .username(System.getenv("SINKIT_POSTGRESQL_USER"))
                 .async()
                 .enabled(true)
-                .threadPoolSize(15)*/
+                .threadPoolSize(20)
                 .build();
 
         final Configuration localSearchResultsCaches = new ConfigurationBuilder().jmxStatistics().disable().available(false)
