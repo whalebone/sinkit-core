@@ -139,7 +139,7 @@ public class DNSApiEJB implements DNSApi {
                         .toBuilder().build();
                 if (query != null) {
                     final List<Rule> result = query.list();
-                    ruleLocalCache.putAsync(keyInCache, result);
+                    ruleLocalCache.put(keyInCache, result);
                     return result;
 
                 }
@@ -170,7 +170,7 @@ public class DNSApiEJB implements DNSApi {
                         .toBuilder().build();
                 if (query != null) {
                     final List<CustomList> result = query.list();
-                    customListsLocalCache.putAsync(keyInCache, result);
+                    customListsLocalCache.put(keyInCache, result);
                     return result;
                 }
                 return null;
@@ -200,7 +200,7 @@ public class DNSApiEJB implements DNSApi {
                         .toBuilder().build();
                 if (query != null) {
                     final List<CustomList> result = query.list();
-                    customListsLocalCache.putAsync(keyInCache, result);
+                    customListsLocalCache.put(keyInCache, result);
                     return result;
                 }
                 return null;
