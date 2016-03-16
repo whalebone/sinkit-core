@@ -1,5 +1,5 @@
 FROM fedora:22
-MAINTAINER Michal Karm Babacek <karm@email.com>
+MAINTAINER Michal Karm Babacek <karm@email.cz
 LABEL description="Codename Feed: Sinkit Core POC"
 
 ENV DEPS            java-1.8.0-openjdk-devel.x86_64 unzip wget gawk sed
@@ -13,7 +13,7 @@ RUN mkdir -p /opt/sinkit && chown sinkit /opt/sinkit && chgrp sinkit /opt/sinkit
 WORKDIR /opt/sinkit
 USER sinkit
 
-ENV WILDFLY_VERSION 10.0.0.CR5-SNAPSHOT
+ENV WILDFLY_VERSION 10.0.0.Final
 ENV HIBERNATE_HQL_LUCENE_VERSION 1.3.0.Alpha2
 ENV HIBERNATE_HQL_PARSER_VERSION 1.3.0.Alpha2
 ENV STRINGTEMPLATE_VERSION 3.2.1

@@ -18,7 +18,7 @@ import java.util.Set;
 public interface WebApi {
     String sayHello(final String queryString);
 
-    Map<String, Integer> getStats();
+    Map<String, Boolean> getStats();
 
     BlacklistedRecord putBlacklistedRecord(final BlacklistedRecord blacklistedRecord);
 
