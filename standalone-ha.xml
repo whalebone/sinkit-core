@@ -497,12 +497,11 @@
         <socket-binding name="ajp" port="${jboss.ajp.port:8009}"/>
         <socket-binding name="http" port="${jboss.http.port:8080}"/>
         <socket-binding name="https" port="${jboss.https.port:8443}"/>
-        <socket-binding name="jgroups-mping" port="0" multicast-address="${jboss.default.multicast.address:230.0.0.4}" multicast-port="45700"/>
+        <socket-binding name="jgroups-mping" port="0" multicast-address="228.4.5.6" multicast-port="5678"/>
         <socket-binding name="jgroups-tcp" port="7600"/>
         <socket-binding name="jgroups-tcp-fd" port="57600"/>
         <socket-binding name="jgroups-udp" port="55200" multicast-address="${jboss.default.multicast.address:230.0.0.4}" multicast-port="45688"/>
         <socket-binding name="jgroups-udp-fd" port="54200"/>
-        <socket-binding name="modcluster" port="0" multicast-address="224.0.1.105" multicast-port="23364"/>
         <socket-binding name="txn-recovery-environment" port="4712"/>
         <socket-binding name="txn-status-manager" port="4713"/>
         <outbound-socket-binding name="mail-smtp">

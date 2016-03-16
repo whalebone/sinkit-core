@@ -15,7 +15,7 @@ import org.infinispan.configuration.cache.ConfigurationBuilder;
 import org.infinispan.configuration.cache.Index;
 import org.infinispan.eviction.EvictionStrategy;
 import org.infinispan.manager.EmbeddedCacheManager;
-import org.infinispan.persistence.jdbc.configuration.JdbcStringBasedStoreConfigurationBuilder;
+import org.infinispan.persistence.mongodb.configuration.MongoDBStoreConfigurationBuilder;
 import org.infinispan.transaction.TransactionMode;
 import org.infinispan.util.concurrent.IsolationLevel;
 
@@ -132,6 +132,7 @@ public class MyCacheManagerProvider implements Serializable {
                 .async()
                 .enabled(true)
                 */
+                /*
                 .persistence().addStore(JdbcStringBasedStoreConfigurationBuilder.class)
                 .fetchPersistentState(true)
                 .ignoreModifications(false)
@@ -151,6 +152,14 @@ public class MyCacheManagerProvider implements Serializable {
                 .async()
                 .enabled(true)
                 .threadPoolSize(20)
+                .build();*/
+                .persistence()
+                .addStore(MongoDBStoreConfigurationBuilder.class)
+                .connectionURI(System.getenv("SINKIT_MONGODB_CONNECTION_URI"))
+                .collection("indexes")
+                .async()
+                .threadPoolSize(20)
+                .enable()
                 .build();
 
         final Configuration localSearchResultsCaches = new ConfigurationBuilder().jmxStatistics().disable().available(false)
