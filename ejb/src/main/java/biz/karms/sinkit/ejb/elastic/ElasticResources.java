@@ -1,6 +1,7 @@
 package biz.karms.sinkit.ejb.elastic;
 
-import io.searchbox.client.JestClient;
+import com.google.gson.Gson;
+import org.elasticsearch.client.Client;
 
 import javax.enterprise.context.Dependent;
 import javax.enterprise.inject.Default;
@@ -13,12 +14,32 @@ import javax.inject.Inject;
 @Dependent
 public class ElasticResources {
 
+    public static final String ELASTIC_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
+
+//    @Inject
+//    private JestClientProvider jestClientProvider;
+
     @Inject
-    JestClientProvider jestClientProvider;
+    private ElasticClientProvider elasticClientProvider;
+
+    @Inject
+    private GsonProvider gsonProvider;
+
+//    @Produces
+//    @Default
+//    public JestClient getJestClient() {
+//        return jestClientProvider.getJestClient();
+//    }
 
     @Produces
     @Default
-    JestClient getJestClient() {
-        return jestClientProvider.getJestClient();
+    public Client getElasticClient() {
+        return elasticClientProvider.getClient();
+    }
+
+    @Produces
+    @Default
+    public Gson getGson() {
+        return gsonProvider.getGson();
     }
 }

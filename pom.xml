@@ -73,6 +73,7 @@
 
         <!-- Elastic Search -->
         <io.searchbox.jest.version>0.1.7</io.searchbox.jest.version>
+        <es.version>1.7.4</es.version>
 
         <!-- Virus Total -->
         <com.kanishka.api.VirustotalPublicV2.0.version>1.1.GA-SNAPSHOT</com.kanishka.api.VirustotalPublicV2.0.version>
