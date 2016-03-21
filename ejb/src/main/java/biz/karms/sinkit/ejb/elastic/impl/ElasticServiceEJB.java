@@ -1,16 +1,19 @@
 package biz.karms.sinkit.ejb.elastic.impl;
 
-import biz.karms.sinkit.ejb.elastic.ElasticService;
 import biz.karms.sinkit.ejb.elastic.Indexable;
 import biz.karms.sinkit.exception.ArchiveException;
 import io.searchbox.client.JestClient;
 import io.searchbox.client.JestResult;
-import io.searchbox.core.*;
+import io.searchbox.core.Delete;
+import io.searchbox.core.Get;
+import io.searchbox.core.Index;
+import io.searchbox.core.Search;
+import io.searchbox.core.SearchResult;
+import io.searchbox.core.Update;
 import io.searchbox.params.Parameters;
 import org.apache.commons.collections.CollectionUtils;
 
 import javax.annotation.PostConstruct;
-import javax.ejb.Stateless;
 import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,8 +23,8 @@ import java.util.logging.Logger;
 /**
  * Created by tkozel on 4.8.15.
  */
-@Stateless
-public class ElasticServiceEJB implements ElasticService {
+//@Stateless
+public class ElasticServiceEJB /*implements ElasticService*/ {
 
     private static final String PARAMETER_FROM = "from";
     private static final int DEF_LIMIT = 1000;
@@ -52,7 +55,7 @@ public class ElasticServiceEJB implements ElasticService {
      * @return Found object of class T
      * @throws ArchiveException when communication with elastic went wrong or more than single hit is found
      */
-    @Override
+    //@Override
     public <T extends Indexable> T searchForSingleHit(String query, String index, String type, Class<T> clazz) throws ArchiveException {
         final List<T> hits = this.search(query, index, type, clazz);
         if (CollectionUtils.isEmpty(hits)) {
@@ -64,7 +67,7 @@ public class ElasticServiceEJB implements ElasticService {
         return hits.get(0);
     }
 
-    @Override
+    //@Override
     public <T extends Indexable> T getDocumentById(String id, String index, String type, Class<T> clazz) throws ArchiveException {
         JestResult result;
         T document;
@@ -98,7 +101,7 @@ public class ElasticServiceEJB implements ElasticService {
      * @return Found objects of class T
      * @throws ArchiveException when communication with elastic went wrong
      */
-    @Override
+    //@Override
     public <T extends Indexable> List<T> search(String query, String index, String type, Class<T> clazz) throws ArchiveException {
         return search(query, index, type, 0, DEF_LIMIT, clazz);
     }
@@ -117,7 +120,7 @@ public class ElasticServiceEJB implements ElasticService {
      * @return Found objects of class T
      * @throws ArchiveException when communication with elastic went wrong
      */
-    @Override
+    //@Override
     public <T extends Indexable> List<T> search(String query, String index, String type, int from, int size, Class<T> clazz) throws ArchiveException {
         Search search = new Search.Builder(query)
                 .addIndex(index)
@@ -164,7 +167,7 @@ public class ElasticServiceEJB implements ElasticService {
      * @return indexed object
      * @throws ArchiveException when communication with Elastic Search server went wrong
      */
-    @Override
+    //@Override
     public <T extends Indexable> T index(T document, String index, String type) throws ArchiveException {
         Index indexRequest = new Index.Builder(document)
                 .index(index)
@@ -201,7 +204,7 @@ public class ElasticServiceEJB implements ElasticService {
      * @return indexed object
      * @throws ArchiveException when communication with Elastic Search server went wrong
      */
-    @Override
+    //@Override
     public boolean update(String documentId, String script, String index, String type) throws ArchiveException {
 
         Update updateRequest = new Update.Builder(script)
@@ -235,7 +238,7 @@ public class ElasticServiceEJB implements ElasticService {
         return result.isSucceeded();
     }
 
-    @Override
+    //@Override
     public <T extends Indexable> boolean delete(T document, String index, String type) throws ArchiveException {
 
         JestResult result;
@@ -266,4 +269,14 @@ public class ElasticServiceEJB implements ElasticService {
 
         return result.isSucceeded();
     }
+
+//    @Override
+//    public void refresh() {
+//        //noop
+//    }
+//
+//    @Override
+//    public List<IoCRecord> findIoCsForDeactivation(String tooOld) throws ArchiveException {
+//        return null;
+//    }
 }

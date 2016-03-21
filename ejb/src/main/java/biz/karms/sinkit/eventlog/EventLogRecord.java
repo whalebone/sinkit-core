@@ -3,7 +3,6 @@ package biz.karms.sinkit.eventlog;
 import biz.karms.sinkit.ejb.elastic.Indexable;
 import biz.karms.sinkit.ioc.IoCRecord;
 import com.google.gson.annotations.SerializedName;
-import io.searchbox.annotations.JestId;
 
 import java.util.Arrays;
 import java.util.Date;
@@ -15,7 +14,7 @@ public class EventLogRecord implements Indexable {
 
     private static final long serialVersionUID = 423449239443309837L;
 
-    @JestId
+    //@JestId
     private transient String documentId;
 
     private EventLogAction action;

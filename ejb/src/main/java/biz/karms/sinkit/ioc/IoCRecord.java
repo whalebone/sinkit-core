@@ -2,7 +2,6 @@ package biz.karms.sinkit.ioc;
 
 import biz.karms.sinkit.ejb.elastic.Indexable;
 import com.google.gson.annotations.SerializedName;
-import io.searchbox.annotations.JestId;
 
 import java.util.Arrays;
 
@@ -15,7 +14,7 @@ public class IoCRecord implements Indexable {
 
     private static final long serialVersionUID = -595246622767555283L;
 
-    @JestId
+    //@JestId
     @SerializedName("document_id")
     private String documentId;
     @SerializedName("unique_ref")
