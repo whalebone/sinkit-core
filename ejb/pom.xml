@@ -228,6 +228,13 @@
             <version>${io.searchbox.jest.version}</version>
         </dependency>
 
+        <!-- Elastic search core -->
+        <dependency>
+            <groupId>org.elasticsearch</groupId>
+            <artifactId>elasticsearch</artifactId>
+            <version>${es.version}</version>
+        </dependency>
+
         <!--Import the JAX-RS API, we use provided scope as the API is included in JBoss WildFly-->
         <dependency>
             <groupId>org.jboss.resteasy</groupId>
