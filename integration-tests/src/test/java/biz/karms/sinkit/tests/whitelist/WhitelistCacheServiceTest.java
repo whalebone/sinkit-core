@@ -207,10 +207,10 @@ public class WhitelistCacheServiceTest extends Arquillian {
         assertNull(whiteFQDNio);
         assertNull(whiteFQDNcz);
         counter = 0;
-        while (whitelistService.getStats() > 0 && counter < 10) {
+        while (!whitelistService.isWhitelistEmpty() && counter < 10) {
             counter++;
         }
-        assertEquals(0, whitelistService.getStats());
+        assertTrue(whitelistService.isWhitelistEmpty());
     }
 
     /**
