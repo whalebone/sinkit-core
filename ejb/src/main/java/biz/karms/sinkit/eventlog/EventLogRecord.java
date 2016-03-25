@@ -8,7 +8,7 @@ import java.util.Arrays;
 import java.util.Date;
 
 /**
- * Created by tkozel on 23.7.15.
+ * Created by Tomas Kozel
  */
 public class EventLogRecord implements Indexable {
 

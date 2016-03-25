@@ -1,14 +1,13 @@
 package biz.karms.sinkit.ioc;
 
-/**
- * Created by tkozel on 24.6.15.
- */
-
 import com.google.gson.annotations.SerializedName;
 
 import java.io.Serializable;
 import java.util.Date;
 
+/**
+ * Created by Tomas Kozel
+ */
 public class IoCTime implements Serializable {
 
     private static final long serialVersionUID = 3518598035766322842L;

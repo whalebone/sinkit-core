@@ -6,7 +6,7 @@ import org.hibernate.search.annotations.NumericField;
 import java.io.Serializable;
 
 /**
- * Created by tkozel on 24.6.15.
+ * Created by Tomas Kozel
  */
 public class IoCSource implements Serializable {
 

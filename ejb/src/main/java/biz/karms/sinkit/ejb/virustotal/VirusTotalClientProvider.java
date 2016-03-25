@@ -11,7 +11,7 @@ import javax.inject.Inject;
 import java.util.logging.Logger;
 
 /**
- * Created by tkozel on 31.7.15.
+ * Created by Tomas Kozel
  */
 @ApplicationScoped
 public class VirusTotalClientProvider {

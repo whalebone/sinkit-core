@@ -6,7 +6,7 @@ import java.io.Serializable;
 import java.util.Date;
 
 /**
- * Created by tkozel on 3.8.15.
+ * Created by Tomas Kozel
  */
 public class VirusTotalRequest implements Serializable {
 
