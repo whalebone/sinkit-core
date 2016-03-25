@@ -6,7 +6,7 @@ import biz.karms.sinkit.ioc.IoCRecord;
 import javax.ejb.Local;
 
 /**
- * Created by tkozel on 1/9/16.
+ * Created by Tomas Kozel
  */
 @Local
 public interface WhitelistCacheService {
@@ -18,7 +18,7 @@ public interface WhitelistCacheService {
 
     boolean remove(String id);
 
-    int getStats();
+    boolean isWhitelistEmpty();
 
     boolean dropTheWholeCache();
 
