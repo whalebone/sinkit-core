@@ -146,14 +146,14 @@ public class SinkitREST {
     }
 
     @GET
-    @Path("/whitelist/stats/")
+    @Path("/whitelist/isempty/")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public String getWhitelistStats(@HeaderParam(AUTH_HEADER_PARAM) String token) {
+    public String isWhitelistEmpty(@HeaderParam(AUTH_HEADER_PARAM) String token) {
         if (!StupidAuthenticator.isAuthenticated(token)) {
             return AUTH_FAIL;
         }
-        return sinkitService.getWhitelistStats();
+        return sinkitService.isWhitelistEmpty();
     }
 
     @GET
