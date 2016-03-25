@@ -30,5 +30,5 @@ public interface CoreService {
 
     boolean removeWhitelistedRecord(String id);
 
-    int getWhitelistStats();
+    boolean isWhitelistEmpty();
 }
