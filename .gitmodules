@@ -1,0 +1,3 @@
+[submodule "infinispan-cachestore-mongodb"]
+	path = infinispan-cachestore-mongodb
+	url = git@github.com:Karm/infinispan-cachestore-mongodb.git
