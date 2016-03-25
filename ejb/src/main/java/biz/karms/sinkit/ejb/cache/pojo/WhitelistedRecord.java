@@ -8,7 +8,7 @@ import java.util.Calendar;
  */
 public class WhitelistedRecord implements Serializable {
 
-    private static final long serialVersionUID = -4530501033533677059L;
+    private static final long serialVersionUID = -562033533677059L;
     private String rawId;
     private String sourceName;
     private Calendar expiresAt;
