@@ -1,13 +1,10 @@
 package biz.karms.sinkit.ioc;
 
-import org.hibernate.search.annotations.Field;
-
 import java.io.Serializable;
 
 /**
- * Created by tkozel on 10.7.15.
+ * Created by Tomas Kozel
  */
-
 public class IoCSourceId implements Serializable {
 
     private static final long serialVersionUID = 2510134193901542038L;

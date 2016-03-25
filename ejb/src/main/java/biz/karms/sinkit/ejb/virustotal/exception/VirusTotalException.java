@@ -1,7 +1,7 @@
 package biz.karms.sinkit.ejb.virustotal.exception;
 
 /**
- * Created by tkozel on 4.8.15.
+ * Created by Tomas Kozel
  */
 public class VirusTotalException extends Exception {
 

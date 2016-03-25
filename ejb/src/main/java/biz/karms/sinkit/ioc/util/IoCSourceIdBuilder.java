@@ -6,13 +6,13 @@ import biz.karms.sinkit.ioc.IoCSourceId;
 import biz.karms.sinkit.ioc.IoCSourceIdType;
 
 /**
- * Created by tkozel on 10.7.15.
+ * @author Tomas Kozel
  */
 public class IoCSourceIdBuilder {
 
     public static IoCSourceId build(IoCRecord ioc) throws IoCSourceIdException {
 
-        IoCSourceId sid = new IoCSourceId();
+        final IoCSourceId sid = new IoCSourceId();
         if (ioc.getSource().getFQDN() != null) {
             sid.setValue(ioc.getSource().getFQDN());
             sid.setType(IoCSourceIdType.FQDN);
