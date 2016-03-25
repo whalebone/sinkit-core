@@ -2,16 +2,17 @@ package biz.karms.sinkit.ejb;
 
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCache;
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCacheName;
+import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.CustomList;
+import biz.karms.sinkit.ejb.cache.pojo.GSBRecord;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
+import biz.karms.sinkit.ejb.cache.pojo.WhitelistedRecord;
 import biz.karms.sinkit.ejb.hasingleton.HATimerServiceActivator;
-import org.infinispan.AdvancedCache;
 import org.infinispan.Cache;
 import org.infinispan.configuration.cache.CacheMode;
 import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
 import org.infinispan.configuration.cache.Index;
-import org.infinispan.context.Flag;
 import org.infinispan.eviction.EvictionStrategy;
 import org.infinispan.manager.EmbeddedCacheManager;
 import org.infinispan.persistence.mongodb.configuration.MongoDBStoreConfigurationBuilder;
@@ -42,7 +43,6 @@ public class MyCacheManagerProvider implements Serializable {
 
     private static final long ENTRY_LIFESPAN = 2 * 60 * 1000; //ms
     private static final long NEVER = -1;
-    private static final int CONCURRENCY_LEVEL = 1000;
 
     @Inject
     private Logger log;
@@ -50,17 +50,8 @@ public class MyCacheManagerProvider implements Serializable {
     @Resource(lookup = "java:jboss/infinispan/container/sinkitcontainer")
     private EmbeddedCacheManager manager;
 
-    public void init(@Observes @Initialized(ApplicationScoped.class) Object init) {
-        log.info("\n\n Constructing caches...\n\n");
-
-        final boolean startWhiteCache = !manager.getAddress().toString().contains(HATimerServiceActivator.unwantedNameSuffix);
-
-        /**
-         * There is some duplicity in the configuration, but this is pretty much WIP.
-         * TODO: Merge what is in common.
-         */
-
-        final Configuration rulesAndLists = new ConfigurationBuilder().jmxStatistics().disable().available(false) // JMX statistics
+    private Configuration replicatedIndexed(final String cacheName, final int threadPool) {
+        return new ConfigurationBuilder().jmxStatistics().disable().available(false)
                 .clustering().cacheMode(CacheMode.REPL_ASYNC)
                 .stateTransfer().awaitInitialTransfer(true)
                 .timeout(5, TimeUnit.MINUTES)
@@ -80,15 +71,18 @@ public class MyCacheManagerProvider implements Serializable {
                         //If you put or remove, the returned object might not be what you expect.
                 .unsafe().unreliableReturnValues(true)
                 .persistence()
+                .passivation(false)
                 .addStore(MongoDBStoreConfigurationBuilder.class)
                 .connectionURI(System.getenv("SINKIT_MONGODB_CONNECTION_URI"))
-                .collection("indexes")
+                .collection(cacheName)
                 .async()
-                .threadPoolSize(15)
+                .threadPoolSize(threadPool)
                 .enable()
                 .build();
+    }
 
-        final Configuration distributedNotIndexed = new ConfigurationBuilder().jmxStatistics().disable().available(false)
+    private Configuration replicatedNotIndexed(final String cacheName, final int threadPool) {
+        return new ConfigurationBuilder().jmxStatistics().disable().available(false)
                 .clustering().cacheMode(CacheMode.REPL_ASYNC)
                 .stateTransfer().awaitInitialTransfer(true)
                 .timeout(5, TimeUnit.MINUTES)
@@ -103,14 +97,21 @@ public class MyCacheManagerProvider implements Serializable {
                 .transaction().transactionMode(TransactionMode.NON_TRANSACTIONAL)
                         //If you put or remove, the returned object might not be what you expect.
                 .unsafe().unreliableReturnValues(true)
-                /*.persistence()
-                .addSingleFileStore()
-                .location(System.getProperty("java.io.tmpdir"))
+                .persistence()
+                .passivation(false)
+                .addStore(MongoDBStoreConfigurationBuilder.class)
+                .connectionURI(System.getenv("SINKIT_MONGODB_CONNECTION_URI"))
+                .collection(cacheName)
+                .fetchPersistentState(true)
+                .ignoreModifications(false)
+                .purgeOnStartup(false)
                 .async()
-                .enabled(true)
-                */
+                .threadPoolSize(threadPool)
+                .enable()
+                .build();
                 /*
-                .persistence().addStore(JdbcStringBasedStoreConfigurationBuilder.class)
+                .persistence()
+                .addStore(JdbcStringBasedStoreConfigurationBuilder.class)
                 .fetchPersistentState(true)
                 .ignoreModifications(false)
                 .purgeOnStartup(false)
@@ -129,34 +130,39 @@ public class MyCacheManagerProvider implements Serializable {
                 .async()
                 .enabled(true)
                 .threadPoolSize(20)
-                .build();*/
-                .persistence()
-                .addStore(MongoDBStoreConfigurationBuilder.class)
-                .connectionURI(System.getenv("SINKIT_MONGODB_CONNECTION_URI"))
-                .collection("indexes")
-                .async()
-                .threadPoolSize(15)
-                .enable()
-                .build();
+                */
+    }
 
-        final Configuration localSearchResultsCaches = new ConfigurationBuilder().jmxStatistics().disable().available(false)
+    private Configuration localNotIndexed() {
+        return new ConfigurationBuilder().jmxStatistics().disable().available(false)
                 .clustering().cacheMode(CacheMode.LOCAL)
                 .expiration()
                 .lifespan(ENTRY_LIFESPAN)
                 .transaction().transactionMode(TransactionMode.NON_TRANSACTIONAL)
                 .build();
+    }
 
-        manager.defineConfiguration(SinkitCacheName.BLACKLIST_CACHE.toString(), distributedNotIndexed);
+    public void init(@Observes @Initialized(ApplicationScoped.class) Object init) {
+        log.info("\n\n Constructing caches...\n\n");
 
+        final boolean startWhiteCache = !manager.getAddress().toString().contains(HATimerServiceActivator.unwantedNameSuffix);
+
+        /**
+         * MANAGER settings and Persistence
+         */
+        manager.defineConfiguration(SinkitCacheName.BLACKLIST_CACHE.toString(), replicatedNotIndexed("infinispan_blacklist", 15));
         if (startWhiteCache) {
-            manager.defineConfiguration(SinkitCacheName.WHITELIST_CACHE.toString(), distributedNotIndexed);
+            manager.defineConfiguration(SinkitCacheName.WHITELIST_CACHE.toString(), replicatedNotIndexed("infinispan_whitelist", 15));
         } else {
             log.log(Level.INFO, "This node's address " + manager.getAddress().toString() + " contains unwanted suffix " + HATimerServiceActivator.unwantedNameSuffix + ", so cache " + SinkitCacheName.WHITELIST_CACHE.toString() + "won't be created.");
         }
+        manager.defineConfiguration(SinkitCacheName.GSB_CACHE.toString(), replicatedNotIndexed("infinispan_gsb", 10));
+        manager.defineConfiguration(SinkitCacheName.RULES_CACHE.toString(), replicatedIndexed("infinispan_rules", 5));
+        manager.defineConfiguration(SinkitCacheName.CUSTOM_LISTS_CACHE.toString(), replicatedIndexed("infinispan_custom_lists", 5));
 
-        manager.defineConfiguration(SinkitCacheName.RULES_CACHE.toString(), rulesAndLists);
-        manager.defineConfiguration(SinkitCacheName.CUSTOM_LISTS_CACHE.toString(), rulesAndLists);
-        manager.defineConfiguration(SinkitCacheName.GSB_CACHE.toString(), distributedNotIndexed);
+        /**
+         * Start caches
+         */
         manager.getCache(SinkitCacheName.BLACKLIST_CACHE.toString()).start();
         if (startWhiteCache) {
             manager.getCache(SinkitCacheName.WHITELIST_CACHE.toString()).start();
@@ -165,10 +171,12 @@ public class MyCacheManagerProvider implements Serializable {
         manager.getCache(SinkitCacheName.CUSTOM_LISTS_CACHE.toString()).start();
         manager.getCache(SinkitCacheName.GSB_CACHE.toString()).start();
 
-        // Local search result caches
-        manager.defineConfiguration(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE.toString(), localSearchResultsCaches);
+        /**
+         * Local search result caches
+         */
+        manager.defineConfiguration(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE.toString(), localNotIndexed());
         manager.getCache(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE.toString()).start();
-        manager.defineConfiguration(SinkitCacheName.RULES_LOCAL_CACHE.toString(), localSearchResultsCaches);
+        manager.defineConfiguration(SinkitCacheName.RULES_LOCAL_CACHE.toString(), localNotIndexed());
         manager.getCache(SinkitCacheName.RULES_LOCAL_CACHE.toString()).start();
         log.log(Level.INFO, "Caches defined.");
     }
@@ -176,24 +184,24 @@ public class MyCacheManagerProvider implements Serializable {
     @Produces
     @ApplicationScoped
     @SinkitCache(SinkitCacheName.BLACKLIST_CACHE)
-    public AdvancedCache<?, ?> getBlacklistCache() {
+    public Cache<String, BlacklistedRecord> getBlacklistCache() {
         if (manager == null) {
             throw new IllegalArgumentException("Manager must not be null.");
         }
         log.log(Level.INFO, "getBlacklistCache called.");
-        return manager.getCache(SinkitCacheName.BLACKLIST_CACHE.toString()).getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES);
+        return manager.getCache(SinkitCacheName.BLACKLIST_CACHE.toString());
     }
 
     @Produces
     @ApplicationScoped
     @SinkitCache(SinkitCacheName.WHITELIST_CACHE)
-    public AdvancedCache<?, ?> getWhitelistCache() {
+    public Cache<String, WhitelistedRecord> getWhitelistCache() {
         if (manager == null) {
             throw new IllegalArgumentException("Manager must not be null.");
         }
         log.log(Level.INFO, "getWhitelistCache called.");
         if (manager.cacheExists(SinkitCacheName.WHITELIST_CACHE.toString())) {
-            return manager.getCache(SinkitCacheName.WHITELIST_CACHE.toString()).getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES);
+            return manager.getCache(SinkitCacheName.WHITELIST_CACHE.toString());
         }
         throw new IllegalStateException("getWhitelistCache called on a node that ain't supposed to be running it. DNS node?");
     }
@@ -201,34 +209,34 @@ public class MyCacheManagerProvider implements Serializable {
     @Produces
     @ApplicationScoped
     @SinkitCache(SinkitCacheName.CUSTOM_LISTS_CACHE)
-    public AdvancedCache<?, ?> getCustomListCache() {
+    public Cache<String, CustomList> getCustomListCache() {
         if (manager == null) {
             throw new IllegalArgumentException("Manager must not be null.");
         }
         log.log(Level.INFO, "getCustomListCache called.");
-        return manager.getCache(SinkitCacheName.CUSTOM_LISTS_CACHE.toString()).getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES);
+        return manager.getCache(SinkitCacheName.CUSTOM_LISTS_CACHE.toString());
     }
 
     @Produces
     @ApplicationScoped
     @SinkitCache(SinkitCacheName.RULES_CACHE)
-    public AdvancedCache<?, ?> getRuleCache() {
+    public Cache<String, Rule> getRuleCache() {
         if (manager == null) {
             throw new IllegalArgumentException("Manager must not be null.");
         }
         log.log(Level.INFO, "getRuleCache called.");
-        return manager.getCache(SinkitCacheName.RULES_CACHE.toString()).getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES);
+        return manager.getCache(SinkitCacheName.RULES_CACHE.toString());
     }
 
     @Produces
     @ApplicationScoped
     @SinkitCache(SinkitCacheName.GSB_CACHE)
-    public AdvancedCache<?, ?> getGsbCache() {
+    public Cache<String, GSBRecord> getGsbCache() {
         if (manager == null) {
             throw new IllegalArgumentException("Manager must not be null.");
         }
         log.log(Level.INFO, "getGsbCache called.");
-        return manager.getCache(SinkitCacheName.GSB_CACHE.toString()).getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES);
+        return manager.getCache(SinkitCacheName.GSB_CACHE.toString());
     }
 
     @Produces
