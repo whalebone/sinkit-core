@@ -29,7 +29,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Created by tkozel on 25.6.15.
+ * @author Tomas Kozel
  */
 @Stateless
 public class CoreServiceEJB implements CoreService {
@@ -94,8 +94,7 @@ public class CoreServiceEJB implements CoreService {
         IoCValidator.validateIoCRecord(ioc, iocActiveHours);
 
         // try to construct source ID
-        IoCSourceId sid = IoCSourceIdBuilder.build(ioc);
-        ioc.getSource().setId(sid);
+        ioc.getSource().setId(IoCSourceIdBuilder.build(ioc));
 
         ioc.setActive(true);
 
@@ -185,14 +184,14 @@ public class CoreServiceEJB implements CoreService {
     @Override
     public boolean processWhitelistIoCRecord(final IoCRecord whiteIoC) throws IoCValidationException, ArchiveException {
         IoCValidator.validateWhitelistIoCRecord(whiteIoC);
-        IoCSourceId sid = IoCSourceIdBuilder.build(whiteIoC);
+        final IoCSourceId sid = IoCSourceIdBuilder.build(whiteIoC);
         whiteIoC.getSource().setId(sid);
         // TODO: remove when ttl is received from IntelMQ
         whiteIoC.getSource().setTTL(whitelistValidSeconds);
         WhitelistedRecord white = whitelistCacheService.get(whiteIoC.getSource().getId().getValue());
         boolean putToCacheBefore = true;
         if (white != null) {
-            Calendar expiresAt = Calendar.getInstance();
+            final Calendar expiresAt = Calendar.getInstance();
             expiresAt.add(Calendar.SECOND, whiteIoC.getSource().getTTL().intValue());
             // if old whitelist record needs update
             if (expiresAt.after(white.getExpiresAt())) {
@@ -224,7 +223,7 @@ public class CoreServiceEJB implements CoreService {
                 return false;
             }
         }
-        List<IoCRecord> iocs = archiveService.findIoCsForWhitelisting(white.getRawId());
+        final List<IoCRecord> iocs = archiveService.findIoCsForWhitelisting(white.getRawId());
         for (IoCRecord iocRecord : iocs) {
             if (!blacklistCacheService.removeWholeObjectFromCache(iocRecord)) {
                 return false;
@@ -253,8 +252,8 @@ public class CoreServiceEJB implements CoreService {
     }
 
     @Override
-    public int getWhitelistStats() {
-        return whitelistCacheService.getStats();
+    public boolean isWhitelistEmpty() {
+        return whitelistCacheService.isWhitelistEmpty();
     }
 
     @Override
