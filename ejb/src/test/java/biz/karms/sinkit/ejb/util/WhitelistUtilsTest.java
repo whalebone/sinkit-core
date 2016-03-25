@@ -1,15 +1,12 @@
 package biz.karms.sinkit.ejb.util;
 
-import jdk.nashorn.internal.ir.WhileNode;
 import org.junit.Test;
-
-import java.util.Arrays;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 /**
- * Created by tkozel on 1/10/16.
+ * Created by Tomas Kozel
  */
 public class WhitelistUtilsTest {
 
@@ -25,7 +22,7 @@ public class WhitelistUtilsTest {
     @Test
     public void explodeDomainsTest() {
         String fqdn = "one.two.three.four.five.com";
-        String[] domains = new String[] {
+        String[] domains = new String[]{
                 "five.com",
                 "four.five.com",
                 "three.four.five.com",
