@@ -3,7 +3,7 @@ package biz.karms.sinkit.eventlog;
 import java.io.Serializable;
 
 /**
- * Created by tkozel on 23.7.15.
+ * Created by Tomas Kozel
  */
 public class EventReason implements Serializable {
 

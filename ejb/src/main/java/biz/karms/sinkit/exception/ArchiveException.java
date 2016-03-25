@@ -1,7 +1,7 @@
 package biz.karms.sinkit.exception;
 
 /**
- * Created by tkozel on 25.6.15.
+ * Created by Tomas Kozel
  */
 public class ArchiveException extends Exception {
 

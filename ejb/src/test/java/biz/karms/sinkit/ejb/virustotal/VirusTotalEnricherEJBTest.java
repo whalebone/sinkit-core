@@ -36,7 +36,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 /**
- * Created by tkozel on 2/6/16.
+ * Created by Tomas Kozel
  */
 @RunWith(MockitoJUnitRunner.class)
 public class VirusTotalEnricherEJBTest {
@@ -62,7 +62,7 @@ public class VirusTotalEnricherEJBTest {
     @Test
     public void testSuccessfulEnrichment() throws Exception {
         IoCRecord ioc = createIoCRecord("unique", null);
-        EventLogRecord logRecord = createLogRecord("6.6.6.6", null, VirusTotalRequestStatus.WAITING, new String[] {"unique"});
+        EventLogRecord logRecord = createLogRecord("6.6.6.6", null, VirusTotalRequestStatus.WAITING, new String[]{"unique"});
         when(archiveService.getLogRecordWaitingForVTReport(2))
                 .thenReturn(null)
                 .thenReturn(logRecord)
@@ -92,7 +92,7 @@ public class VirusTotalEnricherEJBTest {
         verify(archiveService, times(1)).setVirusTotalReportToIoCRecord(eq(ioc), reportCaptor.capture());
         assertNotNull(reportCaptor.getValue());
         assertEquals(1, reportCaptor.getValue().length);
-        assertEquals("6.6.6.6",reportCaptor.getValue()[0].getIp());
+        assertEquals("6.6.6.6", reportCaptor.getValue()[0].getIp());
         assertNotNull(reportCaptor.getValue()[0].getScanDate());
         assertNotNull(reportCaptor.getValue()[0].getUrlReport());
         assertNotNull(reportCaptor.getValue()[0].getUrlReport().getScans());
@@ -109,7 +109,7 @@ public class VirusTotalEnricherEJBTest {
     @Test
     public void testFailedScan() throws Exception {
         IoCRecord ioc = createIoCRecord("unique", null);
-        EventLogRecord logRecord = createLogRecord(null, "whalebone.io", VirusTotalRequestStatus.WAITING, new String[] {"unique"});
+        EventLogRecord logRecord = createLogRecord(null, "whalebone.io", VirusTotalRequestStatus.WAITING, new String[]{"unique"});
         when(archiveService.getLogRecordWaitingForVTScan(2))
                 .thenReturn(logRecord)  // first try
                 .thenReturn(null)
@@ -168,7 +168,7 @@ public class VirusTotalEnricherEJBTest {
     @Test
     public void testFailedReport() throws Exception {
         IoCRecord ioc = createIoCRecord("unique", null);
-        EventLogRecord logRecord = createLogRecord(null, "whalebone.io", VirusTotalRequestStatus.WAITING_FOR_REPORT, new String[] {"unique"});
+        EventLogRecord logRecord = createLogRecord(null, "whalebone.io", VirusTotalRequestStatus.WAITING_FOR_REPORT, new String[]{"unique"});
         when(archiveService.getLogRecordWaitingForVTReport(2))
                 .thenReturn(logRecord)  // first try
                 .thenReturn(null)
@@ -232,7 +232,7 @@ public class VirusTotalEnricherEJBTest {
         request.setVirusTotalRequest(new VirusTotalRequest());
         request.getVirusTotalRequest().setStatus(status);
         IoCRecord[] matchedIoCs = new IoCRecord[matchedIoCUniqueRefs.length];
-        for(int i = 0; i < matchedIoCs.length; i++) {
+        for (int i = 0; i < matchedIoCs.length; i++) {
             matchedIoCs[i] = new IoCRecord();
             matchedIoCs[i].setUniqueRef(matchedIoCUniqueRefs[i]);
         }
