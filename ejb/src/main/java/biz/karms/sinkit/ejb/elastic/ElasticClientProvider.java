@@ -29,14 +29,20 @@ public class ElasticClientProvider {
             if (node == null) {
                 log.log(Level.INFO, "Elastic client node doesn't exists, creating new one");
                 node = NodeBuilder.nodeBuilder()
-                        .settings(ImmutableSettings.settingsBuilder().put("http.enabled", false))
+                        .settings(ImmutableSettings.settingsBuilder()
+                                        .put("http.enabled", false)
+                                        .put("network.host", "_" + System.getenv("SINKIT_NIC") + ":ipv4_")
+                                        .putArray("discovery.zen.ping.unicast.hosts", System.getenv("SINKIT_ELASTIC_HOST") + ":" + System.getenv("SINKIT_ELASTIC_PORT"))
+                                        .put("cluster.name", System.getenv("SINKIT_ELASTIC_CLUSTER"))
+                                        .put("discovery.zen.ping.multicast.enabled", true)
+                                        .put("discovery.zen.ping.timeout", "3s")
+                                        .put("discovery.zen.minimum_master_nodes", 1)
+                        )
                         .client(true)
                         .data(false)
                         .node();
             }
             client = node.client();
-//            client = new TransportClient()
-//                    .addTransportAddress(new InetSocketTransportAddress("localhost", 9300));
         }
         return client;
     }
@@ -51,8 +57,5 @@ public class ElasticClientProvider {
             log.log(Level.INFO, "Closing elastic client node");
             node.close();
         }
-//        if (client != null) {
-//            client.close();
-//        }
     }
 }
