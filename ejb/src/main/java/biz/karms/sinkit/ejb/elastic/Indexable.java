@@ -3,7 +3,7 @@ package biz.karms.sinkit.ejb.elastic;
 import java.io.Serializable;
 
 /**
- * Created by tkozel on 4.8.15.
+ * Created by Tomas Kozel
  */
 public interface Indexable extends Serializable {
 
