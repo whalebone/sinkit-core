@@ -2,7 +2,7 @@ FROM fedora:22
 MAINTAINER Michal Karm Babacek <karm@email.cz
 LABEL description="Codename Feed: Sinkit Core POC"
 
-ENV DEPS            java-1.8.0-openjdk-devel.x86_64 unzip wget gawk sed
+ENV DEPS            java-1.8.0-openjdk-devel.x86_64 unzip wget gawk sed jna.x86_64 jsch-agent-proxy-usocket-jna.noarch
 ENV JBOSS_HOME      "/opt/sinkit/wildfly"
 ENV JAVA_HOME       "/usr/lib/jvm/java-1.8.0"
 
