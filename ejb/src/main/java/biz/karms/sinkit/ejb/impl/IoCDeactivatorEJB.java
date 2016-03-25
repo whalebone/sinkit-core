@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 /**
- * Created by tkozel on 29.6.15.
+ * Created by Tomas Kozel
  */
 @Stateless
 @AccessTimeout(value = 40, unit = TimeUnit.MINUTES)

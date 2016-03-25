@@ -14,7 +14,7 @@ import java.util.List;
  */
 public class FullHashLookupResponse implements Serializable {
 
-    private static final long serialVersionUID = 6701808366131140791L;
+    private static final long serialVersionUID = 21808366131140791L;
 
     private int validSeconds;
 
