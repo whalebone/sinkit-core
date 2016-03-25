@@ -13,8 +13,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 /**
- * Created by tkozel on 26.7.15.
- * <p>
+ * @author Tomas Kozel
  * Maintains state
  */
 @Stateless

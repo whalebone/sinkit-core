@@ -61,7 +61,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-
 /**
  * @author Michal Karm Babacek
  */
@@ -359,7 +358,7 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.FINE, "getSinkHole: Sinkhole.");
             try {
                 log.log(Level.FINE, "getSinkHole: Calling coreService.logDNSEvent(EventLogAction.BLOCK,...");
-                if(DNS_REQUEST_LOGGING_ENABLED) {
+                if (DNS_REQUEST_LOGGING_ENABLED) {
                     logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()), archiveService, log);
                 }
                 log.log(Level.FINE, "getSinkHole: coreService.logDNSEvent returned.");
@@ -372,7 +371,7 @@ public class DNSApiEJB implements DNSApi {
             //Log it for customer
             log.log(Level.FINE, "getSinkHole: Log.");
             try {
-                if(DNS_REQUEST_LOGGING_ENABLED) {
+                if (DNS_REQUEST_LOGGING_ENABLED) {
                     logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()), archiveService, log);
                 }
             } catch (ArchiveException e) {
@@ -385,7 +384,7 @@ public class DNSApiEJB implements DNSApi {
             //Log it for us
             log.log(Level.FINE, "getSinkHole: Log internally.");
             try {
-                if(DNS_REQUEST_LOGGING_ENABLED) {
+                if (DNS_REQUEST_LOGGING_ENABLED) {
                     logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()), archiveService, log);
                 }
             } catch (ArchiveException e) {

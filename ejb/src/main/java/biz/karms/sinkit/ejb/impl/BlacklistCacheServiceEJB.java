@@ -99,7 +99,7 @@ public class BlacklistCacheServiceEJB implements BlacklistCacheService {
         if (key != null) {
             try {
                 if (blacklistCache.containsKey(key)) {
-                    BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
+                    final BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
                     HashMap<String, Pair<String, String>> feedToTypeUpdate = blacklistedRecord.getSources();
                     if (ioCRecord.getFeed().getName() != null) {
                         feedToTypeUpdate.remove(ioCRecord.getFeed().getName());
