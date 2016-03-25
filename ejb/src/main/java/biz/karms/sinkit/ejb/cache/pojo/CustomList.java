@@ -15,7 +15,7 @@ import java.io.Serializable;
 @Entity
 public class CustomList implements Serializable {
 
-    private static final long serialVersionUID = 14123411141111L;
+    private static final long serialVersionUID = 14109218311141111L;
 
     /**
      * Client DNS server identification
