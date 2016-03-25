@@ -3,7 +3,7 @@ package biz.karms.sinkit.eventlog;
 import com.google.gson.annotations.SerializedName;
 
 /**
- * Created by tkozel on 23.7.15.
+ * Created by Tomas Kozel
  */
 public enum EventLogAction {
 

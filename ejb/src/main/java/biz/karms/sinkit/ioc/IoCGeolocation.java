@@ -3,7 +3,7 @@ package biz.karms.sinkit.ioc;
 import java.io.Serializable;
 
 /**
- * Created by tkozel on 25.6.15.
+ * Created by Tomas Kozel
  */
 public class IoCGeolocation implements Serializable {
 

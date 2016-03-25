@@ -1,12 +1,9 @@
 package biz.karms.sinkit.ioc;
 
-import org.hibernate.search.annotations.Field;
-import org.hibernate.search.annotations.Indexed;
-
 import java.io.Serializable;
 
 /**
- * Created by tkozel on 24.6.15.
+ * Created by Tomas Kozel
  */
 public class IoCClassification implements Serializable {
 
@@ -16,7 +13,8 @@ public class IoCClassification implements Serializable {
     private String taxonomy;
     private String identifier;
 
-    public IoCClassification() {}
+    public IoCClassification() {
+    }
 
     public String getType() {
         return type;
