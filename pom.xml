@@ -74,13 +74,14 @@
         <!-- Elastic Search -->
         <io.searchbox.jest.version>0.1.7</io.searchbox.jest.version>
         <es.version>1.7.4</es.version>
+        <es.jna.version>4.1.0</es.jna.version>
 
         <!-- Virus Total -->
         <com.kanishka.api.VirustotalPublicV2.0.version>1.1.GA-SNAPSHOT</com.kanishka.api.VirustotalPublicV2.0.version>
 
         <!-- Infinispan and business core deps-->
         <infinispan.core.version>8.1.0.Final</infinispan.core.version>
-        <infinispan.cachestore.mongo.version>8.2.1-SNAPSHOT</infinispan.cachestore.mongo.version>
+        <infinispan.cachestore.mongo.version>8.2.1.karm-SNAPSHOT</infinispan.cachestore.mongo.version>
         <infinispan.cachestore.jdbc.version>8.1.0.Final</infinispan.cachestore.jdbc.version>
         <infinispan.query.version>8.1.0.Final</infinispan.query.version>
         <hibernate.infinispan.version>5.0.7.Final</hibernate.infinispan.version>
