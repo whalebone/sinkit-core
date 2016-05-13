@@ -32,6 +32,7 @@
         <module>ear</module>
         <module>rest</module>
         <module>integration-tests</module>
+        <module>infinispan-cachestore-mongodb</module>
     </modules>
 
     <properties>

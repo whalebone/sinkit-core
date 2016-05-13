@@ -49,6 +49,9 @@ wget ${MAVEN_CENTRAL}/org/infinispan/infinispan-query-dsl/${VERSION_INFINISPAN}/
 wget ${MAVEN_CENTRAL}/org/infinispan/infinispan-objectfilter/${VERSION_INFINISPAN}/infinispan-objectfilter-${VERSION_INFINISPAN}.jar -O ${INFINISPAN_MODULE_DIR}/infinispan-objectfilter-${VERSION_INFINISPAN}.jar && \
 wget ${MAVEN_CENTRAL}/org/infinispan/infinispan-query/${VERSION_INFINISPAN}/infinispan-query-${VERSION_INFINISPAN}.jar -O ${INFINISPAN_MODULE_DIR}/infinispan-query-${VERSION_INFINISPAN}.jar
 
+# Patched Infinispan - very dirty :-(
+ADD infinispan-core-${VERSION_INFINISPAN}.jar /opt/sinkit/wildfly-${WILDFLY_VERSION}/modules/system/layers/base/org/infinispan/main/infinispan-core-${VERSION_INFINISPAN}.jar
+
 # Circle CI builds and tests the archive, so no need for additional checks here.
 ADD ear/target/sinkit-ear.ear /opt/sinkit/wildfly-${WILDFLY_VERSION}/standalone/deployments/
 
@@ -64,6 +67,11 @@ EXPOSE 54200/udp
 EXPOSE 45688/udp
 EXPOSE 45700/udp
 EXPOSE 7800/udp
+EXPOSE 7800/tcp
+EXPOSE 7801/udp
+EXPOSE 7801/tcp
+EXPOSE 57600/udp
+EXPOSE 57600/tcp
 
 ENV WF_CONFIG /opt/sinkit/wildfly/standalone/configuration/standalone-ha.xml
 
