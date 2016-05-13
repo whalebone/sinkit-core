@@ -337,7 +337,22 @@
                 <stack name="tcp">
                     <transport type="TCP" socket-binding="jgroups-tcp"/>
 
-                    <protocol type="MPING" socket-binding="jgroups-mping">
+                    <protocol type="TCPPING">
+                        <property name="initial_hosts">
+                            @SINKIT_TCPPING_INITIAL_HOSTS@
+                        </property>
+                        <property name="port_range">
+                            2
+                        </property>
+                        <property name="timeout">
+                            @SINKIT_TCPPING_TIMEOUT@
+                        </property>
+                        <property name="num_initial_members">
+                            @SINKIT_TCPPING_NUM_MEMBERS@
+                        </property>
+                    </protocol>
+
+                    <!--<protocol type="MPING" socket-binding="jgroups-mping">
                         <property name="bind_interface_str">
                             @SINKITNIC@
                         </property>
@@ -356,16 +371,38 @@
                         <property name="send_interfaces">
                             @SINKITNIC@
                         </property>
-                    </protocol>
+                    </protocol>-->
 
                     <protocol type="MERGE3"/>
-                    <protocol type="FD_SOCK" socket-binding="jgroups-tcp-fd"/>
-                    <protocol type="FD"/>
-                    <protocol type="VERIFY_SUSPECT"/>
+                    <protocol type="FD_SOCK" socket-binding="jgroups-tcp-fd">
+                        <property name="get_cache_timeout">
+                            30000
+                        </property>
+                        <property name="sock_conn_timeout">
+                            20000
+                        </property>
+                    </protocol>
+                    <protocol type="FD">
+                        <property name="timeout">
+                            30000
+                        </property>
+                        <property name="max_tries">
+                            5
+                        </property>
+                    </protocol>
+                    <protocol type="VERIFY_SUSPECT">
+                        <property name="timeout">
+                            30000
+                        </property>
+                    </protocol>
                     <protocol type="pbcast.NAKACK2"/>
                     <protocol type="UNICAST3"/>
                     <protocol type="pbcast.STABLE"/>
-                    <protocol type="pbcast.GMS"/>
+                    <protocol type="pbcast.GMS">
+                        <property name="join_timeout">
+                            @SINKIT_TCPPING_TIMEOUT@
+                        </property>
+                    </protocol>
                     <protocol type="MFC"/>
                     <protocol type="FRAG2">
                         <property name="frag_size">
