@@ -26,14 +26,14 @@ fi
 sed -i "s/@SINKITNIC@/${SINKIT_NIC:-eth0}/g" ${WF_CONFIG}
 
 # Replace TCPPING config
-sed -i "s/@SINKIT_TCPPING_INITIAL_HOSTS@/${SINKIT_TCPPING_INITIAL_HOSTS:-[${DOCKERCLOUD_CONTAINER_FQDN}]7800}/g" ${WF_CONFIG}
+sed -i "s/@SINKIT_TCPPING_INITIAL_HOSTS@/${SINKIT_TCPPING_INITIAL_HOSTS:-[${TUTUM_CONTAINER_FQDN}]7800}/g" ${WF_CONFIG}
 sed -i "s/@SINKIT_TCPPING_TIMEOUT@/${SINKIT_TCPPING_TIMEOUT:-60000}/g" ${WF_CONFIG}
 sed -i "s/@SINKIT_TCPPING_NUM_MEMBERS@/${SINKIT_TCPPING_NUM_MEMBERS:-1}/g" ${WF_CONFIG}
 
 # Replace Logging level
 sed -i "s/@SINKITLOGGING@/${SINKIT_LOGLEVEL:-INFO}/g" ${WF_CONFIG}
 
-CONTAINER_NAME=`echo ${DOCKERCLOUD_CONTAINER_FQDN}|sed 's/\([^\.]*\.[^\.]*\).*/\1/g'`
+CONTAINER_NAME=`echo ${TUTUM_CONTAINER_FQDN}|sed 's/\([^\.]*\.[^\.]*\).*/\1/g'`
 
 if [ "`echo \"${CONTAINER_NAME}\" | wc -c`" -gt 24 ]; then
     echo "ERROR: CONTAINER_NAME ${CONTAINER_NAME} must be up to 24 characters long."
@@ -57,6 +57,6 @@ sed -i "s/<core-environment>/<core-environment node-identifier=\"${CONTAINER_NAM
  -Djgroups.tcp.address=${MYIP} \
  -Djboss.default.multicast.address=230.0.0.4 \
  -Djboss.node.name="${CONTAINER_NAME}" \
- -Djboss.host.name="${DOCKERCLOUD_CONTAINER_FQDN}" \
- -Djboss.qualified.host.name="${DOCKERCLOUD_CONTAINER_FQDN}" \
+ -Djboss.host.name="${TUTUM_CONTAINER_FQDN}" \
+ -Djboss.qualified.host.name="${TUTUM_CONTAINER_FQDN}" \
  -Djboss.as.management.blocking.timeout=1800
