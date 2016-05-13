@@ -41,8 +41,9 @@ public class MyCacheManagerProvider implements Serializable {
 
     private static final long serialVersionUID = 45216839143257496L;
 
-    private static final long ENTRY_LIFESPAN = 2 * 60 * 1000; //ms
-    private static final long NEVER = -1;
+    private static final long ENTRY_LIFESPAN = TimeUnit.MINUTES.toMillis(2L);
+    private static final long NEVER = -1L;
+    private static final long WAKEUP_INTERVAL = TimeUnit.MINUTES.toMillis(30L);
 
     @Inject
     private Logger log;
@@ -53,14 +54,13 @@ public class MyCacheManagerProvider implements Serializable {
     private Configuration replicatedIndexed(final String cacheName, final int threadPool) {
         return new ConfigurationBuilder().jmxStatistics().disable().available(false)
                 .clustering().cacheMode(CacheMode.REPL_ASYNC)
-                .stateTransfer().awaitInitialTransfer(true)
-                .timeout(5, TimeUnit.MINUTES)
+                .stateTransfer().awaitInitialTransfer(false)
+                //.timeout(30, TimeUnit.MINUTES)
                 .async()
                 .expiration()
                 .lifespan(NEVER)
-                .wakeUpInterval(NEVER)
+                .wakeUpInterval(WAKEUP_INTERVAL)
                 .maxIdle(NEVER)
-                .disableReaper()
                 .indexing().index(Index.ALL)
                 .addProperty("hibernate.search.default.worker.execution", "async")
                 .addProperty("hibernate.search.lucene_version", "LUCENE_CURRENT")
@@ -68,13 +68,14 @@ public class MyCacheManagerProvider implements Serializable {
                 .addProperty("default.indexmanager", "near-real-time")
                 .eviction().strategy(EvictionStrategy.NONE)
                 .transaction().transactionMode(TransactionMode.NON_TRANSACTIONAL)
-                        //If you put or remove, the returned object might not be what you expect.
                 .unsafe().unreliableReturnValues(true)
                 .persistence()
                 .passivation(false)
                 .addStore(MongoDBStoreConfigurationBuilder.class)
                 .connectionURI(System.getenv("SINKIT_MONGODB_CONNECTION_URI"))
                 .collection(cacheName)
+                .shared(true)
+                .preload(true)
                 .async()
                 .threadPoolSize(threadPool)
                 .enable()
@@ -84,27 +85,27 @@ public class MyCacheManagerProvider implements Serializable {
     private Configuration replicatedNotIndexed(final String cacheName, final int threadPool) {
         return new ConfigurationBuilder().jmxStatistics().disable().available(false)
                 .clustering().cacheMode(CacheMode.REPL_ASYNC)
-                .stateTransfer().awaitInitialTransfer(true)
-                .timeout(5, TimeUnit.MINUTES)
+                .stateTransfer().awaitInitialTransfer(false)
+                //.timeout(50, TimeUnit.MINUTES)
                 .async()
                 .expiration()
                 .lifespan(NEVER)
-                .wakeUpInterval(NEVER)
+                .wakeUpInterval(WAKEUP_INTERVAL)
                 .maxIdle(NEVER)
-                .disableReaper()
                 .indexing().index(Index.NONE)
                 .eviction().strategy(EvictionStrategy.NONE)
                 .transaction().transactionMode(TransactionMode.NON_TRANSACTIONAL)
-                        //If you put or remove, the returned object might not be what you expect.
                 .unsafe().unreliableReturnValues(true)
                 .persistence()
                 .passivation(false)
                 .addStore(MongoDBStoreConfigurationBuilder.class)
                 .connectionURI(System.getenv("SINKIT_MONGODB_CONNECTION_URI"))
                 .collection(cacheName)
-                .fetchPersistentState(true)
+                .fetchPersistentState(false)
                 .ignoreModifications(false)
                 .purgeOnStartup(false)
+                .shared(true)
+                .preload(true)
                 .async()
                 .threadPoolSize(threadPool)
                 .enable()
@@ -112,7 +113,7 @@ public class MyCacheManagerProvider implements Serializable {
                 /*
                 .persistence()
                 .addStore(JdbcStringBasedStoreConfigurationBuilder.class)
-                .fetchPersistentState(true)
+                .fetchPersistentState(false)
                 .ignoreModifications(false)
                 .purgeOnStartup(false)
                 .table()
@@ -150,15 +151,15 @@ public class MyCacheManagerProvider implements Serializable {
         /**
          * MANAGER settings and Persistence
          */
-        manager.defineConfiguration(SinkitCacheName.BLACKLIST_CACHE.toString(), replicatedNotIndexed("infinispan_blacklist", 15));
+        manager.defineConfiguration(SinkitCacheName.RULES_CACHE.toString(), replicatedIndexed("infinispan_rules", 5));
+        manager.defineConfiguration(SinkitCacheName.CUSTOM_LISTS_CACHE.toString(), replicatedIndexed("infinispan_custom_lists", 5));
+        manager.defineConfiguration(SinkitCacheName.GSB_CACHE.toString(), replicatedNotIndexed("infinispan_gsb", 10));
+        manager.defineConfiguration(SinkitCacheName.BLACKLIST_CACHE.toString(), replicatedNotIndexed("infinispan_blacklist", 10));
         if (startWhiteCache) {
-            manager.defineConfiguration(SinkitCacheName.WHITELIST_CACHE.toString(), replicatedNotIndexed("infinispan_whitelist", 15));
+            manager.defineConfiguration(SinkitCacheName.WHITELIST_CACHE.toString(), replicatedNotIndexed("infinispan_whitelist", 10));
         } else {
             log.log(Level.INFO, "This node's address " + manager.getAddress().toString() + " contains unwanted suffix " + HATimerServiceActivator.unwantedNameSuffix + ", so cache " + SinkitCacheName.WHITELIST_CACHE.toString() + "won't be created.");
         }
-        manager.defineConfiguration(SinkitCacheName.GSB_CACHE.toString(), replicatedNotIndexed("infinispan_gsb", 10));
-        manager.defineConfiguration(SinkitCacheName.RULES_CACHE.toString(), replicatedIndexed("infinispan_rules", 5));
-        manager.defineConfiguration(SinkitCacheName.CUSTOM_LISTS_CACHE.toString(), replicatedIndexed("infinispan_custom_lists", 5));
 
         /**
          * Start caches

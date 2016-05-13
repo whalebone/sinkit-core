@@ -91,7 +91,7 @@ public class GSBServiceEJB implements GSBService {
         if (gsbRecord == null) {
             return null;
         } else {
-            logger.log(Level.INFO, "lookup: hashPrefix " + hashStringPrefix + " was found in cache. It was made off: " + fullHashString + " which is lookupVariant: " + lookupVariant);
+            logger.log(Level.FINE, "lookup: hashPrefix " + hashStringPrefix + " was found in cache. It was made off: " + fullHashString + " which is lookupVariant: " + lookupVariant);
         }
 
         final HashMap<String, HashSet<String>> fullHashes;
