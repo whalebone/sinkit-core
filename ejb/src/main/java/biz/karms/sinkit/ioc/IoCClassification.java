@@ -10,10 +10,11 @@ import java.io.Serializable;
  */
 public class IoCClassification implements Serializable {
 
-    private static final long serialVersionUID = -5807317040203145173L;
+    private static final long serialVersionUID = -5212807838160280916L;
 
     private String type;
     private String taxonomy;
+    private String identifier;
 
     public IoCClassification() {}
 
@@ -33,11 +34,20 @@ public class IoCClassification implements Serializable {
         this.taxonomy = taxonomy;
     }
 
+    public String getIdentifier() {
+        return identifier;
+    }
+
+    public void setIdentifier(String identifier) {
+        this.identifier = identifier;
+    }
+
     @Override
     public String toString() {
         return "IoCClassification{" +
                 "type='" + type + '\'' +
                 ", taxonomy='" + taxonomy + '\'' +
+                ", identifier='" + identifier + '\'' +
                 '}';
     }
 }
