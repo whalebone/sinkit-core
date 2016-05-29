@@ -12,7 +12,7 @@ import java.util.*;
 @Local
 public interface GSBService {
 
-    Set<String> lookup(String url);
+    Set<ThreatType> lookup(String url);
 
     boolean putHashPrefix(String hashPrefix);
 

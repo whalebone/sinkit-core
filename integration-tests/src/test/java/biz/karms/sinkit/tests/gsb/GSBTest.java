@@ -134,7 +134,7 @@ public class GSBTest extends Arquillian {
         assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("removeHashPrefixTest Response:" + responseBody);
-        expected = "[\"goog-malware-shavar\"]";
+        expected = "[\"MALWARE\"]";
         assertTrue(responseBody.contains(expected), "Should have contained " + expected + ", but got: " + responseBody);
     }
 
@@ -160,7 +160,7 @@ public class GSBTest extends Arquillian {
         assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("removeHashPrefixTest Response:" + responseBody);
-        expected = "[\"goog-phish-shavar\"]";
+        expected = "[\"PHISHING\"]";
         assertTrue(responseBody.contains(expected), "Should have contained " + expected + ", but got: " + responseBody);
     }
 

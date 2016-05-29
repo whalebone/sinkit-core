@@ -21,6 +21,7 @@ import org.jboss.arquillian.container.test.api.OperateOnDeployment;
 import org.jboss.arquillian.container.test.api.RunAsClient;
 import org.jboss.arquillian.test.api.ArquillianResource;
 import org.jboss.arquillian.testng.Arquillian;
+import org.jboss.marshalling.Pair;
 import org.testng.annotations.Test;
 
 import javax.ejb.EJB;
@@ -29,7 +30,10 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import static org.testng.Assert.assertEquals;
@@ -197,6 +201,14 @@ public class CoreTest extends Arquillian {
         IoCRecord ioc1 = archiveService.getIoCRecordById(iocId1);
         IoCRecord ioc2 = archiveService.getIoCRecordById(iocId2);
 
+        // note: feed name and types will be ignored since iocIds already exists
+        // { feed: [type1 : iocId1, type2:iocId2, ...]}
+        Map<String, Set<Pair<String, String>>> ids = new HashMap<>();
+        Set<Pair<String, String>> typeIoCIds = new HashSet<>();
+        typeIoCIds.add(new Pair<>("type1", iocId1));
+        typeIoCIds.add(new Pair<>("type2", iocId2));
+        ids.put("feed1", typeIoCIds);
+
         dnsApi.logDNSEvent(EventLogAction.BLOCK,
                 "10.1.1.1",
                 "10.1.1.2",
@@ -204,7 +216,7 @@ public class CoreTest extends Arquillian {
                 "requestType",
                 "seznam.cz",
                 "10.1.1.3",
-                new HashSet<>(Arrays.asList(iocId1, iocId2)),
+                ids,
                 archiveService,
                 LOGGER);
         // The async task follows Fire and Forget. TODO: dnsEventLogTestAssert must wait
