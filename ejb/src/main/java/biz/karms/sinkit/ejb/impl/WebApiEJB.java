@@ -17,10 +17,16 @@ import org.apache.commons.validator.routines.DomainValidator;
 import org.infinispan.Cache;
 import org.infinispan.commons.util.concurrent.NotifyingFuture;
 import org.infinispan.context.Flag;
+import org.infinispan.manager.EmbeddedCacheManager;
 import org.infinispan.query.Search;
 import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
+import org.infinispan.remoting.transport.jgroups.JGroupsAddress;
+import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
 import org.jboss.marshalling.Pair;
+import org.infinispan.remoting.transport.Address;
+import org.jgroups.Event;
+import org.jgroups.stack.IpAddress;
 
 import javax.ejb.Stateless;
 import javax.inject.Inject;
@@ -75,11 +81,27 @@ public class WebApiEJB implements WebApi {
     }
 
     @Override
-    public Map<String, Boolean> getStats() {
-        Map<String, Boolean> info = new HashMap<>();
-        info.put("blacklistCache empty?", blacklistCache.isEmpty());
-        info.put("ruleCache empty?", ruleCache.isEmpty());
-        info.put("customListsCache empty?", customListsCache.isEmpty());
+    public Map<String, String> getStats() {
+        final Map<String, String> info = new HashMap<>();
+        //info.put("blacklistCache empty?", Boolean.toString(blacklistCache.isEmpty()));
+        //info.put("ruleCache empty?", Boolean.toString(ruleCache.isEmpty()));
+        //info.put("customListsCache empty?", Boolean.toString(customListsCache.isEmpty()));
+
+        final StringBuilder membersInfo = new StringBuilder();
+
+        final EmbeddedCacheManager container = blacklistCache.getCacheManager();
+        final List<Address> members = container.getMembers();
+        membersInfo.append("Members: ").append(members).append(System.getProperty("line.separator"));
+        final JGroupsTransport transport = (JGroupsTransport) container.getTransport();
+        for (Address infinispanWrapAddr : members) {
+            JGroupsAddress jgroupsWrapAddr = (JGroupsAddress) infinispanWrapAddr;
+            org.jgroups.Address ipAddress = (org.jgroups.Address) transport.getChannel().down(new Event(Event.GET_PHYSICAL_ADDRESS, jgroupsWrapAddr.getJGroupsAddress()));
+            IpAddress ipAddr = (IpAddress) ipAddress;
+            membersInfo.append(ipAddr.getIpAddress().getHostAddress()).append(":").append(((IpAddress) ipAddress).getPort()).append("; ");
+        }
+
+        info.put("blacklistCache transport stats", membersInfo.toString());
+
         return info;
     }
 
