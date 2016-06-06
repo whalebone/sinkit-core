@@ -13,12 +13,12 @@ RUN mkdir -p /opt/sinkit && chown sinkit /opt/sinkit && chgrp sinkit /opt/sinkit
 WORKDIR /opt/sinkit
 USER sinkit
 
-ENV WILDFLY_VERSION 10.0.0.Final
+ENV WILDFLY_VERSION 10.1.0.Final-SNAPSHOT
 ENV HIBERNATE_HQL_LUCENE_VERSION 1.3.0.Alpha2
 ENV HIBERNATE_HQL_PARSER_VERSION 1.3.0.Alpha2
 ENV STRINGTEMPLATE_VERSION 3.2.1
 ENV ANTLR_RUNTIME_VERSION 3.4
-ENV VERSION_INFINISPAN 8.1.0.Final
+ENV VERSION_INFINISPAN 8.2.2.Final
 ENV MAVEN_CENTRAL http://central.maven.org/maven2
 
 # ADD would run every rebuild
@@ -50,7 +50,7 @@ wget ${MAVEN_CENTRAL}/org/infinispan/infinispan-objectfilter/${VERSION_INFINISPA
 wget ${MAVEN_CENTRAL}/org/infinispan/infinispan-query/${VERSION_INFINISPAN}/infinispan-query-${VERSION_INFINISPAN}.jar -O ${INFINISPAN_MODULE_DIR}/infinispan-query-${VERSION_INFINISPAN}.jar
 
 # Patched Infinispan - very dirty :-(
-ADD infinispan-core-${VERSION_INFINISPAN}.jar /opt/sinkit/wildfly-${WILDFLY_VERSION}/modules/system/layers/base/org/infinispan/main/infinispan-core-${VERSION_INFINISPAN}.jar
+# ADD infinispan-core-${VERSION_INFINISPAN}.jar /opt/sinkit/wildfly-${WILDFLY_VERSION}/modules/system/layers/base/org/infinispan/main/infinispan-core-${VERSION_INFINISPAN}.jar
 
 # Circle CI builds and tests the archive, so no need for additional checks here.
 ADD ear/target/sinkit-ear.ear /opt/sinkit/wildfly-${WILDFLY_VERSION}/standalone/deployments/
@@ -70,6 +70,10 @@ EXPOSE 7800/udp
 EXPOSE 7800/tcp
 EXPOSE 7801/udp
 EXPOSE 7801/tcp
+EXPOSE 7600/udp
+EXPOSE 7600/tcp
+EXPOSE 7601/udp
+EXPOSE 7601/tcp
 EXPOSE 57600/udp
 EXPOSE 57600/tcp
 
