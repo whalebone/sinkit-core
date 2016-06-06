@@ -81,12 +81,12 @@
         <com.kanishka.api.VirustotalPublicV2.0.version>1.1.GA-SNAPSHOT</com.kanishka.api.VirustotalPublicV2.0.version>
 
         <!-- Infinispan and business core deps-->
-        <infinispan.core.version>8.1.0.Final</infinispan.core.version>
+        <infinispan.core.version>8.2.2.Final</infinispan.core.version>
         <infinispan.cachestore.mongo.version>8.2.1.karm-SNAPSHOT</infinispan.cachestore.mongo.version>
         <infinispan.cachestore.jdbc.version>8.1.0.Final</infinispan.cachestore.jdbc.version>
-        <infinispan.query.version>8.1.0.Final</infinispan.query.version>
-        <hibernate.infinispan.version>5.0.7.Final</hibernate.infinispan.version>
-        <hibernate.search.version>5.5.1.Final</hibernate.search.version>
+        <infinispan.query.version>8.2.2.Final</infinispan.query.version>
+        <hibernate.infinispan.version>5.0.9.Final</hibernate.infinispan.version>
+        <hibernate.search.version>5.5.3.Final</hibernate.search.version>
         <com.mchange.c3p0.version>0.9.5.2</com.mchange.c3p0.version>
         <com.google.code.gson.version>2.6.2</com.google.code.gson.version>
         <postgresql.driver.version>9.4.1208.jre7</postgresql.driver.version>
