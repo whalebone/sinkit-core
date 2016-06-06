@@ -4,6 +4,7 @@ import biz.karms.sinkit.ejb.ArchiveService;
 import biz.karms.sinkit.ejb.CoreService;
 import biz.karms.sinkit.ejb.DNSApi;
 import biz.karms.sinkit.ejb.GSBService;
+import biz.karms.sinkit.ejb.ThreatType;
 import biz.karms.sinkit.ejb.WebApi;
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCache;
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCacheName;
@@ -104,11 +105,11 @@ public class DNSApiEJB implements DNSApi {
     @SinkitCache(SinkitCacheName.RULES_LOCAL_CACHE)
     private Cache<String, List<Rule>> ruleLocalCache;
 
-    private static final List<String> FEEDTYPES = Arrays.asList("c&c", "malware", "ransomware", "malware configuration", "phishing", "blacklist");
+    //private static final List<String> FEEDTYPES = Arrays.asList("c&c", "malware", "ransomware", "malware configuration", "phishing", "blacklist", "unwanted software");
     private static final String IPV6SINKHOLE = System.getenv("SINKIT_SINKHOLE_IPV6");
     private static final String IPV4SINKHOLE = System.getenv("SINKIT_SINKHOLE_IP");
     private static final String GSB_FEED_NAME = (System.getenv().containsKey("SINKIT_GSB_FEED_NAME")) ? System.getenv("SINKIT_GSB_FEED_NAME") : "google-safebrowsing-api";
-    private static final String GSB_IOC_DOES_NOT_EXIST = "GSB-IOC-FAKE-ID";
+    //private static final String GSB_IOC_DOES_NOT_EXIST = "GSB-IOC-FAKE-ID";
     private static final int ARCHIVE_FAILED_TRIALS = 10;
     //private static final String TOKEN = System.getenv("SINKIT_ACCESS_TOKEN");
     private static final boolean DNS_REQUEST_LOGGING_ENABLED = Boolean.parseBoolean((System.getenv().containsKey("SINKIT_DNS_REQUEST_LOGGING_ENABLED")) ? System.getenv("SINKIT_DNS_REQUEST_LOGGING_ENABLED") : "true");
@@ -293,7 +294,7 @@ public class DNSApiEJB implements DNSApi {
         final BlacklistedRecord blacklistedRecord = blacklistCache.get(DigestUtils.md5Hex(fqdnOrIp));
         log.log(Level.FINE, "blacklistCache.get took: " + (System.currentTimeMillis() - start) + " ms.");
 
-        Set<String> gsbResults = null;
+        Set<ThreatType> gsbResults = null;
         if (isFQDN) {
             /**
              * Let's search GSB cache
@@ -309,17 +310,31 @@ public class DNSApiEJB implements DNSApi {
             return null;
         }
 
-        // Feed UID : {Type, IoCID}
-        final Map<String, Pair<String, String>> feedTypeMap = new HashMap<>();
+        // Feed UID : [{Type1, IoCID1}, {Type2, IoCID2}, ...]
+        final Map<String, Set<Pair<String, String>>> feedTypeMap = new HashMap<>();
 
-        if (blacklistedRecord != null) {
-            feedTypeMap.putAll(blacklistedRecord.getSources());
+        if (blacklistedRecord != null && MapUtils.isNotEmpty(blacklistedRecord.getSources())) {
+
+            /**
+             * once blacklisted source issue is fixed
+             * replace this for-loop for feedTypeMap.putAll(blacklistedRecord.getSources());
+             */
+            Set<Pair<String, String>> blacklistedRecordSource;
+            for (Map.Entry<String, Pair<String, String>> typeIoCPair : blacklistedRecord.getSources().entrySet()) {
+                blacklistedRecordSource = new HashSet<>();
+                blacklistedRecordSource.add(typeIoCPair.getValue());
+                feedTypeMap.put(typeIoCPair.getKey(), blacklistedRecordSource);
+            }
         }
 
         if (CollectionUtils.isNotEmpty(gsbResults)) {
             log.log(Level.FINE, "getSinkHole: gsbResults contains records: " + gsbResults.size());
             // GSB_IOC_DOES_NOT_EXIST - the IoC doesn't exist at this time. It will be created at Logging time.
-            feedTypeMap.put(GSB_FEED_NAME, new Pair<>(FEEDTYPES.get(1), GSB_IOC_DOES_NOT_EXIST));
+            Set<Pair<String, String>> gsbTypes = new HashSet<>(gsbResults.size());
+            for (ThreatType gsbThreatType : gsbResults) {
+                gsbTypes.add(new Pair<>(gsbThreatType.getName(), null));
+            }
+            feedTypeMap.put(GSB_FEED_NAME, gsbTypes);
         } else {
             log.log(Level.FINE, "getSinkHole: gsbResults contains no record");
         }
@@ -335,16 +350,21 @@ public class DNSApiEJB implements DNSApi {
         //TODO: Nested cycles, could we do better here?
         for (Rule rule : rules) {
             for (String uuid : rule.getSources().keySet()) {
-                // feed uuid : [type , docID], so "getA()" means get type
-                Pair<String, String> typeDocId = feedTypeMap.get(uuid);
-                if (typeDocId != null && FEEDTYPES.contains(typeDocId.getA())) {
-                    String tmpMode = rule.getSources().get(uuid);
-                    if (mode == null || ("S".equals(tmpMode) && !"D".equals(mode)) || "D".equals(tmpMode)) {
-                        //D >= S >= L >= null, i.e. if a feed is Disabled, we don't switch to Sinkhole.
-                        mode = tmpMode;
+                Set<Pair<String, String>> typeDocIds = feedTypeMap.get(uuid);
+                if (typeDocIds == null) {
+                    continue;
+                }
+                // feed uuid : [{type , docID}, {type2, docID2}, ...] so "getA()" means get type
+                for (Pair<String, String> typeDocId : typeDocIds) {
+                    if (typeDocId != null && ThreatType.parseName(typeDocId.getA()) != null) {
+                        String tmpMode = rule.getSources().get(uuid);
+                        if (mode == null || ("S".equals(tmpMode) && !"D".equals(mode)) || "D".equals(tmpMode)) {
+                            //D >= S >= L >= null, i.e. if a feed is Disabled, we don't switch to Sinkhole.
+                            mode = tmpMode;
+                        }
+                    } else {
+                        log.log(Level.FINE, "getSinkHole: BlacklistedRecord/GSB Rcord " + fqdnOrIp + " for feed " + uuid + " does not have Type nor DocID.");
                     }
-                } else {
-                    log.log(Level.FINE, "getSinkHole: BlacklistedRecord/GSB Rcord " + fqdnOrIp + " for feed " + uuid + " does not have Type nor DocID.");
                 }
             }
         }
@@ -360,7 +380,7 @@ public class DNSApiEJB implements DNSApi {
             try {
                 log.log(Level.FINE, "getSinkHole: Calling coreService.logDNSEvent(EventLogAction.BLOCK,...");
                 if(DNS_REQUEST_LOGGING_ENABLED) {
-                    logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()), archiveService, log);
+                    logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, feedTypeMap, archiveService, log);
                 }
                 log.log(Level.FINE, "getSinkHole: coreService.logDNSEvent returned.");
             } catch (ArchiveException e) {
@@ -373,7 +393,7 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.FINE, "getSinkHole: Log.");
             try {
                 if(DNS_REQUEST_LOGGING_ENABLED) {
-                    logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()), archiveService, log);
+                    logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, feedTypeMap, archiveService, log);
                 }
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging AUDIT failed: ", e);
@@ -386,7 +406,7 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.FINE, "getSinkHole: Log internally.");
             try {
                 if(DNS_REQUEST_LOGGING_ENABLED) {
-                    logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, unwrapDocumentIds(feedTypeMap.values()), archiveService, log);
+                    logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, feedTypeMap, archiveService, log);
                 }
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging INTERNAL failed: ", e);
@@ -430,7 +450,7 @@ public class DNSApiEJB implements DNSApi {
             final String requestType,
             final String reasonFqdn,
             final String reasonIp,
-            final Set<String> matchedIoCs,
+            final Map<String, Set<Pair<String, String>>> matchedIoCs,
             final ArchiveService archiveService,
             final Logger log
     ) throws ArchiveException {
@@ -454,18 +474,24 @@ public class DNSApiEJB implements DNSApi {
 
         final List<IoCRecord> matchedIoCsList = new ArrayList<>();
         log.log(Level.FINE, "Iterating matchedIoCs...");
-        for (final String iocId : matchedIoCs) {
-            if (StringUtils.isNotBlank(iocId)) {
+        // { feed : [ type1 : iocId1, type2 : iocId2]}
+        for (Map.Entry<String, Set<Pair<String, String>>> matchedIoC : matchedIoCs.entrySet()) {
+            // feedName = matchedIoC.getKey();
+            for (Pair<String, String> typeIoCID : matchedIoC.getValue()) {
+                // iocId = typeIoCID.getB();
+                // type = typeIoCID.getA();
+                //if (StringUtils.isNotBlank(typeIoCID.getB())) {
                 IoCRecord ioCRecord;
-                if (GSB_IOC_DOES_NOT_EXIST.equals(iocId) && StringUtils.isNotBlank(reasonFqdn)) {
+                if (StringUtils.isBlank(typeIoCID.getB()) && StringUtils.isNotBlank(reasonFqdn)) {
                     // Nope, no IP, just FQDN for GSB
-                    ioCRecord = processNonExistingGSBIoC(reasonFqdn, archiveService, log);
+                    ioCRecord = processNonExistingIoC(reasonFqdn, matchedIoC.getKey(), typeIoCID.getA(), archiveService, log);
                 } else {
-                    ioCRecord = processRegularIoCId(iocId, archiveService, log);
+                    ioCRecord = processRegularIoCId(typeIoCID.getB(), archiveService, log);
                 }
                 if (ioCRecord != null) {
                     matchedIoCsList.add(ioCRecord);
                 }
+                //}
             }
         }
         final IoCRecord[] matchedIoCsArray = matchedIoCsList.toArray(new IoCRecord[matchedIoCsList.size()]);
@@ -499,17 +525,17 @@ public class DNSApiEJB implements DNSApi {
      * and the fact that we will start having the keys in our IoC cache.
      * Furthermore, it might be a premature optimization.
      */
-    private static IoCRecord processNonExistingGSBIoC(final String matchedFQDN, ArchiveService archiveService, Logger log) {
+    private static IoCRecord processNonExistingIoC(final String matchedFQDN, String feedName, String type, ArchiveService archiveService, Logger log) {
         //HttpURLConnection coreServerConnection = null;
         //BufferedWriter jsonContentBuffer = null;
         //final Gson gson = new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create();
 
         final IoCRecord ioc = new IoCRecord();
         final IoCFeed feed = new IoCFeed();
-        feed.setName(GSB_FEED_NAME);
+        feed.setName(feedName);
         ioc.setFeed(feed);
         final IoCClassification classification = new IoCClassification();
-        classification.setType(FEEDTYPES.get(1));
+        classification.setType(type);
         ioc.setClassification(classification);
         final IoCSource source = new IoCSource();
         source.setFQDN(matchedFQDN);

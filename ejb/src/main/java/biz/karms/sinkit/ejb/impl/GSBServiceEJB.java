@@ -1,9 +1,11 @@
 package biz.karms.sinkit.ejb.impl;
 
 import biz.karms.sinkit.ejb.GSBService;
+import biz.karms.sinkit.ejb.ThreatType;
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCache;
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCacheName;
 import biz.karms.sinkit.ejb.cache.pojo.GSBRecord;
+import biz.karms.sinkit.ejb.gsb.GSBBlacklist;
 import biz.karms.sinkit.ejb.gsb.GSBClient;
 import biz.karms.sinkit.ejb.gsb.dto.FullHashLookupResponse;
 import biz.karms.sinkit.ejb.gsb.util.GSBCachePOJOFactory;
@@ -55,7 +57,7 @@ public class GSBServiceEJB implements GSBService {
     }
 
     @Override
-    public Set<String> lookup(final String ipOrFQDN) {
+    public Set<ThreatType> lookup(final String ipOrFQDN) {
         if (ipOrFQDN == null) {
             throw new IllegalArgumentException("lookup: URL must not be null, cannot perform lookup.");
         }
@@ -63,10 +65,15 @@ public class GSBServiceEJB implements GSBService {
         final List<String> lookupVariants = GSBUtils.getLookupVariants(ipOrFQDN);
         // try to lookup for each variant until first match is found
         Set<String> gsbBlacklists;
+        Set<ThreatType> coreBlacklists;
         for (String lookupVariant : lookupVariants) {
             gsbBlacklists = lookupSingleVariant(lookupVariant);
             if (gsbBlacklists != null && !gsbBlacklists.isEmpty()) {
-                return gsbBlacklists;
+                coreBlacklists = new HashSet<>();
+                for (String gsbBlacklist : gsbBlacklists) {
+                    coreBlacklists.add(GSBBlacklist.parseGSBName(gsbBlacklist).getThreatType());
+                }
+                return coreBlacklists;
             }
         }
         return null;
