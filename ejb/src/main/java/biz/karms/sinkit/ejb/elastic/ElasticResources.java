@@ -1,5 +1,7 @@
 package biz.karms.sinkit.ejb.elastic;
 
+import biz.karms.sinkit.ejb.elastic.logstash.LogstashClient;
+import biz.karms.sinkit.ejb.elastic.logstash.LogstashClientProvider;
 import com.google.gson.Gson;
 import org.elasticsearch.client.Client;
 
@@ -23,6 +25,9 @@ public class ElasticResources {
     private ElasticClientProvider elasticClientProvider;
 
     @Inject
+    private LogstashClientProvider logstashClientProvider;
+
+    @Inject
     private GsonProvider gsonProvider;
 
 //    @Produces
@@ -41,5 +46,11 @@ public class ElasticResources {
     @Default
     public Gson getGson() {
         return gsonProvider.getGson();
+    }
+
+    @Produces
+    @Default
+    public LogstashClient getLogstashClient() {
+        return logstashClientProvider.getLogstashClient();
     }
 }

@@ -26,6 +26,8 @@ public interface ArchiveService {
 
     EventLogRecord archiveEventLogRecord(EventLogRecord logRecord) throws ArchiveException;
 
+    EventLogRecord archiveEventLogRecordUsingLogstash(EventLogRecord logRecord) throws ArchiveException;
+
     List<IoCRecord> getActiveNotWhitelistedIoCs(int from, int size) throws ArchiveException;
 
     IoCRecord getIoCRecordById(String id) throws ArchiveException;

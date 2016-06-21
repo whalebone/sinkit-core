@@ -20,6 +20,7 @@ A prototype of a toy project featuring Infinispan dist cache.
     export SINKIT_GSB_API_KEY=
     export SINKIT_GSB_FULLHASH_URL=
     export SINKIT_WHITELIST_VALID_HOURS=
+    export SINKIT_LOGSTASH_URL=
 
 ## Basic config
 ###Feeds configurations

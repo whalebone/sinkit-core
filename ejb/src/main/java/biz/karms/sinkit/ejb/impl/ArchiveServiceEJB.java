@@ -2,6 +2,7 @@ package biz.karms.sinkit.ejb.impl;
 
 import biz.karms.sinkit.ejb.ArchiveService;
 import biz.karms.sinkit.ejb.elastic.ElasticService;
+import biz.karms.sinkit.ejb.elastic.logstash.LogstashClient;
 import biz.karms.sinkit.ejb.util.IoCIdentificationUtils;
 import biz.karms.sinkit.eventlog.EventLogRecord;
 import biz.karms.sinkit.eventlog.VirusTotalRequestStatus;
@@ -53,6 +54,9 @@ public class ArchiveServiceEJB implements ArchiveService {
 
     @EJB
     private ElasticService elasticService;
+
+    @Inject
+    private LogstashClient logstashClient;
 
     @Override
     public List<IoCRecord> findIoCsForDeactivation(final int hours) throws ArchiveException {
@@ -176,6 +180,15 @@ public class ArchiveServiceEJB implements ArchiveService {
         final String index = ELASTIC_LOG_INDEX + "-" + df.format(logRecord.getLogged());
         log.log(Level.FINE, "elasticService.index logging logrecord, index=" + index);
         return elasticService.index(logRecord, index, ELASTIC_LOG_TYPE);
+    }
+
+    @Override
+    public EventLogRecord archiveEventLogRecordUsingLogstash(EventLogRecord logRecord) throws ArchiveException {
+        final DateFormat df = new SimpleDateFormat("YYYY-MM-dd");
+        final String index = ELASTIC_LOG_INDEX + "-" + df.format(logRecord.getLogged());
+        log.log(Level.FINE, "archiveService.archiveEventLogRecordUsingLogstash logging logrecord, index=" + index);
+        logstashClient.sentToLogstash(logRecord, index, ELASTIC_LOG_TYPE);
+        return logRecord;
     }
 
     @Override

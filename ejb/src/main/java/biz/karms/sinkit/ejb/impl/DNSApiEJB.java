@@ -12,6 +12,7 @@ import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.CustomList;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ejb.dto.Sinkhole;
+import biz.karms.sinkit.ejb.elastic.logstash.LogstashClient;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
 import biz.karms.sinkit.ejb.util.IoCIdentificationUtils;
 import biz.karms.sinkit.eventlog.EventDNSRequest;
@@ -109,6 +110,7 @@ public class DNSApiEJB implements DNSApi {
     private static final String IPV6SINKHOLE = System.getenv("SINKIT_SINKHOLE_IPV6");
     private static final String IPV4SINKHOLE = System.getenv("SINKIT_SINKHOLE_IP");
     private static final String GSB_FEED_NAME = (System.getenv().containsKey("SINKIT_GSB_FEED_NAME")) ? System.getenv("SINKIT_GSB_FEED_NAME") : "google-safebrowsing-api";
+    private static final boolean USE_LOGSTASH = StringUtils.isNotBlank(System.getenv(LogstashClient.LOGSTASH_URL_ENV));
     //private static final String GSB_IOC_DOES_NOT_EXIST = "GSB-IOC-FAKE-ID";
     private static final int ARCHIVE_FAILED_TRIALS = 10;
     //private static final String TOKEN = System.getenv("SINKIT_ACCESS_TOKEN");
@@ -500,7 +502,11 @@ public class DNSApiEJB implements DNSApi {
         final VirusTotalRequest vtReq = new VirusTotalRequest();
         vtReq.setStatus(VirusTotalRequestStatus.WAITING);
         logRecord.setVirusTotalRequest(vtReq);
-        archiveService.archiveEventLogRecord(logRecord);
+        if (USE_LOGSTASH) {
+            archiveService.archiveEventLogRecordUsingLogstash(logRecord);
+        } else {
+            archiveService.archiveEventLogRecord(logRecord);
+        }
     }
 
     private static IoCRecord processRegularIoCId(final String iocId, ArchiveService archiveService, Logger log) throws ArchiveException {
