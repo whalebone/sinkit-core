@@ -37,6 +37,7 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.validator.routines.DomainValidator;
 import org.infinispan.Cache;
+import org.infinispan.context.Flag;
 import org.infinispan.query.Search;
 import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
@@ -120,11 +121,6 @@ public class DNSApiEJB implements DNSApi {
     private List<Rule> rulesLookup(final String clientIPAddressPaddedBigInt) {
         try {
             log.log(Level.FINE, "Getting key BigInteger zero padded representation " + clientIPAddressPaddedBigInt);
-            // Let's try to hit it
-            final Rule rule = ruleCache.get(clientIPAddressPaddedBigInt);
-            if (rule != null) {
-                return Collections.singletonList(rule);
-            }
             // Let's search subnets
             final String keyInCache = DigestUtils.md5Hex(clientIPAddressPaddedBigInt + clientIPAddressPaddedBigInt);
             log.log(Level.FINE, "keyInCache: " + keyInCache + ", from: " + (clientIPAddressPaddedBigInt + clientIPAddressPaddedBigInt));
@@ -133,6 +129,11 @@ public class DNSApiEJB implements DNSApi {
             if (cached != null) {
                 return cached;
             } else {
+                // Let's try to hit it
+                final Rule rule = ruleCache.getAdvancedCache().withFlags(Flag.SKIP_INDEXING).get(clientIPAddressPaddedBigInt);
+                if (rule != null) {
+                    return Collections.singletonList(rule);
+                }
                 final QueryFactory qf = Search.getQueryFactory(ruleCache);
                 Query query = qf.from(Rule.class)
                         .having("startAddress").lte(clientIPAddressPaddedBigInt)
@@ -292,8 +293,8 @@ public class DNSApiEJB implements DNSApi {
         // Lookup BlacklistedRecord from IoC cache (gives feeds)
         log.log(Level.FINE, "getSinkHole: getting IoC key " + fqdnOrIp);
         start = System.currentTimeMillis();
-        final BlacklistedRecord blacklistedRecord = blacklistCache.get(DigestUtils.md5Hex(fqdnOrIp));
-        log.log(Level.FINE, "blacklistCache.get took: " + (System.currentTimeMillis() - start) + " ms.");
+        final BlacklistedRecord blacklistedRecord = blacklistCache.getAdvancedCache().withFlags(Flag.SKIP_CACHE_STORE).get(DigestUtils.md5Hex(fqdnOrIp));
+        log.log(Level.INFO, "blacklistCache.get took: " + (System.currentTimeMillis() - start) + " ms.");
 
         Set<ThreatType> gsbResults = null;
         if (isFQDN) {
