@@ -86,7 +86,7 @@ public class GSBServiceEJB implements GSBService {
         final String fullHashString = Hex.encodeHexString(hash);
         final String hashStringPrefix = fullHashString.substring(0, PREFIX_LENGTH * 2);
 
-        GSBRecord gsbRecord = gsbCache.get(hashStringPrefix);
+        GSBRecord gsbRecord = gsbCache.getAdvancedCache().withFlags(Flag.SKIP_CACHE_STORE).get(hashStringPrefix);
         // if hash prefix is not in the cache then URL is not blacklisted for sure
         if (gsbRecord == null) {
             return null;
