@@ -15,7 +15,8 @@ import org.infinispan.configuration.cache.ConfigurationBuilder;
 import org.infinispan.configuration.cache.Index;
 import org.infinispan.eviction.EvictionStrategy;
 import org.infinispan.manager.EmbeddedCacheManager;
-import org.infinispan.persistence.mongodb.configuration.MongoDBStoreConfigurationBuilder;
+import org.infinispan.persistence.jdbc.configuration.JdbcStringBasedStoreConfigurationBuilder;
+import org.infinispan.transaction.LockingMode;
 import org.infinispan.transaction.TransactionMode;
 
 import javax.annotation.ManagedBean;
@@ -41,7 +42,7 @@ public class MyCacheManagerProvider implements Serializable {
 
     private static final long serialVersionUID = 45216839143257496L;
 
-    private static final long ENTRY_LIFESPAN = TimeUnit.MINUTES.toMillis(2L);
+    private static final long ENTRY_LIFESPAN = TimeUnit.MINUTES.toMillis(3L);
     private static final long NEVER = -1L;
     private static final long WAKEUP_INTERVAL = TimeUnit.MINUTES.toMillis(30L);
 
@@ -51,25 +52,25 @@ public class MyCacheManagerProvider implements Serializable {
     @Resource(lookup = "java:jboss/infinispan/container/sinkitcontainer")
     private EmbeddedCacheManager manager;
 
-    private Configuration replicatedIndexed(final String cacheName, final int threadPool) {
+    private Configuration replicatedIndexed(final String cacheName, final int threadPool, final boolean thisIsDNSNode) {
         return new ConfigurationBuilder().jmxStatistics().disable().available(false)
-                .clustering().cacheMode(CacheMode.REPL_ASYNC)
-                .stateTransfer().awaitInitialTransfer(false)
-                //.timeout(30, TimeUnit.MINUTES)
-                .async()
+                .clustering().cacheMode(CacheMode.REPL_SYNC)
+                .stateTransfer().awaitInitialTransfer(true)
+                .timeout(10, TimeUnit.MINUTES)//.async()
                 .expiration()
                 .lifespan(NEVER)
                 .wakeUpInterval(WAKEUP_INTERVAL)
                 .maxIdle(NEVER)
-                .indexing().index(Index.ALL)
+                .indexing().index(Index.LOCAL)
                 .addProperty("hibernate.search.default.worker.execution", "async")
                 .addProperty("hibernate.search.lucene_version", "LUCENE_CURRENT")
                 .addProperty("default.directory_provider", "ram")
                 .addProperty("default.indexmanager", "near-real-time")
                 .eviction().strategy(EvictionStrategy.NONE)
                 .transaction().transactionMode(TransactionMode.NON_TRANSACTIONAL)
+                .lockingMode(LockingMode.OPTIMISTIC)
                 .unsafe().unreliableReturnValues(true)
-                .persistence()
+                /*.persistence()
                 .passivation(false)
                 .addStore(MongoDBStoreConfigurationBuilder.class)
                 .connectionURI(System.getenv("SINKIT_MONGODB_CONNECTION_URI"))
@@ -79,15 +80,38 @@ public class MyCacheManagerProvider implements Serializable {
                 .async()
                 .threadPoolSize(threadPool)
                 .enable()
+                */
+                .persistence()
+                .addStore(JdbcStringBasedStoreConfigurationBuilder.class)
+                .fetchPersistentState(false)
+                .ignoreModifications(thisIsDNSNode)
+                .preload(true)
+                .shared(true)
+                .purgeOnStartup(false)
+                .table()
+                .dropOnExit(false)
+                .createOnStart(true)
+                .tableNamePrefix("ISPN_" + cacheName)
+                .idColumnName("ID_COLUMN").idColumnType("VARCHAR(255)")
+                .dataColumnName("DATA_COLUMN").dataColumnType("BYTEA")
+                .timestampColumnName("TIMESTAMP_COLUMN").timestampColumnType("BIGINT")
+                .connectionPool()
+                .connectionUrl("jdbc:postgresql://" + System.getenv("SINKIT_POSTGRESQL_DB_HOST") + ":" + System.getenv("SINKIT_POSTGRESQL_DB_PORT") + "/" + System.getenv("SINKIT_POSTGRESQL_DB_NAME"))
+                .driverClass("org.postgresql.Driver")
+                .password(System.getenv("SINKIT_POSTGRESQL_PASS"))
+                .username(System.getenv("SINKIT_POSTGRESQL_USER"))
+                .async()
+                .enabled(true)
+                .threadPoolSize(threadPool)
                 .build();
     }
 
-    private Configuration replicatedNotIndexed(final String cacheName, final int threadPool) {
+    private Configuration replicatedNotIndexed(final String cacheName, final int threadPool, final boolean thisIsDNSNode) {
         return new ConfigurationBuilder().jmxStatistics().disable().available(false)
-                .clustering().cacheMode(CacheMode.REPL_ASYNC)
-                .stateTransfer().awaitInitialTransfer(false)
-                //.timeout(50, TimeUnit.MINUTES)
-                .async()
+                .clustering().cacheMode(CacheMode.REPL_SYNC)
+                        //.hash().numOwners(2)
+                .stateTransfer().awaitInitialTransfer(true)
+                .timeout(10, TimeUnit.MINUTES)//.async()
                 .expiration()
                 .lifespan(NEVER)
                 .wakeUpInterval(WAKEUP_INTERVAL)
@@ -95,7 +119,9 @@ public class MyCacheManagerProvider implements Serializable {
                 .indexing().index(Index.NONE)
                 .eviction().strategy(EvictionStrategy.NONE)
                 .transaction().transactionMode(TransactionMode.NON_TRANSACTIONAL)
+                .lockingMode(LockingMode.OPTIMISTIC)
                 .unsafe().unreliableReturnValues(true)
+                /*
                 .persistence()
                 .passivation(false)
                 .addStore(MongoDBStoreConfigurationBuilder.class)
@@ -108,7 +134,29 @@ public class MyCacheManagerProvider implements Serializable {
                 .preload(true)
                 .async()
                 .threadPoolSize(threadPool)
-                .enable()
+                .enable()*/
+                .persistence()
+                .addStore(JdbcStringBasedStoreConfigurationBuilder.class)
+                .fetchPersistentState(false)
+                .ignoreModifications(thisIsDNSNode)
+                .preload(true)
+                .shared(true)
+                .purgeOnStartup(false)
+                .table()
+                .dropOnExit(false)
+                .createOnStart(true)
+                .tableNamePrefix("ISPN_" + cacheName)
+                .idColumnName("ID_COLUMN").idColumnType("VARCHAR(255)")
+                .dataColumnName("DATA_COLUMN").dataColumnType("BYTEA")
+                .timestampColumnName("TIMESTAMP_COLUMN").timestampColumnType("BIGINT")
+                .connectionPool()
+                .connectionUrl("jdbc:postgresql://" + System.getenv("SINKIT_POSTGRESQL_DB_HOST") + ":" + System.getenv("SINKIT_POSTGRESQL_DB_PORT") + "/" + System.getenv("SINKIT_POSTGRESQL_DB_NAME"))
+                .driverClass("org.postgresql.Driver")
+                .password(System.getenv("SINKIT_POSTGRESQL_PASS"))
+                .username(System.getenv("SINKIT_POSTGRESQL_USER"))
+                .async()
+                .enabled(true)
+                .threadPoolSize(threadPool)
                 .build();
                 /*
                 .persistence()
@@ -146,26 +194,26 @@ public class MyCacheManagerProvider implements Serializable {
     public void init(@Observes @Initialized(ApplicationScoped.class) Object init) {
         log.info("\n\n Constructing caches...\n\n");
 
-        final boolean startWhiteCache = !manager.getAddress().toString().contains(HATimerServiceActivator.unwantedNameSuffix);
+        final boolean thisIsDNSNode = !manager.getAddress().toString().contains(HATimerServiceActivator.unwantedNameSuffix);
 
         /**
          * MANAGER settings and Persistence
          */
-        manager.defineConfiguration(SinkitCacheName.RULES_CACHE.toString(), replicatedIndexed("infinispan_rules", 5));
-        manager.defineConfiguration(SinkitCacheName.CUSTOM_LISTS_CACHE.toString(), replicatedIndexed("infinispan_custom_lists", 5));
-        manager.defineConfiguration(SinkitCacheName.GSB_CACHE.toString(), replicatedNotIndexed("infinispan_gsb", 10));
-        manager.defineConfiguration(SinkitCacheName.BLACKLIST_CACHE.toString(), replicatedNotIndexed("infinispan_blacklist", 10));
-        if (startWhiteCache) {
-            manager.defineConfiguration(SinkitCacheName.WHITELIST_CACHE.toString(), replicatedNotIndexed("infinispan_whitelist", 10));
+        manager.defineConfiguration(SinkitCacheName.RULES_CACHE.toString(), replicatedIndexed("infinispan_rules", 5, thisIsDNSNode));
+        manager.defineConfiguration(SinkitCacheName.CUSTOM_LISTS_CACHE.toString(), replicatedIndexed("infinispan_custom_lists", 5, thisIsDNSNode));
+        manager.defineConfiguration(SinkitCacheName.GSB_CACHE.toString(), replicatedNotIndexed("infinispan_gsb", 10, thisIsDNSNode));
+        manager.defineConfiguration(SinkitCacheName.BLACKLIST_CACHE.toString(), replicatedNotIndexed("infinispan_blacklist", 10, thisIsDNSNode));
+        if (thisIsDNSNode) {
+            manager.defineConfiguration(SinkitCacheName.WHITELIST_CACHE.toString(), replicatedNotIndexed("infinispan_whitelist", 10, thisIsDNSNode));
         } else {
-            log.log(Level.INFO, "This node's address " + manager.getAddress().toString() + " contains unwanted suffix " + HATimerServiceActivator.unwantedNameSuffix + ", so cache " + SinkitCacheName.WHITELIST_CACHE.toString() + "won't be created.");
+            log.log(Level.INFO, "This node's address " + manager.getAddress().toString() + " contains unwanted suffix " + HATimerServiceActivator.unwantedNameSuffix + ", so cache " + SinkitCacheName.WHITELIST_CACHE.toString() + " won't be created.");
         }
 
         /**
          * Start caches
          */
         manager.getCache(SinkitCacheName.BLACKLIST_CACHE.toString()).start();
-        if (startWhiteCache) {
+        if (thisIsDNSNode) {
             manager.getCache(SinkitCacheName.WHITELIST_CACHE.toString()).start();
         }
         manager.getCache(SinkitCacheName.RULES_CACHE.toString()).start();
