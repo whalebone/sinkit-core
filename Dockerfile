@@ -1,4 +1,4 @@
-FROM fedora:22
+FROM fedora:24
 MAINTAINER Michal Karm Babacek <karm@email.cz
 LABEL description="Codename Feed: Sinkit Core POC"
 
@@ -85,19 +85,9 @@ RUN echo 'JAVA_OPTS="\
  -server \
  -Xms${SINKIT_MS_RAM:-6g} \
  -Xmx${SINKIT_MX_RAM:-6g} \
- -XX:+UseLargePages \
- -XX:LargePageSizeInBytes=2m \
  -XX:+UseConcMarkSweepGC \
  -XX:+HeapDumpOnOutOfMemoryError \
  -XX:HeapDumpPath=/opt/sinkit \
- -verbose:gc \
- -Xloggc:"/opt/sinkit/wildfly/standalone/log/gc.log" \
- -XX:+PrintGCDetails \
- -XX:+PrintGCDateStamps \
- -XX:+UseGCLogFileRotation \
- -XX:NumberOfGCLogFiles=5 \
- -XX:GCLogFileSize=200M \
- -XX:-TraceClassUnloading \
 "' >> /opt/sinkit/wildfly/bin/standalone.conf
 RUN mkdir -p /opt/sinkit/wildfly/standalone/log/
 ADD sinkit.sh /opt/sinkit/
