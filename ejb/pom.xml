@@ -99,7 +99,7 @@
             <version>${hibernate.search.version}</version>
             <scope>provided</scope>
         </dependency>
-<!--
+
         <dependency>
             <groupId>com.mchange</groupId>
             <artifactId>c3p0</artifactId>
@@ -117,14 +117,14 @@
             <artifactId>infinispan-cachestore-jdbc</artifactId>
             <version>${infinispan.cachestore.jdbc.version}</version>
         </dependency>
--->
 
+<!--
         <dependency>
             <groupId>org.infinispan</groupId>
             <artifactId>infinispan-cachestore-mongodb</artifactId>
             <version>${infinispan.cachestore.mongo.version}</version>
         </dependency>
-
+-->
 
         <dependency>
             <groupId>org.infinispan</groupId>
