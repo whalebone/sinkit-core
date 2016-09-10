@@ -37,18 +37,21 @@
             <groupId>org.jboss.msc</groupId>
             <artifactId>jboss-msc</artifactId>
             <version>${version.jboss.msc}</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>org.wildfly</groupId>
             <artifactId>wildfly-clustering-common</artifactId>
             <version>${version.wildfly}</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>org.wildfly</groupId>
             <artifactId>wildfly-clustering-singleton-api</artifactId>
             <version>${version.wildfly}</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- Import the CDI API, we use provided scope as the API is included in JBoss WildFly -->
@@ -84,7 +87,6 @@
             <artifactId>commons-validator</artifactId>
             <version>${commons.validator.version}</version>
         </dependency>
-
 
         <dependency>
             <groupId>org.hibernate</groupId>
@@ -223,7 +225,7 @@
                         <addMavenDescriptor>false</addMavenDescriptor>
                         <manifestEntries>
                             <Dependencies>
-                                org.hibernate.infinispan,org.infinispan,org.infinispan.commons,org.infinispan.query,org.jboss.msc,org.wildfly.clustering.singleton,org.jboss.as.server,org.jgroups
+                                org.infinispan,org.infinispan.commons,org.infinispan.query,org.jboss.msc,org.wildfly.clustering.singleton,org.jboss.as.server,org.jgroups
                             </Dependencies>
                         </manifestEntries>
                     </archive>

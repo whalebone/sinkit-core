@@ -17,7 +17,7 @@ import biz.karms.sinkit.ioc.IoCRecord;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import org.jboss.marshalling.Pair;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import javax.ejb.EJB;
 import javax.enterprise.context.RequestScoped;
@@ -232,11 +232,11 @@ public class SinkitService implements Serializable {
 
     void addEventLogRecord(final String json) throws ArchiveException {
         EventLogRecord logRec = new GsonBuilder().create().fromJson(json, EventLogRecord.class);
-        Map<String, Set<Pair<String,String>>> ids = new HashMap<>();
-        Set<Pair<String,String>> typeIoCId;
+        Map<String, Set<ImmutablePair<String,String>>> ids = new HashMap<>();
+        Set<ImmutablePair<String,String>> typeIoCId;
         for (IoCRecord ioc : logRec.getMatchedIocs()) {
             typeIoCId = new HashSet<>();
-            typeIoCId.add(new Pair<>("", ioc.getDocumentId()));
+            typeIoCId.add(new ImmutablePair<>("", ioc.getDocumentId()));
             ids.put(ioc.getDocumentId(), typeIoCId);
         }
         dnsApi.logDNSEvent(

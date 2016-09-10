@@ -6,16 +6,20 @@ import org.hibernate.search.annotations.*;
 import javax.persistence.Entity;
 import java.io.Serializable;
 import java.util.HashMap;
+//import org.infinispan.protostream.annotations.ProtoField;
+//import org.infinispan.protostream.annotations.ProtoMessage;
 
 /**
  * @author Michal Karm Babacek
  */
+//@ProtoMessage(name = "Rule")
 @Indexed(index = "Rule")
 @Entity
 public class Rule implements Serializable {
 
     private static final long serialVersionUID = 187732233347691L;
 
+    //@ProtoField(number = 1, required = true)
     @Field(index = Index.YES, analyze = Analyze.NO)
     private String startAddress;
 

@@ -35,13 +35,13 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.validator.routines.DomainValidator;
 import org.infinispan.Cache;
 import org.infinispan.context.Flag;
 import org.infinispan.query.Search;
 import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
-import org.jboss.marshalling.Pair;
 
 import javax.ejb.Asynchronous;
 import javax.ejb.EJB;
@@ -51,7 +51,6 @@ import javax.ejb.TransactionAttributeType;
 import javax.inject.Inject;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
@@ -181,7 +180,7 @@ public class DNSApiEJB implements DNSApi {
         } else {
             final String clientIPAddressPaddedBigInt;
             try {
-                clientIPAddressPaddedBigInt = CIDRUtils.getStartEndAddresses(fqdnOrIp).getA();
+                clientIPAddressPaddedBigInt = CIDRUtils.getStartEndAddresses(fqdnOrIp).getLeft();
             } catch (UnknownHostException e) {
                 log.log(Level.FINE, "customListsLookup: " + fqdnOrIp + " in not a valid IP address nor a valid FQDN.");
                 return null;
@@ -234,7 +233,7 @@ public class DNSApiEJB implements DNSApi {
          */
         final String clientIPAddressPaddedBigInt;
         try {
-            clientIPAddressPaddedBigInt = CIDRUtils.getStartEndAddresses(clientIPAddress).getA();
+            clientIPAddressPaddedBigInt = CIDRUtils.getStartEndAddresses(clientIPAddress).getLeft();
         } catch (UnknownHostException e) {
             log.log(Level.SEVERE, "getSinkHole: clientIPAddress " + clientIPAddress + " in not a valid address.");
             return null;
@@ -294,7 +293,7 @@ public class DNSApiEJB implements DNSApi {
         log.log(Level.FINE, "getSinkHole: getting IoC key " + fqdnOrIp);
         start = System.currentTimeMillis();
         final BlacklistedRecord blacklistedRecord = blacklistCache.getAdvancedCache().withFlags(Flag.SKIP_CACHE_STORE).get(DigestUtils.md5Hex(fqdnOrIp));
-        log.log(Level.INFO, "blacklistCache.get took: " + (System.currentTimeMillis() - start) + " ms.");
+        log.log(Level.FINE, "blacklistCache.get took: " + (System.currentTimeMillis() - start) + " ms.");
 
         Set<ThreatType> gsbResults = null;
         if (isFQDN) {
@@ -313,7 +312,7 @@ public class DNSApiEJB implements DNSApi {
         }
 
         // Feed UID : [{Type1, IoCID1}, {Type2, IoCID2}, ...]
-        final Map<String, Set<Pair<String, String>>> feedTypeMap = new HashMap<>();
+        final Map<String, Set<ImmutablePair<String, String>>> feedTypeMap = new HashMap<>();
 
         if (blacklistedRecord != null && MapUtils.isNotEmpty(blacklistedRecord.getSources())) {
 
@@ -321,20 +320,20 @@ public class DNSApiEJB implements DNSApi {
              * once blacklisted source issue is fixed
              * replace this for-loop for feedTypeMap.putAll(blacklistedRecord.getSources());
              */
-            Set<Pair<String, String>> blacklistedRecordSource;
-            for (Map.Entry<String, Pair<String, String>> typeIoCPair : blacklistedRecord.getSources().entrySet()) {
+            Set<ImmutablePair<String, String>> blacklistedRecordSource;
+            for (Map.Entry<String, ImmutablePair<String, String>> typeIoCImmutablePair : blacklistedRecord.getSources().entrySet()) {
                 blacklistedRecordSource = new HashSet<>();
-                blacklistedRecordSource.add(typeIoCPair.getValue());
-                feedTypeMap.put(typeIoCPair.getKey(), blacklistedRecordSource);
+                blacklistedRecordSource.add(typeIoCImmutablePair.getValue());
+                feedTypeMap.put(typeIoCImmutablePair.getKey(), blacklistedRecordSource);
             }
         }
 
         if (CollectionUtils.isNotEmpty(gsbResults)) {
             log.log(Level.FINE, "getSinkHole: gsbResults contains records: " + gsbResults.size());
             // GSB_IOC_DOES_NOT_EXIST - the IoC doesn't exist at this time. It will be created at Logging time.
-            Set<Pair<String, String>> gsbTypes = new HashSet<>(gsbResults.size());
+            Set<ImmutablePair<String, String>> gsbTypes = new HashSet<>(gsbResults.size());
             for (ThreatType gsbThreatType : gsbResults) {
-                gsbTypes.add(new Pair<>(gsbThreatType.getName(), null));
+                gsbTypes.add(new ImmutablePair<>(gsbThreatType.getName(), null));
             }
             feedTypeMap.put(GSB_FEED_NAME, gsbTypes);
         } else {
@@ -347,18 +346,18 @@ public class DNSApiEJB implements DNSApi {
             return null;
         }
 
-        // Feed UID, Mode <L|S|D>. In the end, we operate on a one selected Feed:mode pair only.
+        // Feed UID, Mode <L|S|D>. In the end, we operate on a one selected Feed:mode ImmutablePair only.
         String mode = null;
         //TODO: Nested cycles, could we do better here?
         for (Rule rule : rules) {
             for (String uuid : rule.getSources().keySet()) {
-                Set<Pair<String, String>> typeDocIds = feedTypeMap.get(uuid);
+                Set<ImmutablePair<String, String>> typeDocIds = feedTypeMap.get(uuid);
                 if (typeDocIds == null) {
                     continue;
                 }
                 // feed uuid : [{type , docID}, {type2, docID2}, ...] so "getA()" means get type
-                for (Pair<String, String> typeDocId : typeDocIds) {
-                    if (typeDocId != null && ThreatType.parseName(typeDocId.getA()) != null) {
+                for (ImmutablePair<String, String> typeDocId : typeDocIds) {
+                    if (typeDocId != null && ThreatType.parseName(typeDocId.getLeft()) != null) {
                         String tmpMode = rule.getSources().get(uuid);
                         if (mode == null || ("S".equals(tmpMode) && !"D".equals(mode)) || "D".equals(tmpMode)) {
                             //D >= S >= L >= null, i.e. if a feed is Disabled, we don't switch to Sinkhole.
@@ -381,7 +380,7 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.FINE, "getSinkHole: Sinkhole.");
             try {
                 log.log(Level.FINE, "getSinkHole: Calling coreService.logDNSEvent(EventLogAction.BLOCK,...");
-                if(DNS_REQUEST_LOGGING_ENABLED) {
+                if (DNS_REQUEST_LOGGING_ENABLED) {
                     logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, feedTypeMap, archiveService, log);
                 }
                 log.log(Level.FINE, "getSinkHole: coreService.logDNSEvent returned.");
@@ -394,7 +393,7 @@ public class DNSApiEJB implements DNSApi {
             //Log it for customer
             log.log(Level.FINE, "getSinkHole: Log.");
             try {
-                if(DNS_REQUEST_LOGGING_ENABLED) {
+                if (DNS_REQUEST_LOGGING_ENABLED) {
                     logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, feedTypeMap, archiveService, log);
                 }
             } catch (ArchiveException e) {
@@ -407,7 +406,7 @@ public class DNSApiEJB implements DNSApi {
             //Log it for us
             log.log(Level.FINE, "getSinkHole: Log internally.");
             try {
-                if(DNS_REQUEST_LOGGING_ENABLED) {
+                if (DNS_REQUEST_LOGGING_ENABLED) {
                     logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, feedTypeMap, archiveService, log);
                 }
             } catch (ArchiveException e) {
@@ -423,8 +422,8 @@ public class DNSApiEJB implements DNSApi {
 
     }
 
-    private static Set<String> unwrapDocumentIds(Collection<Pair<String, String>> pairs) {
-        return pairs.stream().map(Pair::getB).collect(Collectors.toCollection(HashSet::new));
+    private static Set<String> unwrapDocumentIds(Collection<ImmutablePair<String, String>> ImmutablePairs) {
+        return ImmutablePairs.stream().map(ImmutablePair::getRight).collect(Collectors.toCollection(HashSet::new));
     }
 
     /**
@@ -452,7 +451,7 @@ public class DNSApiEJB implements DNSApi {
             final String requestType,
             final String reasonFqdn,
             final String reasonIp,
-            final Map<String, Set<Pair<String, String>>> matchedIoCs,
+            final Map<String, Set<ImmutablePair<String, String>>> matchedIoCs,
             final ArchiveService archiveService,
             final Logger log
     ) throws ArchiveException {
@@ -477,18 +476,18 @@ public class DNSApiEJB implements DNSApi {
         final List<IoCRecord> matchedIoCsList = new ArrayList<>();
         log.log(Level.FINE, "Iterating matchedIoCs...");
         // { feed : [ type1 : iocId1, type2 : iocId2]}
-        for (Map.Entry<String, Set<Pair<String, String>>> matchedIoC : matchedIoCs.entrySet()) {
+        for (Map.Entry<String, Set<ImmutablePair<String, String>>> matchedIoC : matchedIoCs.entrySet()) {
             // feedName = matchedIoC.getKey();
-            for (Pair<String, String> typeIoCID : matchedIoC.getValue()) {
+            for (ImmutablePair<String, String> typeIoCID : matchedIoC.getValue()) {
                 // iocId = typeIoCID.getB();
                 // type = typeIoCID.getA();
                 //if (StringUtils.isNotBlank(typeIoCID.getB())) {
                 IoCRecord ioCRecord;
-                if (StringUtils.isBlank(typeIoCID.getB()) && StringUtils.isNotBlank(reasonFqdn)) {
+                if (StringUtils.isBlank(typeIoCID.getRight()) && StringUtils.isNotBlank(reasonFqdn)) {
                     // Nope, no IP, just FQDN for GSB
-                    ioCRecord = processNonExistingIoC(reasonFqdn, matchedIoC.getKey(), typeIoCID.getA(), archiveService, log);
+                    ioCRecord = processNonExistingIoC(reasonFqdn, matchedIoC.getKey(), typeIoCID.getLeft(), archiveService, log);
                 } else {
-                    ioCRecord = processRegularIoCId(typeIoCID.getB(), archiveService, log);
+                    ioCRecord = processRegularIoCId(typeIoCID.getRight(), archiveService, log);
                 }
                 if (ioCRecord != null) {
                     matchedIoCsList.add(ioCRecord);

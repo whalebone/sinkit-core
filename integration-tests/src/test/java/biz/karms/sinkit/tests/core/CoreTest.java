@@ -17,11 +17,11 @@ import com.gargoylesoftware.htmlunit.WebRequest;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jboss.arquillian.container.test.api.OperateOnDeployment;
 import org.jboss.arquillian.container.test.api.RunAsClient;
 import org.jboss.arquillian.test.api.ArquillianResource;
 import org.jboss.arquillian.testng.Arquillian;
-import org.jboss.marshalling.Pair;
 import org.testng.annotations.Test;
 
 import javax.ejb.EJB;
@@ -203,10 +203,10 @@ public class CoreTest extends Arquillian {
 
         // note: feed name and types will be ignored since iocIds already exists
         // { feed: [type1 : iocId1, type2:iocId2, ...]}
-        Map<String, Set<Pair<String, String>>> ids = new HashMap<>();
-        Set<Pair<String, String>> typeIoCIds = new HashSet<>();
-        typeIoCIds.add(new Pair<>("type1", iocId1));
-        typeIoCIds.add(new Pair<>("type2", iocId2));
+        Map<String, Set<ImmutablePair<String, String>>> ids = new HashMap<>();
+        Set<ImmutablePair<String, String>> typeIoCIds = new HashSet<>();
+        typeIoCIds.add(new ImmutablePair<>("type1", iocId1));
+        typeIoCIds.add(new ImmutablePair<>("type2", iocId2));
         ids.put("feed1", typeIoCIds);
 
         dnsApi.logDNSEvent(EventLogAction.BLOCK,

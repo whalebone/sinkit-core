@@ -1,6 +1,6 @@
 package biz.karms.sinkit.ejb.cache.pojo;
 
-import org.jboss.marshalling.Pair;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import java.io.Serializable;
 import java.util.Calendar;
@@ -23,9 +23,9 @@ public class BlacklistedRecord implements Serializable {
     /**
      * Feed : {Type, IoCID}
      */
-    private HashMap<String, Pair<String, String>> sources;
+    private HashMap<String, ImmutablePair<String, String>> sources;
 
-    public BlacklistedRecord(String blackListedDomainOrIP, Calendar listed, HashMap<String, Pair<String, String>> sources) {
+    public BlacklistedRecord(String blackListedDomainOrIP, Calendar listed, HashMap<String, ImmutablePair<String, String>> sources) {
         this.blackListedDomainOrIP = blackListedDomainOrIP;
         this.listed = listed;
         this.sources = sources;
@@ -60,11 +60,11 @@ public class BlacklistedRecord implements Serializable {
         this.listed = listed;
     }
 
-    public HashMap<String, Pair<String, String>> getSources() {
+    public HashMap<String, ImmutablePair<String, String>> getSources() {
         return sources;
     }
 
-    public void setSources(HashMap<String, Pair<String, String>> sources) {
+    public void setSources(HashMap<String, ImmutablePair<String, String>> sources) {
         this.sources = sources;
     }
 
