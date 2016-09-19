@@ -1,7 +1,5 @@
 package biz.karms.sinkit.ejb.dto.support;
 
-import biz.karms.sinkit.ejb.dto.support.DNSClientDTO;
-
 import java.io.Serializable;
 import java.util.List;
 

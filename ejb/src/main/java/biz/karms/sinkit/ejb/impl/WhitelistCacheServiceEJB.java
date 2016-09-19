@@ -18,7 +18,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Created by tkozel on 1/9/16.
+ * @author Tomas Kozel
  */
 @Stateless
 public class WhitelistCacheServiceEJB implements WhitelistCacheService {
@@ -38,6 +38,7 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
 
         final WhitelistedRecord white = WhitelistUtils.createWhitelistedRecord(iocRecord, completed);
         final String key = DigestUtils.md5Hex(white.getRawId());
+        log.log(Level.INFO, "Whitelist key: " + key + ", ttl in s: " + iocRecord.getSource().getTTL());
         try {
             if (!whitelistCache.containsKey(key)) {
                 whitelistCache.putAsync(key, white, iocRecord.getSource().getTTL(), TimeUnit.SECONDS);
@@ -62,13 +63,7 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
             log.log(Level.SEVERE, "get: Cannot search whitelist. Id is null.");
             return null;
         }
-
-        final String key = DigestUtils.md5Hex(id);
-        if (!whitelistCache.containsKey(key)) {
-            return null;
-        }
-
-        return whitelistCache.get(key);
+        return whitelistCache.getOrDefault(DigestUtils.md5Hex(id), null);
     }
 
     @Override
@@ -98,7 +93,9 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
             return null;
         }
         partialWhite.setCompleted(true);
-        return whitelistCache.replace(key, partialWhite, ttl, TimeUnit.MILLISECONDS);
+        //TODO: Do we need it to be acurate? That woudl require changes in MyCacheManagerProvider
+        whitelistCache.replaceAsync(key, partialWhite, ttl, TimeUnit.MILLISECONDS);
+        return whitelistCache.get(key);
     }
 
     @Override
@@ -109,13 +106,13 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
             log.log(Level.INFO, "remove: entry not found, key: " + id);
             return false;
         }
-        whitelistCache.remove(key);
+        whitelistCache.removeAsync(key);
         return true;
     }
 
     @Override
-    public int getStats() {
-        return whitelistCache.size();
+    public boolean isWhitelistEmpty() {
+        return whitelistCache.isEmpty();
     }
 
     private boolean isIoCValidForPut(final IoCRecord iocRecord) {

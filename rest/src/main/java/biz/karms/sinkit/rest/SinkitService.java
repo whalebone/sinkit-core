@@ -143,8 +143,8 @@ public class SinkitService implements Serializable {
         return new GsonBuilder().create().toJson(response);
     }
 
-    String getWhitelistStats() {
-        return new GsonBuilder().create().toJson(coreService.getWhitelistStats());
+    String isWhitelistEmpty() {
+        return new GsonBuilder().create().toJson(coreService.isWhitelistEmpty());
     }
 
     String runCacheRebuilding() {

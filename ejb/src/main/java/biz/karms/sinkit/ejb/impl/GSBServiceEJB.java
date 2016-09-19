@@ -16,6 +16,7 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.infinispan.Cache;
 import org.infinispan.commons.util.concurrent.NotifyingFuture;
+import org.infinispan.context.Flag;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.EJB;
@@ -85,12 +86,12 @@ public class GSBServiceEJB implements GSBService {
         final String fullHashString = Hex.encodeHexString(hash);
         final String hashStringPrefix = fullHashString.substring(0, PREFIX_LENGTH * 2);
 
-        GSBRecord gsbRecord = gsbCache.get(hashStringPrefix);
+        GSBRecord gsbRecord = gsbCache.getAdvancedCache().withFlags(Flag.SKIP_CACHE_STORE).get(hashStringPrefix);
         // if hash prefix is not in the cache then URL is not blacklisted for sure
         if (gsbRecord == null) {
             return null;
         } else {
-            logger.log(Level.INFO, "lookup: hashPrefix " + hashStringPrefix + " was found in cache. It was made off: " + fullHashString + " which is lookupVariant: " + lookupVariant);
+            logger.log(Level.FINE, "lookup: hashPrefix " + hashStringPrefix + " was found in cache. It was made off: " + fullHashString + " which is lookupVariant: " + lookupVariant);
         }
 
         final HashMap<String, HashSet<String>> fullHashes;
@@ -101,7 +102,7 @@ public class GSBServiceEJB implements GSBService {
             logger.log(Level.FINE, "lookup: Full hashes for prefix " + hashStringPrefix + " expired -> updating.");
             FullHashLookupResponse resposne = gsbClient.getFullHashes(hashPrefix);
             gsbRecord = GSBCachePOJOFactory.createFullHashes(resposne);
-            gsbCache.putAsync(hashStringPrefix, gsbRecord);
+            gsbCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).putAsync(hashStringPrefix, gsbRecord);
             fullHashes = gsbRecord.getFullHashes();
         }
 
@@ -136,7 +137,7 @@ public class GSBServiceEJB implements GSBService {
             HashMap<String, HashSet<String>> fullHashes = new HashMap<>();
 
             final GSBRecord gsbRecord = new GSBRecord(hashPrefix, fullHashesExpireAt, fullHashes);
-            gsbCache.putAsync(hashPrefix, gsbRecord);
+            gsbCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).putAsync(hashPrefix, gsbRecord);
             logger.log(Level.FINEST, "putHashPrefix: Hash prefix " + hashPrefix + " added into cache.");
         } else {
             //Should not have happened often
@@ -178,7 +179,7 @@ public class GSBServiceEJB implements GSBService {
     @Override
     public boolean dropTheWholeCache(boolean async) {
         try {
-            NotifyingFuture<Void> cleared = gsbCache.clearAsync();
+            NotifyingFuture<Void> cleared = gsbCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).clearAsync();
             if (!async) {
                 cleared.get();
             }
@@ -192,6 +193,7 @@ public class GSBServiceEJB implements GSBService {
 
     @Override
     public int getStats() {
+        logger.log(Level.SEVERE, "Dangerous call to .size(), could OOM.");
         return gsbCache.size();
     }
 }

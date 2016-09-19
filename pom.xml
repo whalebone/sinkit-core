@@ -32,14 +32,15 @@
         <module>ear</module>
         <module>rest</module>
         <module>integration-tests</module>
+        <module>infinispan-cachestore-mongodb</module>
     </modules>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- JBoss dependency versions -->
         <version.wildfly.maven.plugin>1.0.2.Final</version.wildfly.maven.plugin>
-        <version.wildfly>10.0.0.CR2</version.wildfly>
-        <version.jboss.bom>10.0.0.CR2</version.jboss.bom>
+        <version.wildfly>10.0.0.Final</version.wildfly>
+        <version.jboss.bom>10.0.0.Final</version.jboss.bom>
         <version.jboss.spec.javaee.7.0>1.0.0.Final</version.jboss.spec.javaee.7.0>
         <version.ejb>3.2</version.ejb>
         <version.jboss.msc>1.2.6.Final</version.jboss.msc>
@@ -74,20 +75,22 @@
         <!-- Elastic Search -->
         <io.searchbox.jest.version>0.1.7</io.searchbox.jest.version>
         <es.version>1.7.4</es.version>
+        <es.jna.version>4.1.0</es.jna.version>
 
         <!-- Virus Total -->
         <com.kanishka.api.VirustotalPublicV2.0.version>1.1.GA-SNAPSHOT</com.kanishka.api.VirustotalPublicV2.0.version>
 
         <!-- Infinispan and business core deps-->
-        <infinispan.core.version>8.0.1.Final</infinispan.core.version>
-        <infinispan.cachestore.jdbc.version>8.0.1.Final</infinispan.cachestore.jdbc.version>
-        <infinispan.query.version>8.0.1.Final</infinispan.query.version>
-        <hibernate.infinispan.version>5.0.1.Final</hibernate.infinispan.version>
-        <hibernate.search.version>5.5.0.Final</hibernate.search.version>
-        <com.mchange.c3p0.version>0.9.5.1</com.mchange.c3p0.version>
-        <com.google.code.gson.version>2.3.1</com.google.code.gson.version>
-        <postgresql.driver.version>9.2-1004-jdbc41</postgresql.driver.version>
-        <commons.validator.version>1.4.1</commons.validator.version>
+        <infinispan.core.version>8.2.2.Final</infinispan.core.version>
+        <infinispan.cachestore.mongo.version>8.2.0.Final</infinispan.cachestore.mongo.version>
+        <infinispan.cachestore.jdbc.version>8.2.2.Final</infinispan.cachestore.jdbc.version>
+        <infinispan.query.version>8.2.2.Final</infinispan.query.version>
+        <hibernate.infinispan.version>5.0.9.Final</hibernate.infinispan.version>
+        <hibernate.search.version>5.5.3.Final</hibernate.search.version>
+        <com.mchange.c3p0.version>0.9.5.2</com.mchange.c3p0.version>
+        <com.google.code.gson.version>2.6.2</com.google.code.gson.version>
+        <postgresql.driver.version>9.4.1209.jre7</postgresql.driver.version>
+        <commons.validator.version>1.5.0</commons.validator.version>
         <commons.codec.version>1.10</commons.codec.version>
     </properties>
 

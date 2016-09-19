@@ -70,10 +70,15 @@ public class HATimerService implements Service<String> {
         final String node = System.getProperty("jboss.node.name");
         try {
             InitialContext ic = new InitialContext();
-            // Timers - Start
-            ((SchedulerDemo) ic.lookup(JNDI_PATH_SCHEDULER_DEMO)).initialize("SCHEDULER_DEMO HASingleton timer @" + node + " " + new Date());
-            ((VirusTotalEnricher) ic.lookup(JNDI_PATH_VIRUSTOTAL)).initialize("VIRUSTOTAL HASingleton timer @" + node + " " + new Date());
-            ((IoCDeactivator) ic.lookup(JNDI_PATH_IOCDEACTIVATOR)).initialize("IOCDEACTIVATOR HASingleton timer @" + node + " " + new Date());
+            if (!node.contains(HATimerServiceActivator.unwantedNameSuffix)) {
+                // Timers - Start
+                ((SchedulerDemo) ic.lookup(JNDI_PATH_SCHEDULER_DEMO)).initialize("SCHEDULER_DEMO HASingleton timer @" + node + " " + new Date());
+                ((VirusTotalEnricher) ic.lookup(JNDI_PATH_VIRUSTOTAL)).initialize("VIRUSTOTAL HASingleton timer @" + node + " " + new Date());
+                ((IoCDeactivator) ic.lookup(JNDI_PATH_IOCDEACTIVATOR)).initialize("IOCDEACTIVATOR HASingleton timer @" + node + " " + new Date());
+            } else {
+                LOGGER.warning("The node '" + node + "' contains the unwanted suffix " + HATimerServiceActivator.unwantedNameSuffix + ", we are not gonna start.");
+                started.set(false);
+            }
         } catch (NamingException e) {
             throw new StartException("Could not initialize timer", e);
         }

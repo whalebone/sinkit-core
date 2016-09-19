@@ -13,7 +13,7 @@ import java.util.HashSet;
 
 public class GSBRecord implements Serializable {
 
-    private static final long serialVersionUID = -7345339432357942885L;
+    private static final long serialVersionUID = -8345339432357942885L;
 
     private String hashPrefix;
     private Calendar fullHashesExpireAt;

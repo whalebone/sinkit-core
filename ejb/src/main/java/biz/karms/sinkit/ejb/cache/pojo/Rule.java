@@ -14,7 +14,7 @@ import java.util.HashMap;
 @Entity
 public class Rule implements Serializable {
 
-    private static final long serialVersionUID = 827732233347691L;
+    private static final long serialVersionUID = 187732233347691L;
 
     @Field(index = Index.YES, analyze = Analyze.NO)
     private String startAddress;

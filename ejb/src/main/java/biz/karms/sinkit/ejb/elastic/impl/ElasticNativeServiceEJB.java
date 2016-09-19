@@ -27,7 +27,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Created by tkozel on 2/27/16.
+ * @author Tomas Kozel
  */
 @Stateless
 public class ElasticNativeServiceEJB implements ElasticService {

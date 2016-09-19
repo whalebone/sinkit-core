@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 
-<server xmlns="urn:jboss:domain:4.0">
+<server xmlns="urn:jboss:domain:4.1">
     <extensions>
         <extension module="org.jboss.as.clustering.infinispan"/>
         <extension module="org.jboss.as.clustering.jgroups"/>
@@ -56,7 +56,7 @@
                 <json-formatter name="json-formatter"/>
             </formatters>
             <handlers>
-                <file-handler name="file" formatter="json-formatter" relative-to="jboss.server.data.dir" path="audit-log.log"/>
+                <file-handler name="file" formatter="json-formatter" path="audit-log.log" relative-to="jboss.server.data.dir"/>
             </handlers>
             <logger log-boot="true" log-read-only="false" enabled="false">
                 <handlers>
@@ -168,10 +168,10 @@
         </subsystem>
         <subsystem xmlns="urn:jboss:domain:ejb3:4.0">
             <session-bean>
-                <stateful default-access-timeout="5000" cache-ref="distributable" passivation-disabled-cache-ref="simple"/>
                 <stateless>
                     <bean-instance-pool-ref pool-name="slsb-strict-max-pool"/>
                 </stateless>
+                <stateful default-access-timeout="5000" cache-ref="simple" passivation-disabled-cache-ref="simple"/>
                 <singleton default-access-timeout="5000"/>
             </session-bean>
             <pools>
@@ -183,7 +183,7 @@
             </pools>
             <caches>
                 <cache name="simple"/>
-                <cache name="distributable" aliases="passivating clustered" passivation-store-ref="infinispan"/>
+                <cache name="distributable" passivation-store-ref="infinispan" aliases="passivating clustered"/>
             </caches>
             <passivation-stores>
                 <passivation-store name="infinispan" cache-container="ejb" max-size="10000"/>
@@ -210,27 +210,38 @@
             <buffer-pool name="default"/>
         </subsystem>
         <subsystem xmlns="urn:jboss:domain:infinispan:4.0">
-            <cache-container name="server" aliases="singleton cluster" default-cache="default" module="org.wildfly.clustering.server">
-                <transport channel="ee"/>
-                <replicated-cache name="default" mode="ASYNC">
-                    <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
-                    <transaction mode="NONE"/>
-                    <file-store/>
-                    <state-transfer timeout="300000"/>
-                </replicated-cache>
-            </cache-container>
-
             <cache-container name="sinkitcontainer" module="org.infinispan.query" default-cache="defaultsinkit">
-                <transport channel="ee"/>
-                <replicated-cache name="defaultsinkit" mode="ASYNC">
-                    <locking acquire-timeout="60000" concurrency-level="3000" isolation="REPEATABLE_READ"/>
-                    <transaction mode="NONE"/>
-                    <file-store/>
-                    <state-transfer timeout="300000"/>
-                </replicated-cache>
+                <transport channel="eetcp" lock-timeout="240000"/>
+                <distributed-cache name="defaultsinkit" mode="SYNC" l1-lifespan="0" owners="2">
+                    <transaction mode="NONE" locking="OPTIMISTIC"/>
+                    <locking isolation="READ_COMMITTED"/>
+                    <state-transfer timeout="240000"/>
+                </distributed-cache>
             </cache-container>
-
-            <cache-container name="web" module="org.wildfly.clustering.web.infinispan" default-cache="passivation">
+            <cache-container name="server" aliases="singleton cluster" default-cache="default" module="org.wildfly.clustering.server">
+                <transport channel="eetcp" lock-timeout="240000"/>
+                <distributed-cache name="default" mode="SYNC" l1-lifespan="0" owners="2">
+                    <transaction mode="BATCH" locking="OPTIMISTIC"/>
+                    <locking isolation="READ_COMMITTED"/>
+                    <state-transfer timeout="240000"/>
+                </distributed-cache>
+            </cache-container>
+            <cache-container name="web" default-cache="passivation" module="org.wildfly.clustering.web.infinispan">
+                <local-cache name="passivation">
+                    <locking isolation="REPEATABLE_READ"/>
+                    <transaction mode="BATCH"/>
+                    <file-store passivation="true" purge="false"/>
+                </local-cache>
+                <local-cache name="persistent">
+                    <locking isolation="REPEATABLE_READ"/>
+                    <transaction mode="BATCH"/>
+                    <file-store passivation="false" purge="false"/>
+                </local-cache>
+                <local-cache name="concurrent">
+                    <file-store passivation="true" purge="false"/>
+                </local-cache>
+            </cache-container>
+            <cache-container name="ejb" aliases="sfsb" default-cache="passivation" module="org.wildfly.clustering.ejb.infinispan">
                 <local-cache name="passivation">
                     <locking isolation="REPEATABLE_READ"/>
                     <transaction mode="BATCH"/>
@@ -242,36 +253,17 @@
                     <file-store passivation="false" purge="false"/>
                 </local-cache>
             </cache-container>
-
-            <cache-container name="ejb" aliases="sfsb" module="org.wildfly.clustering.ejb.infinispan" default-cache="passivation">
-                <local-cache name="passivation">
-                    <locking isolation="REPEATABLE_READ"/>
-                    <transaction mode="BATCH"/>
-                    <file-store passivation="true" purge="false"/>
-                </local-cache>
-                <local-cache name="persistent">
-                    <locking isolation="REPEATABLE_READ"/>
-                    <transaction mode="BATCH"/>
-                    <file-store passivation="false" purge="false"/>
-                </local-cache>
-            </cache-container>
-
-            <cache-container name="hibernate" module="org.hibernate" default-cache="local-query">
-                <transport lock-timeout="60000"/>
-                <local-cache name="local-query">
-                    <transaction mode="NONE"/>
-                    <eviction max-entries="10000" strategy="LRU"/>
-                    <expiration max-idle="100000"/>
-                </local-cache>
-                <invalidation-cache name="entity" mode="SYNC">
+            <cache-container name="hibernate" default-cache="local-query" module="org.hibernate.infinispan">
+                <local-cache name="entity">
                     <transaction mode="NON_XA"/>
-                    <eviction max-entries="10000" strategy="LRU"/>
+                    <eviction strategy="LRU" max-entries="10000"/>
                     <expiration max-idle="100000"/>
-                </invalidation-cache>
-                <replicated-cache name="timestamps" mode="ASYNC">
-                    <transaction mode="NONE"/>
-                    <eviction strategy="NONE"/>
-                </replicated-cache>
+                </local-cache>
+                <local-cache name="local-query">
+                    <eviction strategy="LRU" max-entries="10000"/>
+                    <expiration max-idle="100000"/>
+                </local-cache>
+                <local-cache name="timestamps"/>
             </cache-container>
         </subsystem>
         <subsystem xmlns="urn:jboss:domain:jaxrs:1.0"/>
@@ -297,32 +289,16 @@
         <subsystem xmlns="urn:jboss:domain:jdr:1.0"/>
         <subsystem xmlns="urn:jboss:domain:jgroups:4.0">
             <channels default="ee">
-                <channel name="ee" stack="tcp"/>
+               <!-- <channel name="ee" stack="udp"/>-->
+                <channel name="eetcp" stack="tcp"/>
             </channels>
             <stacks>
                 <stack name="udp">
                     <transport type="UDP" socket-binding="jgroups-udp"/>
-                    <protocol type="PING">
-                        <property name="async_discovery">
-                            true
-                        </property>
-                        <property name="discovery_rsp_expiry_time">
-                            120000
-                        </property>
-                        <property name="timeout">
-                            300000
-                        </property>
-                    </protocol>
+                    <protocol type="PING"/>
                     <protocol type="MERGE3"/>
                     <protocol type="FD_SOCK" socket-binding="jgroups-udp-fd"/>
-                    <protocol type="FD_ALL">
-                        <property name="timeout">
-                            300000
-                        </property>
-                        <property name="timeout_check_interval">
-                            60000
-                        </property>
-                    </protocol>
+                    <protocol type="FD_ALL"/>
                     <protocol type="VERIFY_SUSPECT"/>
                     <protocol type="pbcast.NAKACK2"/>
                     <protocol type="UNICAST3"/>
@@ -330,21 +306,38 @@
                     <protocol type="pbcast.GMS"/>
                     <protocol type="UFC"/>
                     <protocol type="MFC"/>
-                    <protocol type="FRAG2">
-                        <property name="frag_size">
-                            1300
-                        </property>
-                    </protocol>
+                    <protocol type="FRAG2"/>
                 </stack>
                 <stack name="tcp">
                     <transport type="TCP" socket-binding="jgroups-tcp"/>
 
-                    <protocol type="MPING" socket-binding="jgroups-mping">
+                    <protocol type="TCPPING">
+                        <property name="initial_hosts">
+                            @SINKIT_TCPPING_INITIAL_HOSTS@
+                        </property>
+                        <property name="port_range">
+                            2
+                        </property>
+                        <property name="timeout">
+                            @SINKIT_TCPPING_TIMEOUT@
+                        </property>
+                        <property name="num_initial_members">
+                            @SINKIT_TCPPING_NUM_MEMBERS@
+                        </property>
+                    </protocol>
+
+                    <!--<protocol type="MPING" socket-binding="jgroups-mping">
                         <property name="bind_interface_str">
                             @SINKITNIC@
                         </property>
                         <property name="ip_ttl">
                             64
+                        </property>
+                        <property name="mcast_addr">
+                            230.0.0.4
+                        </property>
+                        <property name="mcast_port">
+                            4570
                         </property>
                         <property name="receive_interfaces">
                             @SINKITNIC@
@@ -352,16 +345,38 @@
                         <property name="send_interfaces">
                             @SINKITNIC@
                         </property>
-                    </protocol>
+                    </protocol>-->
 
                     <protocol type="MERGE3"/>
-                    <protocol type="FD_SOCK" socket-binding="jgroups-tcp-fd"/>
-                    <protocol type="FD"/>
-                    <protocol type="VERIFY_SUSPECT"/>
+                    <protocol type="FD_SOCK" socket-binding="jgroups-tcp-fd">
+                        <property name="get_cache_timeout">
+                            30000
+                        </property>
+                        <property name="sock_conn_timeout">
+                            20000
+                        </property>
+                    </protocol>
+                    <protocol type="FD">
+                        <property name="timeout">
+                            30000
+                        </property>
+                        <property name="max_tries">
+                            5
+                        </property>
+                    </protocol>
+                    <protocol type="VERIFY_SUSPECT">
+                        <property name="timeout">
+                            30000
+                        </property>
+                    </protocol>
                     <protocol type="pbcast.NAKACK2"/>
                     <protocol type="UNICAST3"/>
                     <protocol type="pbcast.STABLE"/>
-                    <protocol type="pbcast.GMS"/>
+                    <protocol type="pbcast.GMS">
+                        <property name="join_timeout">
+                            @SINKIT_TCPPING_TIMEOUT@
+                        </property>
+                    </protocol>
                     <protocol type="MFC"/>
                     <protocol type="FRAG2">
                         <property name="frag_size">
@@ -442,11 +457,11 @@
             </core-environment>
             <recovery-environment socket-binding="txn-recovery-environment" status-socket-binding="txn-status-manager"/>
         </subsystem>
-        <subsystem xmlns="urn:jboss:domain:undertow:3.0">
+        <subsystem xmlns="urn:jboss:domain:undertow:3.1">
             <buffer-cache name="default"/>
             <server name="default-server">
                 <ajp-listener name="ajp" socket-binding="ajp"/>
-                <http-listener name="default" socket-binding="http" redirect-socket="https"/>
+                <http-listener name="default" socket-binding="http" redirect-socket="https" enable-http2="true"/>
                 <host name="default-host" alias="localhost">
                     <location name="/" handler="welcome-content"/>
                     <filter-ref name="server-header"/>
@@ -475,13 +490,8 @@
             <inet-address value="${jboss.bind.address:127.0.0.1}"/>
             <nic name="@SINKITNIC@"/>
         </interface>
-        <!-- TODO - only show this if the jacorb subsystem is added  -->
-        <interface name="unsecure">
-            <!--
-              ~  Used for IIOP sockets in the standard configuration.
-              ~                  To secure IIOP connections you need to setup SSL 
-              -->
-            <inet-address value="${jboss.bind.address.unsecure:127.0.0.1}"/>
+        <interface name="private">
+            <inet-address value="${jboss.bind.address.private:127.0.0.1}"/>
             <nic name="@SINKITNIC@"/>
         </interface>
     </interfaces>
@@ -491,12 +501,11 @@
         <socket-binding name="ajp" port="${jboss.ajp.port:8009}"/>
         <socket-binding name="http" port="${jboss.http.port:8080}"/>
         <socket-binding name="https" port="${jboss.https.port:8443}"/>
-        <socket-binding name="jgroups-mping" port="0" multicast-address="${jboss.default.multicast.address:230.0.0.4}" multicast-port="45700"/>
-        <socket-binding name="jgroups-tcp" port="7600"/>
-        <socket-binding name="jgroups-tcp-fd" port="57600"/>
-        <socket-binding name="jgroups-udp" port="55200" multicast-address="${jboss.default.multicast.address:230.0.0.4}" multicast-port="45688"/>
-        <socket-binding name="jgroups-udp-fd" port="54200"/>
-        <socket-binding name="modcluster" port="0" multicast-address="224.0.1.105" multicast-port="23364"/>
+        <socket-binding name="jgroups-mping" port="0" multicast-address="${jboss.default.multicast.address:230.0.0.4}" multicast-port="45700" interface="public"/>
+        <socket-binding name="jgroups-tcp" port="7600" interface="public"/>
+        <socket-binding name="jgroups-tcp-fd" port="57600" interface="public"/>
+        <socket-binding name="jgroups-udp" port="55200" multicast-address="${jboss.default.multicast.address:230.0.0.4}" multicast-port="45688" interface="public"/>
+        <socket-binding name="jgroups-udp-fd" port="54200" interface="public"/>
         <socket-binding name="txn-recovery-environment" port="4712"/>
         <socket-binding name="txn-status-manager" port="4713"/>
         <outbound-socket-binding name="mail-smtp">

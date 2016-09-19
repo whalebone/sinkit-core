@@ -100,28 +100,31 @@
             <scope>provided</scope>
         </dependency>
 
-        <!--
         <dependency>
             <groupId>com.mchange</groupId>
             <artifactId>c3p0</artifactId>
             <version>${com.mchange.c3p0.version}</version>
         </dependency>
-        -->
-        <!--
-                <dependency>
-                    <groupId>org.postgresql</groupId>
-                    <artifactId>postgresql</artifactId>
-                    <version>${postgresql.driver.version}</version>
-                </dependency>
-        -->
-        <!--
+
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgresql.driver.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.infinispan</groupId>
             <artifactId>infinispan-cachestore-jdbc</artifactId>
             <version>${infinispan.cachestore.jdbc.version}</version>
         </dependency>
--->
 
+<!--
+        <dependency>
+            <groupId>org.infinispan</groupId>
+            <artifactId>infinispan-cachestore-mongodb</artifactId>
+            <version>${infinispan.cachestore.mongo.version}</version>
+        </dependency>
+-->
 
         <dependency>
             <groupId>org.infinispan</groupId>
@@ -136,78 +139,6 @@
             <version>${infinispan.query.version}</version>
             <scope>provided</scope>
         </dependency>
-
-        <!--        <dependency>
-                    <groupId>org.infinispan</groupId>-->
-        <!--<artifactId>infinispan-query</artifactId>-->
-        <!--<artifactId>infinispan-embedded-query</artifactId>
-        <version>${infinispan.core.version}</version>-->
-        <!--<exclusions>
-            <exclusion>
-                <groupId>org.infinispan</groupId>
-                <artifactId>infinispan-core</artifactId>
-            </exclusion>
-            <exclusion>
-                <groupId>org.jboss.logging</groupId>
-                <artifactId>jboss-logging</artifactId>
-            </exclusion>
-        </exclusions>-->
-        <!--</dependency>-->
-
-        <!--     <dependency>
-                 <groupId>org.infinispan</groupId>
-                 <artifactId>infinispan-commons</artifactId>
-                 <version>${infinispan.core.version}</version>
-                 <exclusions>
-                 <exclusion>
-                 <groupId>org.jboss.logging</groupId>
-                 <artifactId>jboss-logging</artifactId>
-                 </exclusion>
-                 </exclusions>
-             </dependency>
-             -->
-
-        <!--     <dependency>
-                 <groupId>javax.cache</groupId>
-                 <artifactId>cache-api</artifactId>
-                 <version>1.0.0</version>
-             </dependency>
-     -->
-        <!--
-                <dependency>
-                    <groupId>org.hibernate</groupId>
-                    <artifactId>hibernate-infinispan</artifactId>
-                    <version>${hibernate.infinispan.version}</version>
-                    <scope>provided</scope>
-                </dependency>
-        -->
-
-        <!--<dependency>
-            <groupId>org.infinispan</groupId>
-            <artifactId>infinispan-cdi</artifactId>
-            <version>${infinispan.core.version}</version>
-        </dependency>-->
-
-        <!--
-        <dependency>
-            <groupId>org.infinispan</groupId>
-            <artifactId>infinispan-query-dsl</artifactId>
-            <version>${infinispan.core.version}</version>
-        </dependency>-->
-        <!--
-        <dependency>
-            <groupId>org.infinispan</groupId>
-            <artifactId>infinispan-jcache</artifactId>
-            <version>${infinispan.core.version}</version>
-        </dependency>-->
-
-        <!--
-        <dependency>
-            <groupId>org.infinispan</groupId>
-            <artifactId>infinispan-client-hotrod</artifactId>
-            <version>${infinispan.core.version}</version>
-            <scope>provided</scope>
-        </dependency>-->
 
         <dependency>
             <groupId>com.google.code.gson</groupId>
@@ -233,6 +164,12 @@
             <groupId>org.elasticsearch</groupId>
             <artifactId>elasticsearch</artifactId>
             <version>${es.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna</artifactId>
+            <version>${es.jna.version}</version>
         </dependency>
 
         <!--Import the JAX-RS API, we use provided scope as the API is included in JBoss WildFly-->
@@ -286,7 +223,7 @@
                         <addMavenDescriptor>false</addMavenDescriptor>
                         <manifestEntries>
                             <Dependencies>
-                                org.hibernate.infinispan,org.infinispan,org.infinispan.commons,org.infinispan.query,org.jboss.msc,org.wildfly.clustering.singleton,org.jboss.as.server
+                                org.hibernate.infinispan,org.infinispan,org.infinispan.commons,org.infinispan.query,org.jboss.msc,org.wildfly.clustering.singleton,org.jboss.as.server,org.jgroups
                             </Dependencies>
                         </manifestEntries>
                     </archive>
