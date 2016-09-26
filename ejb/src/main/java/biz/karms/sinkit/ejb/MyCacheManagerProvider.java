@@ -108,10 +108,11 @@ public class MyCacheManagerProvider implements Serializable {
 
     private Configuration replicatedNotIndexed(final String cacheName, final int threadPool, final boolean thisIsDNSNode) {
         return new ConfigurationBuilder().jmxStatistics().disable().available(false)
-                .clustering().cacheMode(CacheMode.REPL_SYNC)
-                        //.hash().numOwners(2)
-                .stateTransfer().awaitInitialTransfer(true)
-                .timeout(10, TimeUnit.MINUTES)//.async()
+                .clustering().cacheMode(CacheMode.DIST_ASYNC)
+                .hash().numOwners(2)
+                .stateTransfer().awaitInitialTransfer(false)
+                //.timeout(20, TimeUnit.MINUTES)
+                // .async()
                 .expiration()
                 .lifespan(NEVER)
                 .wakeUpInterval(WAKEUP_INTERVAL)

@@ -3,7 +3,7 @@ package biz.karms.sinkit.ejb;
 import biz.karms.sinkit.ejb.dto.Sinkhole;
 import biz.karms.sinkit.eventlog.EventLogAction;
 import biz.karms.sinkit.exception.ArchiveException;
-import org.jboss.marshalling.Pair;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import javax.ejb.Local;
 import java.util.Map;
@@ -26,7 +26,7 @@ public interface DNSApi {
             String reasonFqdn,
             String reasonIp,
             // {feed: [type1: iocId1, type2: iocId2, ...]}
-            Map<String, Set<Pair<String, String>>> matchedIoCs,
+            Map<String, Set<ImmutablePair<String, String>>> matchedIoCs,
             ArchiveService archiveService,
             Logger logger
     ) throws ArchiveException;

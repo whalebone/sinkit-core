@@ -38,7 +38,7 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
 
         final WhitelistedRecord white = WhitelistUtils.createWhitelistedRecord(iocRecord, completed);
         final String key = DigestUtils.md5Hex(white.getRawId());
-        log.log(Level.INFO, "Whitelist key: " + key + ", ttl in s: " + iocRecord.getSource().getTTL());
+        log.log(Level.FINE, "Whitelist key: " + key + ", ttl in s: " + iocRecord.getSource().getTTL());
         try {
             if (!whitelistCache.containsKey(key)) {
                 whitelistCache.putAsync(key, white, iocRecord.getSource().getTTL(), TimeUnit.SECONDS);
@@ -100,10 +100,10 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
 
     @Override
     public boolean remove(final String id) {
-        log.log(Level.INFO, "remove: removing whitelist entry manually, key: " + id);
+        log.log(Level.FINE, "remove: removing whitelist entry manually, key: " + id);
         final String key = DigestUtils.md5Hex(id);
         if (!whitelistCache.containsKey(key)) {
-            log.log(Level.INFO, "remove: entry not found, key: " + id);
+            log.log(Level.FINE, "remove: entry not found, key: " + id);
             return false;
         }
         whitelistCache.removeAsync(key);

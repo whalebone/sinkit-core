@@ -13,6 +13,7 @@ import biz.karms.sinkit.ejb.util.CIDRUtils;
 import com.google.common.collect.Lists;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.validator.routines.DomainValidator;
 import org.infinispan.Cache;
 import org.infinispan.commons.util.concurrent.NotifyingFuture;
@@ -23,7 +24,6 @@ import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
 import org.infinispan.remoting.transport.jgroups.JGroupsAddress;
 import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
-import org.jboss.marshalling.Pair;
 import org.infinispan.remoting.transport.Address;
 import org.jgroups.Event;
 import org.jgroups.stack.IpAddress;
@@ -158,8 +158,8 @@ public class WebApiEJB implements WebApi {
     @Override
     public List<?> getRules(final String clientIPAddress) {
         try {
-            final Pair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(clientIPAddress);
-            final String clientIPAddressPaddedBigInt = startEndAddresses.getA();
+            final ImmutablePair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(clientIPAddress);
+            final String clientIPAddressPaddedBigInt = startEndAddresses.getLeft();
             log.log(Level.FINE, "Getting key [" + clientIPAddress + "] which actually translates to BigInteger zero padded representation " + "[" + clientIPAddressPaddedBigInt + "]");
             // Let's try to hit it
             Rule rule = ruleCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).get(clientIPAddressPaddedBigInt);
@@ -225,8 +225,8 @@ public class WebApiEJB implements WebApi {
     @Override
     public String deleteRule(final String cidrAddress) {
         try {
-            final Pair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(cidrAddress);
-            final String clientIPAddressPaddedBigInt = startEndAddresses.getA();
+            final ImmutablePair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(cidrAddress);
+            final String clientIPAddressPaddedBigInt = startEndAddresses.getLeft();
             log.log(Level.FINE, "Deleting key [" + cidrAddress + "] which actually translates to BigInteger zero padded representation " +
                     "[" + clientIPAddressPaddedBigInt + "]");
             String response;
@@ -281,13 +281,13 @@ public class WebApiEJB implements WebApi {
             }
 
             for (String cidr : customerDNSSetting.keySet()) {
-                final Pair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(cidr);
+                final ImmutablePair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(cidr);
                 Rule rule = new Rule();
                 rule.setCidrAddress(cidr);
                 rule.setCustomerId(customerId);
                 rule.setSources(customerDNSSetting.get(cidr));
-                rule.setStartAddress(startEndAddresses.getA());
-                rule.setEndAddress(startEndAddresses.getB());
+                rule.setStartAddress(startEndAddresses.getLeft());
+                rule.setEndAddress(startEndAddresses.getRight());
                 log.log(Level.FINE, "Putting key [" + rule.getStartAddress() + "]");
                 ruleCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).putAsync(rule.getStartAddress(), rule);
             }
@@ -310,13 +310,13 @@ public class WebApiEJB implements WebApi {
                     // TODO: Proper Error codes.
                     return null;
                 }
-                final Pair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(allDNSSettingDTO.getDnsClient());
+                final ImmutablePair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(allDNSSettingDTO.getDnsClient());
                 final Rule rule = new Rule();
                 rule.setCidrAddress(allDNSSettingDTO.getDnsClient());
                 rule.setCustomerId(allDNSSettingDTO.getCustomerId());
                 rule.setSources(allDNSSettingDTO.getSettings());
-                rule.setStartAddress(startEndAddresses.getA());
-                rule.setEndAddress(startEndAddresses.getB());
+                rule.setStartAddress(startEndAddresses.getLeft());
+                rule.setEndAddress(startEndAddresses.getRight());
                 log.log(Level.FINE, "Putting key [" + rule.getStartAddress() + "]");
                 ruleCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).putAsync(rule.getStartAddress(), rule);
             } catch (Exception e) {
@@ -358,9 +358,9 @@ public class WebApiEJB implements WebApi {
         for (CustomerCustomListDTO customerCustomList : customerCustomLists) {
             // Let's calculate DNS Client address
             try {
-                final Pair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(customerCustomList.getDnsClient());
-                dnsClientStartAddress = startEndAddresses.getA();
-                dnsClientEndAddress = startEndAddresses.getB();
+                final ImmutablePair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(customerCustomList.getDnsClient());
+                dnsClientStartAddress = startEndAddresses.getLeft();
+                dnsClientEndAddress = startEndAddresses.getRight();
                 if (dnsClientStartAddress == null || dnsClientEndAddress == null) {
                     log.log(Level.SEVERE, "putCustomLists: dnsClientStartAddress or dnsClientEndAddress were null. This cannot happen.");
                     // TODO: Proper Error codes.
@@ -395,9 +395,9 @@ public class WebApiEJB implements WebApi {
                 } else {
                     // In this case, we have to calculate CIDR subnet start and end address
                     try {
-                        final Pair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(fqdnOrCIDR);
-                        final String startAddress = startEndAddresses.getA();
-                        final String endAddress = startEndAddresses.getB();
+                        final ImmutablePair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(fqdnOrCIDR);
+                        final String startAddress = startEndAddresses.getLeft();
+                        final String endAddress = startEndAddresses.getRight();
                         if (startAddress == null || endAddress == null) {
                             log.log(Level.SEVERE, "putCustomLists: endAddress or startAddress were null for CIDR " + fqdnOrCIDR + ". This cannot happen. customListsElementCounter: " + customListsElementCounter);
                             // TODO: Proper Error codes.

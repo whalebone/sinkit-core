@@ -9,8 +9,8 @@ import biz.karms.sinkit.ioc.IoCRecord;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.infinispan.Cache;
-import org.jboss.marshalling.Pair;
 
 import javax.ejb.Stateless;
 import javax.inject.Inject;
@@ -54,9 +54,9 @@ public class BlacklistCacheServiceEJB implements BlacklistCacheService {
             try {
                 if (blacklistCache.containsKey(key)) {
                     final BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
-                    final HashMap<String, Pair<String, String>> feedToTypeUpdate = blacklistedRecord.getSources();
+                    final HashMap<String, ImmutablePair<String, String>> feedToTypeUpdate = blacklistedRecord.getSources();
                     if (ioCRecord.getFeed().getName() != null && ioCRecord.getClassification().getType() != null) {
-                        feedToTypeUpdate.putIfAbsent(ioCRecord.getFeed().getName(), new Pair<>(ioCRecord.getClassification().getType(), ioCRecord.getDocumentId()));
+                        feedToTypeUpdate.putIfAbsent(ioCRecord.getFeed().getName(), new ImmutablePair<>(ioCRecord.getClassification().getType(), ioCRecord.getDocumentId()));
                     } else {
                         log.log(Level.SEVERE, "addToCache: ioCRecord's feed or classification type were null");
                     }
@@ -65,9 +65,9 @@ public class BlacklistCacheServiceEJB implements BlacklistCacheService {
                     log.log(Level.FINE, "Replacing key [" + ioCRecord.getSource().getId().getValue() + "], hashed: " + key);
                     blacklistCache.replaceAsync(key, blacklistedRecord);
                 } else {
-                    HashMap<String, Pair<String, String>> feedToType = new HashMap<>();
+                    HashMap<String, ImmutablePair<String, String>> feedToType = new HashMap<>();
                     if (ioCRecord.getFeed().getName() != null && ioCRecord.getClassification().getType() != null) {
-                        feedToType.put(ioCRecord.getFeed().getName(), new Pair<>(ioCRecord.getClassification().getType(), ioCRecord.getDocumentId()));
+                        feedToType.put(ioCRecord.getFeed().getName(), new ImmutablePair<>(ioCRecord.getClassification().getType(), ioCRecord.getDocumentId()));
                     } else {
                         log.log(Level.SEVERE, "addToCache: ioCRecord's feed or classification type were null");
                     }
@@ -100,7 +100,7 @@ public class BlacklistCacheServiceEJB implements BlacklistCacheService {
             try {
                 if (blacklistCache.containsKey(key)) {
                     final BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
-                    HashMap<String, Pair<String, String>> feedToTypeUpdate = blacklistedRecord.getSources();
+                    HashMap<String, ImmutablePair<String, String>> feedToTypeUpdate = blacklistedRecord.getSources();
                     if (ioCRecord.getFeed().getName() != null) {
                         feedToTypeUpdate.remove(ioCRecord.getFeed().getName());
                     } else {

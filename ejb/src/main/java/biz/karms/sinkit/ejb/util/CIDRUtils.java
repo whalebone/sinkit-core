@@ -27,7 +27,7 @@ package biz.karms.sinkit.ejb.util;
 *
 * */
 
-import org.jboss.marshalling.Pair;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import java.math.BigInteger;
 import java.net.InetAddress;
@@ -42,7 +42,7 @@ public class CIDRUtils {
     private CIDRUtils() {
     }
 
-    public static Pair<String, String> getStartEndAddresses(final String cidr) throws UnknownHostException {
+    public static ImmutablePair<String, String> getStartEndAddresses(final String cidr) throws UnknownHostException {
         //TODO: This is silly. Refactor CIDRUtils so as to accept actual IPs as well as subnets.
         //TODO: Validate the thing before processing. Guava?
         final String fixedCIDR;
@@ -73,6 +73,6 @@ public class CIDRUtils {
         final BigInteger startIp = ipVal.and(mask);
         final BigInteger endIp = startIp.add(mask.not());
 
-        return new Pair<>(String.format("%040d", startIp), String.format("%040d", endIp));
+        return new ImmutablePair<>(String.format("%040d", startIp), String.format("%040d", endIp));
     }
 }
