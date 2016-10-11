@@ -205,7 +205,7 @@ public class ArchiveServiceEJB implements ArchiveService {
 
     private QueryBuilder getWaitingLogRecordQuery(final VirusTotalRequestStatus status, final int notAllowedFailedMinutes) {
         final String statusTerm = gson.toJson(status).replace("\"", "");
-        final String notAllowedFailedRange = "\"now-" + notAllowedFailedMinutes + "m\"";
+        final String notAllowedFailedRange = "now-" + notAllowedFailedMinutes + "m";
         return QueryBuilders.boolQuery()
                 .must(QueryBuilders.termQuery("virus_total_request.status", statusTerm))
                 .mustNot(QueryBuilders.rangeQuery("virus_total_request.failed").gt(notAllowedFailedRange));
