@@ -24,7 +24,6 @@ import javax.inject.Inject;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -86,10 +85,14 @@ public class ArchiveServiceEJB implements ArchiveService {
         ioc.setDocumentId(IoCIdentificationUtils.computeHashedId(ioc));
         //compute uniqueReference
         ioc.setUniqueRef(IoCIdentificationUtils.computeUniqueReference(ioc));
-        final Map<String, Map<String, Date>> seenLast = new HashMap<>();
-        seenLast.put("seen", new HashMap<>());
-        seenLast.get("seen").put("last", ioc.getSeen().getLast());
-        return elasticService.update(ioc.getDocumentId(), seenLast, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, ioc);
+        final Map<String, Map<String, Object>> fieldsToUpdate = new HashMap<>();
+        fieldsToUpdate.put("seen", new HashMap<>());
+        fieldsToUpdate.get("seen").put("last", ioc.getSeen().getLast());
+        if (ioc.getFeed().getAccuracy() != null) {
+            fieldsToUpdate.put("feed", new HashMap<>());
+            fieldsToUpdate.get("feed").put("accuracy", ioc.getFeed().getAccuracy());
+        }
+        return elasticService.update(ioc.getDocumentId(), fieldsToUpdate, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, ioc);
     }
 
     @Override
