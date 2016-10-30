@@ -11,6 +11,7 @@ public class IoCFeed implements Serializable {
 
     private String url;
     private String name;
+    private Integer accuracy;
 
     public IoCFeed() {}
 
@@ -28,6 +29,14 @@ public class IoCFeed implements Serializable {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public Integer getAccuracy() {
+        return accuracy;
+    }
+
+    public void setAccuracy(Integer accuracy) {
+        this.accuracy = accuracy;
     }
 
     @Override
