@@ -1,5 +1,8 @@
 package biz.karms.sinkit.rest;
 
+import org.infinispan.util.concurrent.TimeoutException;
+
+import javax.ejb.EJBException;
 import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
 import javax.ws.rs.GET;

@@ -56,7 +56,7 @@ public class MyCacheManagerProvider implements Serializable {
         return new ConfigurationBuilder().jmxStatistics().disable().available(false)
                 .clustering().cacheMode(CacheMode.REPL_SYNC)
                 .stateTransfer().awaitInitialTransfer(true)
-                .timeout(10, TimeUnit.MINUTES)//.async()
+                .timeout(20, TimeUnit.MINUTES)//.async()
                 .expiration()
                 .lifespan(NEVER)
                 .wakeUpInterval(WAKEUP_INTERVAL)
@@ -108,11 +108,11 @@ public class MyCacheManagerProvider implements Serializable {
 
     private Configuration replicatedNotIndexed(final String cacheName, final int threadPool, final boolean thisIsDNSNode) {
         return new ConfigurationBuilder().jmxStatistics().disable().available(false)
-                .clustering().cacheMode(CacheMode.DIST_ASYNC)
+                .clustering().cacheMode(CacheMode.DIST_SYNC)
                 .hash().numOwners(2)
-                .stateTransfer().awaitInitialTransfer(false)
-                //.timeout(20, TimeUnit.MINUTES)
-                // .async()
+                .stateTransfer().awaitInitialTransfer(true)
+                .timeout(20, TimeUnit.MINUTES)
+                //.async()
                 .expiration()
                 .lifespan(NEVER)
                 .wakeUpInterval(WAKEUP_INTERVAL)
@@ -183,6 +183,24 @@ public class MyCacheManagerProvider implements Serializable {
                 */
     }
 
+    private Configuration replicatedNotIndexedNotStored() {
+        return new ConfigurationBuilder().jmxStatistics().disable().available(false)
+                .clustering().cacheMode(CacheMode.DIST_ASYNC)
+                .hash().numOwners(2)
+                .stateTransfer().awaitInitialTransfer(true)
+                .timeout(20, TimeUnit.MINUTES)
+                .expiration()
+                .lifespan(NEVER)
+                .wakeUpInterval(WAKEUP_INTERVAL)
+                .maxIdle(NEVER)
+                .indexing().index(Index.NONE)
+                .eviction().strategy(EvictionStrategy.NONE)
+                .transaction().transactionMode(TransactionMode.NON_TRANSACTIONAL)
+                .lockingMode(LockingMode.OPTIMISTIC)
+                .unsafe().unreliableReturnValues(true)
+                .build();
+    }
+
     private Configuration localNotIndexed() {
         return new ConfigurationBuilder().jmxStatistics().disable().available(false)
                 .clustering().cacheMode(CacheMode.LOCAL)
@@ -195,26 +213,28 @@ public class MyCacheManagerProvider implements Serializable {
     public void init(@Observes @Initialized(ApplicationScoped.class) Object init) {
         log.info("\n\n Constructing caches...\n\n");
 
-        final boolean thisIsDNSNode = !manager.getAddress().toString().contains(HATimerServiceActivator.unwantedNameSuffix);
+        final boolean thisIsDNSNode = manager.getAddress().toString().contains(HATimerServiceActivator.unwantedNameSuffix);
 
         /**
          * MANAGER settings and Persistence
          */
         manager.defineConfiguration(SinkitCacheName.RULES_CACHE.toString(), replicatedIndexed("infinispan_rules", 5, thisIsDNSNode));
         manager.defineConfiguration(SinkitCacheName.CUSTOM_LISTS_CACHE.toString(), replicatedIndexed("infinispan_custom_lists", 5, thisIsDNSNode));
-        manager.defineConfiguration(SinkitCacheName.GSB_CACHE.toString(), replicatedNotIndexed("infinispan_gsb", 10, thisIsDNSNode));
-        manager.defineConfiguration(SinkitCacheName.BLACKLIST_CACHE.toString(), replicatedNotIndexed("infinispan_blacklist", 10, thisIsDNSNode));
         if (thisIsDNSNode) {
-            manager.defineConfiguration(SinkitCacheName.WHITELIST_CACHE.toString(), replicatedNotIndexed("infinispan_whitelist", 10, thisIsDNSNode));
-        } else {
             log.log(Level.INFO, "This node's address " + manager.getAddress().toString() + " contains unwanted suffix " + HATimerServiceActivator.unwantedNameSuffix + ", so cache " + SinkitCacheName.WHITELIST_CACHE.toString() + " won't be created.");
+            manager.defineConfiguration(SinkitCacheName.GSB_CACHE.toString(), replicatedNotIndexedNotStored());
+            manager.defineConfiguration(SinkitCacheName.BLACKLIST_CACHE.toString(), replicatedNotIndexedNotStored());
+        } else {
+            manager.defineConfiguration(SinkitCacheName.WHITELIST_CACHE.toString(), replicatedNotIndexed("infinispan_whitelist", 10, thisIsDNSNode));
+            manager.defineConfiguration(SinkitCacheName.GSB_CACHE.toString(), replicatedNotIndexed("infinispan_gsb", 15, thisIsDNSNode));
+            manager.defineConfiguration(SinkitCacheName.BLACKLIST_CACHE.toString(), replicatedNotIndexed("infinispan_blacklist", 15, thisIsDNSNode));
         }
 
         /**
          * Start caches
          */
         manager.getCache(SinkitCacheName.BLACKLIST_CACHE.toString()).start();
-        if (thisIsDNSNode) {
+        if (!thisIsDNSNode) {
             manager.getCache(SinkitCacheName.WHITELIST_CACHE.toString()).start();
         }
         manager.getCache(SinkitCacheName.RULES_CACHE.toString()).start();

@@ -54,6 +54,10 @@ public class BlacklistCacheServiceEJB implements BlacklistCacheService {
             try {
                 if (blacklistCache.containsKey(key)) {
                     final BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
+                    if(blacklistedRecord == null) {
+                        log.log(Level.SEVERE, "addToCache: blacklistedRecord allegedly exists in the Cache already under key "+ key +", but we failed to retrieve it.");
+                        return false;
+                    }
                     final HashMap<String, ImmutablePair<String, String>> feedToTypeUpdate = blacklistedRecord.getSources();
                     if (ioCRecord.getFeed().getName() != null && ioCRecord.getClassification().getType() != null) {
                         feedToTypeUpdate.putIfAbsent(ioCRecord.getFeed().getName(), new ImmutablePair<>(ioCRecord.getClassification().getType(), ioCRecord.getDocumentId()));

@@ -151,7 +151,7 @@
             </datasources>
         </subsystem>
         <subsystem xmlns="urn:jboss:domain:deployment-scanner:2.0">
-            <deployment-scanner path="deployments" relative-to="jboss.server.base.dir" scan-interval="10000" deployment-timeout="780" runtime-failure-causes-rollback="${jboss.deployment.scanner.rollback.on.failure:false}"/>
+            <deployment-scanner path="deployments" relative-to="jboss.server.base.dir" scan-interval="10000" deployment-timeout="1200" runtime-failure-causes-rollback="${jboss.deployment.scanner.rollback.on.failure:false}"/>
         </subsystem>
         <subsystem xmlns="urn:jboss:domain:ee:4.0">
             <global-modules>
@@ -219,24 +219,17 @@
             <buffer-pool name="default"/>
         </subsystem>
         <subsystem xmlns="urn:jboss:domain:infinispan:4.0">
-<!--
             <cache-container name="sinkitcontainer" module="org.infinispan.query">
                 <transport channel="eetcp" lock-timeout="600000"/>
             </cache-container>
--->
-
-
             <cache-container name="server" aliases="singleton cluster" default-cache="default" module="org.wildfly.clustering.server">
-                <transport channel="eetcpx" lock-timeout="600000"/>
+                <transport channel="eetcp" lock-timeout="600000"/>
                 <distributed-cache name="default" mode="SYNC" l1-lifespan="0" owners="2">
                     <locking isolation="READ_COMMITTED"/>
                     <transaction mode="NONE"/>
                     <state-transfer timeout="600000"/>
                 </distributed-cache>
             </cache-container>
-
-
-
             <cache-container name="web" default-cache="passivation" module="org.wildfly.clustering.web.infinispan">
                 <local-cache name="passivation">
                     <locking isolation="REPEATABLE_READ"/>
@@ -301,7 +294,6 @@
         <subsystem xmlns="urn:jboss:domain:jgroups:4.0">
             <channels default="ee">
                 <channel name="eetcp" stack="azure"/>
-                <channel name="eetcpx" stack="azurex"/>
             </channels>
             <stacks>
                 <stack name="azure">
@@ -376,24 +368,6 @@
                             1400
                         </property>
                     </protocol>
-                </stack>
-
-                <stack name="azurex">
-                    <transport type="TCP" socket-binding="jgroups-tcpx"/>
-                    <protocol type="azure.AZURE_PING">
-                        <property name="storage_account_name">${jboss.jgroups.azure_ping.storage_account_name}</property>
-                        <property name="storage_access_key">${jboss.jgroups.azure_ping.storage_access_key}</property>
-                        <property name="container">${jboss.jgroups.azure_ping.container}</property>
-                    </protocol>
-                    <protocol type="MERGE3"/>
-                    <protocol type="FD_SOCK" socket-binding="jgroups-tcp-fdx"/>
-                    <protocol type="FD"/>
-                    <protocol type="VERIFY_SUSPECT"/>
-                    <protocol type="pbcast.NAKACK2"/>
-                    <protocol type="UNICAST3"/>
-                    <protocol type="pbcast.STABLE"/>
-                    <protocol type="pbcast.GMS"/>
-                    <protocol type="FRAG2"/>
                 </stack>
             </stacks>
         </subsystem>
