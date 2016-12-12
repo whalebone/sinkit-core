@@ -30,6 +30,10 @@
         <extension module="org.wildfly.extension.security.manager"/>
         <extension module="org.wildfly.extension.undertow"/>
     </extensions>
+    <!--<system-properties>
+        <property name="javax.net.ssl.trustStore" value="@ORACULUM_TRUST_STORE_PATH@"/>
+        <property name="javax.net.ssl.trustStorePassword" value="@ORACULUM_TRUST_STORE_PASS@"/>
+    </system-properties>-->
     <management>
         <security-realms>
             <security-realm name="ManagementRealm">
@@ -54,6 +58,17 @@
                 <authorization>
                     <properties path="application-roles.properties" relative-to="jboss.server.config.dir"/>
                 </authorization>
+            </security-realm>
+            <security-realm name="SinkitOraculum">
+                <server-identities>
+                    <ssl protocol="@SSL_PROTOCOL@">
+                        <!--<engine enabled-cipher-suites="@ENABLED_CIPHER_SUITES@"/>-->
+                        <keystore provider="JKS" path="@ORACULUM_SERVER_KEYSTORE_PATH@" keystore-password="@ORACULUM_SERVER_KEYSTORE_PASS@" alias="@ORACULUM_SERVER_KEYSTORE_ALIAS@"/>
+                    </ssl>
+                </server-identities>
+                <authentication>
+                    <truststore path="@ORACULUM_TRUST_STORE_PATH@" keystore-password="@ORACULUM_TRUST_STORE_PASS@"/>
+                </authentication>
             </security-realm>
         </security-realms>
         <audit-log>
@@ -455,7 +470,7 @@
             <server name="default-server">
                 <ajp-listener name="ajp" socket-binding="ajp"/>
                 <http-listener name="default" socket-binding="http" redirect-socket="https" enable-http2="true"/>
-                <https-listener name="https" socket-binding="https" security-realm="ApplicationRealm" enable-http2="true"/>
+                <https-listener name="https" socket-binding="https" security-realm="SinkitOraculum" enable-http2="true" verify-client="@ORACULUM_SERVER_VERIFY_CLIENT@"/>
                 <host name="default-host" alias="localhost">
                     <location name="/" handler="welcome-content"/>
                     <filter-ref name="server-header"/>

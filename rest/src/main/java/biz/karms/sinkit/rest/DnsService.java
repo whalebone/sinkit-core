@@ -33,12 +33,12 @@ public class DnsService implements Serializable {
 
     private static final Gson gson = new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create();
 
-    String getSinkHole(final String client, final String key, final String fqdn) {
+    String getSinkHole(final String client, final String key, final String fqdn, final Integer clientId) {
         long start = System.currentTimeMillis();
         //TODO: Define the protocol already...
         String returned = "null";
         try {
-            returned = gson.toJson(dnsApi.getSinkHole(client, key, fqdn));
+            returned = gson.toJson(dnsApi.getSinkHole(client, key, fqdn, clientId));
         } catch (TimeoutException | EJBException e) {
             log.log(Level.SEVERE, "getSinkHole went south:", e);
         }
@@ -47,7 +47,7 @@ public class DnsService implements Serializable {
     }
 
     @Asynchronous
-    void getAsyncSinkHole(final String client, final String key, final String fqdn) {
-        getSinkHole(client, key, fqdn);
+    void getAsyncSinkHole(final String client, final String key, final String fqdn, final Integer clientId) {
+        getSinkHole(client, key, fqdn, clientId);
     }
 }

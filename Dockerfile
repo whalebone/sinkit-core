@@ -2,7 +2,7 @@ FROM fedora:24
 MAINTAINER Michal Karm Babacek <karm@email.cz
 LABEL description="Codename Feed: Sinkit Core POC"
 
-ENV DEPS            java-1.8.0-openjdk-devel.x86_64 unzip wget gawk sed jna.x86_64 jsch-agent-proxy-usocket-jna.noarch
+ENV DEPS            java-1.8.0-openjdk-devel.x86_64 unzip wget gawk sed openssl jna.x86_64 jsch-agent-proxy-usocket-jna.noarch
 ENV JBOSS_HOME      "/opt/sinkit/wildfly"
 ENV JAVA_HOME       "/usr/lib/jvm/java-1.8.0"
 
@@ -79,10 +79,12 @@ RUN echo 'JAVA_OPTS="\
  -XX:MaxMetaspaceSize=512m \
  -XX:+UseG1GC \
  -XX:MaxGCPauseMillis=200 \
+ -XX:InitiatingHeapOccupancyPercent=70 \
  -XX:+HeapDumpOnOutOfMemoryError \
  -XX:HeapDumpPath=/opt/sinkit \
 "' >> /opt/sinkit/wildfly/bin/standalone.conf
 RUN mkdir -p /opt/sinkit/wildfly/standalone/log/
+RUN mkdir -p /opt/sinkit/certs
 ADD sinkit.sh /opt/sinkit/
 CMD ["/opt/sinkit/sinkit.sh"]
 

@@ -1,8 +1,5 @@
 package biz.karms.sinkit.rest;
 
-import org.infinispan.util.concurrent.TimeoutException;
-
-import javax.ejb.EJBException;
 import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
@@ -25,6 +22,7 @@ public class DnsREST {
     DnsService dnsService;
 
     public static final String AUTH_HEADER_PARAM = "X-sinkit-token";
+    public static final String CLIENT_ID_HEADER_PARAM = "X-client-id";
     public static final String AUTH_FAIL = "❤ AUTH ERROR ❤";
 
     /**
@@ -37,9 +35,13 @@ public class DnsREST {
     @GET
     @Path("/{client}/{key}/{fqdn}")
     @Produces({"application/json;charset=UTF-8"})
-    public String getSinkHole(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("client") String client, @PathParam("key") String key, @PathParam("fqdn") String fqdn) {
+    public String getSinkHole(@HeaderParam(AUTH_HEADER_PARAM) String token,
+                              @HeaderParam(CLIENT_ID_HEADER_PARAM) Integer clientId,
+                              @PathParam("client") String client,
+                              @PathParam("key") String key,
+                              @PathParam("fqdn") String fqdn) {
         if (StupidAuthenticator.isAuthenticated(token)) {
-            return dnsService.getSinkHole(client, key, fqdn);
+            return dnsService.getSinkHole(client, key, fqdn, clientId);
         } else {
             return AUTH_FAIL;
         }
@@ -48,9 +50,13 @@ public class DnsREST {
     @GET
     @Path("/async/{client}/{key}/{fqdn}")
     @Produces({"application/json;charset=UTF-8"})
-    public String getAsyncSinkHole(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("client") String client, @PathParam("key") String key, @PathParam("fqdn") String fqdn) {
+    public String getAsyncSinkHole(@HeaderParam(AUTH_HEADER_PARAM) String token,
+                                   @HeaderParam(CLIENT_ID_HEADER_PARAM) Integer clientId,
+                                   @PathParam("client") String client,
+                                   @PathParam("key") String key,
+                                   @PathParam("fqdn") String fqdn) {
         if (StupidAuthenticator.isAuthenticated(token)) {
-            dnsService.getAsyncSinkHole(client, key, fqdn);
+            dnsService.getAsyncSinkHole(client, key, fqdn, clientId);
             // TODO: API FTW
             return "";
         } else {
