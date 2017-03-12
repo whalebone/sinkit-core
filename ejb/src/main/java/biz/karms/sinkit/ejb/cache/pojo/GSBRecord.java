@@ -6,11 +6,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 /**
- * Created by tom on 11/27/15.
- *
  * @author Tomas Kozel
  */
-
 public class GSBRecord implements Serializable {
 
     private static final long serialVersionUID = -8345339432357942885L;

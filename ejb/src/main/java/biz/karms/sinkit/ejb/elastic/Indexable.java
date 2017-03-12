@@ -7,7 +7,7 @@ import java.io.Serializable;
  */
 public interface Indexable extends Serializable {
 
-    public String getDocumentId();
+    String getDocumentId();
 
-    public void setDocumentId(String documentId);
+    void setDocumentId(String documentId);
 }

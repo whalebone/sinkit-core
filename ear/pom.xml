@@ -69,11 +69,14 @@
                     <defaultLibBundleDir>lib</defaultLibBundleDir>
                     <archive>
                         <addMavenDescriptor>false</addMavenDescriptor>
+                        <!-- No longer needed, we don't rely on private APIs -->
+                        <!--
                         <manifestEntries>
                             <Dependencies>
                                 org.infinispan,org.infinispan.commons,org.infinispan.query,org.jboss.msc,org.wildfly.clustering.singleton,org.jboss.as.server,org.jgroups
                             </Dependencies>
                         </manifestEntries>
+                        -->
                     </archive>
                     <modules>
                         <webModule>

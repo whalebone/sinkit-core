@@ -1,7 +1,6 @@
 package biz.karms.sinkit.ioc;
 
 import com.google.gson.annotations.SerializedName;
-import org.hibernate.search.annotations.NumericField;
 
 import java.io.Serializable;
 

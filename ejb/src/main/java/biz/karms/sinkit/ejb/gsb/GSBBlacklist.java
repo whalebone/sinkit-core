@@ -6,7 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Created by tkozel on 5/15/16.
+ * @author Tomas Kozel
  */
 public enum GSBBlacklist {
 

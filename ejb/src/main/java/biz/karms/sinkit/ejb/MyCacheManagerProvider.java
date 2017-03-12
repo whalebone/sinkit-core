@@ -7,27 +7,39 @@ import biz.karms.sinkit.ejb.cache.pojo.CustomList;
 import biz.karms.sinkit.ejb.cache.pojo.GSBRecord;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ejb.cache.pojo.WhitelistedRecord;
-import biz.karms.sinkit.ejb.hasingleton.HATimerServiceActivator;
-import org.infinispan.Cache;
+import biz.karms.sinkit.ejb.cache.pojo.marshallers.CustomListMarshaller;
+import biz.karms.sinkit.ejb.cache.pojo.marshallers.ImmutablePairMarshaller;
+import biz.karms.sinkit.ejb.cache.pojo.marshallers.RuleMarshaller;
+import org.infinispan.client.hotrod.RemoteCache;
+import org.infinispan.client.hotrod.RemoteCacheManager;
+import org.infinispan.client.hotrod.marshall.ProtoStreamMarshaller;
+import org.infinispan.commons.api.BasicCache;
+import org.infinispan.commons.api.BasicCacheContainer;
 import org.infinispan.configuration.cache.CacheMode;
 import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
-import org.infinispan.configuration.cache.Index;
+import org.infinispan.configuration.global.GlobalConfiguration;
+import org.infinispan.configuration.global.GlobalConfigurationBuilder;
 import org.infinispan.eviction.EvictionStrategy;
-import org.infinispan.manager.EmbeddedCacheManager;
-import org.infinispan.persistence.jdbc.configuration.JdbcStringBasedStoreConfigurationBuilder;
-import org.infinispan.transaction.LockingMode;
-import org.infinispan.transaction.TransactionMode;
+import org.infinispan.eviction.EvictionType;
+import org.infinispan.manager.DefaultCacheManager;
+import org.infinispan.protostream.FileDescriptorSource;
+import org.infinispan.protostream.SerializationContext;
+import org.infinispan.query.remote.client.ProtobufMetadataManagerConstants;
+import org.infinispan.util.concurrent.IsolationLevel;
 
-import javax.annotation.ManagedBean;
-import javax.annotation.Resource;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.context.Destroyed;
 import javax.enterprise.context.Initialized;
 import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.io.Serializable;
+import java.io.StringWriter;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -37,322 +49,177 @@ import java.util.logging.Logger;
  * @author Michal Karm Babacek
  */
 @ApplicationScoped
-@ManagedBean
 public class MyCacheManagerProvider implements Serializable {
 
-    private static final long serialVersionUID = 45216839143257496L;
-
-    private static final long ENTRY_LIFESPAN = TimeUnit.MINUTES.toMillis(3L);
-    private static final long NEVER = -1L;
-    private static final long WAKEUP_INTERVAL = TimeUnit.MINUTES.toMillis(30L);
+    private static final long serialVersionUID = 45123839143257496L;
+    private static final long SINKIT_LOCAL_CACHE_SIZE = (System.getenv().containsKey("SINKIT_LOCAL_CACHE_SIZE")) ? Integer.parseInt(System.getenv("SINKIT_LOCAL_CACHE_SIZE")) : 10000;
+    private static final long SINKIT_LOCAL_CACHE_LIFESPAN_MS = (System.getenv().containsKey("SINKIT_LOCAL_CACHE_LIFESPAN_MS")) ? Integer.parseInt(System.getenv("SINKIT_LOCAL_CACHE_LIFESPAN_MS")) : 180000;
+    // This call fails if the property is undefined
+    private static final String SINKIT_HOTROD_HOST = System.getenv("SINKIT_HOTROD_HOST");
+    private static final int SINKIT_HOTROD_PORT = Integer.parseInt(System.getenv("SINKIT_HOTROD_PORT"));
+    private static final String RULE_PROTOBUF_DEFINITION_RESOURCE = "/sinkitprotobuf/rule.proto";
+    private static final String CUSTOM_LIST_PROTOBUF_DEFINITION_RESOURCE = "/sinkitprotobuf/customlist.proto";
 
     @Inject
     private Logger log;
 
-    @Resource(lookup = "java:jboss/infinispan/container/sinkitcontainer")
-    private EmbeddedCacheManager manager;
+    private BasicCacheContainer localCacheManager;
+    private RemoteCacheManager cacheManagerForIndexableCaches;
+    private RemoteCacheManager cacheManager;
 
-    private Configuration replicatedIndexed(final String cacheName, final int threadPool, final boolean thisIsDNSNode) {
-        return new ConfigurationBuilder().jmxStatistics().disable().available(false)
-                .clustering().cacheMode(CacheMode.REPL_SYNC)
-                .stateTransfer().awaitInitialTransfer(true)
-                .timeout(20, TimeUnit.MINUTES)//.async()
-                .expiration()
-                .lifespan(NEVER)
-                .wakeUpInterval(WAKEUP_INTERVAL)
-                .maxIdle(NEVER)
-                .indexing().index(Index.LOCAL)
-                .addProperty("hibernate.search.default.worker.execution", "async")
-                .addProperty("hibernate.search.lucene_version", "LUCENE_CURRENT")
-                .addProperty("default.directory_provider", "ram")
-                .addProperty("default.indexmanager", "near-real-time")
-                .eviction().strategy(EvictionStrategy.NONE)
-                .transaction().transactionMode(TransactionMode.NON_TRANSACTIONAL)
-                .lockingMode(LockingMode.OPTIMISTIC)
-                .unsafe().unreliableReturnValues(true)
-                /*.persistence()
-                .passivation(false)
-                .addStore(MongoDBStoreConfigurationBuilder.class)
-                .connectionURI(System.getenv("SINKIT_MONGODB_CONNECTION_URI"))
-                .collection(cacheName)
-                .shared(true)
-                .preload(true)
-                .async()
-                .threadPoolSize(threadPool)
-                .enable()
-                */
-                .persistence()
-                .addStore(JdbcStringBasedStoreConfigurationBuilder.class)
-                .fetchPersistentState(false)
-                .ignoreModifications(thisIsDNSNode)
-                .preload(true)
-                .shared(true)
-                .purgeOnStartup(false)
-                .table()
-                .dropOnExit(false)
-                .createOnStart(true)
-                .tableNamePrefix("ISPN_" + cacheName)
-                .idColumnName("ID_COLUMN").idColumnType("VARCHAR(255)")
-                .dataColumnName("DATA_COLUMN").dataColumnType("BYTEA")
-                .timestampColumnName("TIMESTAMP_COLUMN").timestampColumnType("BIGINT")
-                .connectionPool()
-                .connectionUrl("jdbc:postgresql://" + System.getenv("SINKIT_POSTGRESQL_DB_HOST") + ":" + System.getenv("SINKIT_POSTGRESQL_DB_PORT") + "/" + System.getenv("SINKIT_POSTGRESQL_DB_NAME"))
-                .driverClass("org.postgresql.Driver")
-                .password(System.getenv("SINKIT_POSTGRESQL_PASS"))
-                .username(System.getenv("SINKIT_POSTGRESQL_USER"))
-                .async()
-                .enabled(true)
-                .threadPoolSize(threadPool)
-                .build();
-    }
+    public void init(@Observes @Initialized(ApplicationScoped.class) Object init) throws IOException {
 
-    private Configuration replicatedNotIndexed(final String cacheName, final int threadPool, final boolean thisIsDNSNode) {
-        return new ConfigurationBuilder().jmxStatistics().disable().available(false)
-                .clustering().cacheMode(CacheMode.DIST_SYNC)
-                .hash().numOwners(2)
-                .stateTransfer().awaitInitialTransfer(true)
-                .timeout(20, TimeUnit.MINUTES)
-                //.async()
-                .expiration()
-                .lifespan(NEVER)
-                .wakeUpInterval(WAKEUP_INTERVAL)
-                .maxIdle(NEVER)
-                .indexing().index(Index.NONE)
-                .eviction().strategy(EvictionStrategy.NONE)
-                .transaction().transactionMode(TransactionMode.NON_TRANSACTIONAL)
-                .lockingMode(LockingMode.OPTIMISTIC)
-                .unsafe().unreliableReturnValues(true)
-                /*
-                .persistence()
-                .passivation(false)
-                .addStore(MongoDBStoreConfigurationBuilder.class)
-                .connectionURI(System.getenv("SINKIT_MONGODB_CONNECTION_URI"))
-                .collection(cacheName)
-                .fetchPersistentState(false)
-                .ignoreModifications(false)
-                .purgeOnStartup(false)
-                .shared(true)
-                .preload(true)
-                .async()
-                .threadPoolSize(threadPool)
-                .enable()*/
-                .persistence()
-                .addStore(JdbcStringBasedStoreConfigurationBuilder.class)
-                .fetchPersistentState(false)
-                .ignoreModifications(thisIsDNSNode)
-                .preload(true)
-                .shared(true)
-                .purgeOnStartup(false)
-                .table()
-                .dropOnExit(false)
-                .createOnStart(true)
-                .tableNamePrefix("ISPN_" + cacheName)
-                .idColumnName("ID_COLUMN").idColumnType("VARCHAR(255)")
-                .dataColumnName("DATA_COLUMN").dataColumnType("BYTEA")
-                .timestampColumnName("TIMESTAMP_COLUMN").timestampColumnType("BIGINT")
-                .connectionPool()
-                .connectionUrl("jdbc:postgresql://" + System.getenv("SINKIT_POSTGRESQL_DB_HOST") + ":" + System.getenv("SINKIT_POSTGRESQL_DB_PORT") + "/" + System.getenv("SINKIT_POSTGRESQL_DB_NAME"))
-                .driverClass("org.postgresql.Driver")
-                .password(System.getenv("SINKIT_POSTGRESQL_PASS"))
-                .username(System.getenv("SINKIT_POSTGRESQL_USER"))
-                .async()
-                .enabled(true)
-                .threadPoolSize(threadPool)
-                .build();
-                /*
-                .persistence()
-                .addStore(JdbcStringBasedStoreConfigurationBuilder.class)
-                .fetchPersistentState(false)
-                .ignoreModifications(false)
-                .purgeOnStartup(false)
-                .table()
-                .dropOnExit(false)
-                .createOnStart(true)
-                .tableNamePrefix("ISPN_STRING_TABLE")
-                .idColumnName("ID_COLUMN").idColumnType("VARCHAR(255)")
-                .dataColumnName("DATA_COLUMN").dataColumnType("BYTEA")
-                .timestampColumnName("TIMESTAMP_COLUMN").timestampColumnType("BIGINT")
-                .connectionPool()
-                .connectionUrl("jdbc:postgresql://" + System.getenv("SINKIT_POSTGRESQL_DB_HOST") + ":" + System.getenv("SINKIT_POSTGRESQL_DB_PORT") + "/" + System.getenv("SINKIT_POSTGRESQL_DB_NAME"))
-                .driverClass("org.postgresql.Driver")
-                .password(System.getenv("SINKIT_POSTGRESQL_PASS"))
-                .username(System.getenv("SINKIT_POSTGRESQL_USER"))
-                .async()
-                .enabled(true)
-                .threadPoolSize(20)
-                */
-    }
+        log.log(Level.INFO, "Constructing caches...");
 
-    private Configuration replicatedNotIndexedNotStored() {
-        return new ConfigurationBuilder().jmxStatistics().disable().available(false)
-                .clustering().cacheMode(CacheMode.DIST_ASYNC)
-                .hash().numOwners(2)
-                .stateTransfer().awaitInitialTransfer(true)
-                .timeout(20, TimeUnit.MINUTES)
-                .expiration()
-                .lifespan(NEVER)
-                .wakeUpInterval(WAKEUP_INTERVAL)
-                .maxIdle(NEVER)
-                .indexing().index(Index.NONE)
-                .eviction().strategy(EvictionStrategy.NONE)
-                .transaction().transactionMode(TransactionMode.NON_TRANSACTIONAL)
-                .lockingMode(LockingMode.OPTIMISTIC)
-                .unsafe().unreliableReturnValues(true)
-                .build();
-    }
-
-    private Configuration localNotIndexed() {
-        return new ConfigurationBuilder().jmxStatistics().disable().available(false)
-                .clustering().cacheMode(CacheMode.LOCAL)
-                .expiration()
-                .lifespan(ENTRY_LIFESPAN)
-                .transaction().transactionMode(TransactionMode.NON_TRANSACTIONAL)
-                .build();
-    }
-
-    public void init(@Observes @Initialized(ApplicationScoped.class) Object init) {
-        log.info("\n\n Constructing caches...\n\n");
-
-        final boolean thisIsDNSNode = manager.getAddress().toString().contains(HATimerServiceActivator.unwantedNameSuffix);
-
-        /**
-         * MANAGER settings and Persistence
-         */
-        manager.defineConfiguration(SinkitCacheName.RULES_CACHE.toString(), replicatedIndexed("infinispan_rules", 5, thisIsDNSNode));
-        manager.defineConfiguration(SinkitCacheName.CUSTOM_LISTS_CACHE.toString(), replicatedIndexed("infinispan_custom_lists", 5, thisIsDNSNode));
-        if (thisIsDNSNode) {
-            log.log(Level.INFO, "This node's address " + manager.getAddress().toString() + " contains unwanted suffix " + HATimerServiceActivator.unwantedNameSuffix + ", so cache " + SinkitCacheName.WHITELIST_CACHE.toString() + " won't be created.");
-            manager.defineConfiguration(SinkitCacheName.GSB_CACHE.toString(), replicatedNotIndexedNotStored());
-            manager.defineConfiguration(SinkitCacheName.BLACKLIST_CACHE.toString(), replicatedNotIndexedNotStored());
-        } else {
-            manager.defineConfiguration(SinkitCacheName.WHITELIST_CACHE.toString(), replicatedNotIndexed("infinispan_whitelist", 10, thisIsDNSNode));
-            manager.defineConfiguration(SinkitCacheName.GSB_CACHE.toString(), replicatedNotIndexed("infinispan_gsb", 15, thisIsDNSNode));
-            manager.defineConfiguration(SinkitCacheName.BLACKLIST_CACHE.toString(), replicatedNotIndexed("infinispan_blacklist", 15, thisIsDNSNode));
+        if (localCacheManager == null) {
+            final GlobalConfiguration glob = new GlobalConfigurationBuilder()
+                    .nonClusteredDefault()
+                    .build();
+            final Configuration loc = new ConfigurationBuilder()
+                    .clustering().cacheMode(CacheMode.LOCAL)
+                    .locking().isolationLevel(IsolationLevel.READ_UNCOMMITTED)
+                    .eviction().strategy(EvictionStrategy.LRU)
+                    .type(EvictionType.COUNT).size(SINKIT_LOCAL_CACHE_SIZE)
+                    .expiration().lifespan(SINKIT_LOCAL_CACHE_LIFESPAN_MS, TimeUnit.MILLISECONDS)
+                    .build();
+            localCacheManager = new DefaultCacheManager(glob, loc, true);
+            log.info("Local cache manager initialized.\n");
         }
 
-        /**
-         * Start caches
-         */
-        manager.getCache(SinkitCacheName.BLACKLIST_CACHE.toString()).start();
-        if (!thisIsDNSNode) {
-            manager.getCache(SinkitCacheName.WHITELIST_CACHE.toString()).start();
+        if (cacheManagerForIndexableCaches == null) {
+            org.infinispan.client.hotrod.configuration.ConfigurationBuilder builder = new org.infinispan.client.hotrod.configuration.ConfigurationBuilder();
+            builder.addServer()
+                    .host(SINKIT_HOTROD_HOST)
+                    .port(SINKIT_HOTROD_PORT)
+                    .marshaller(new ProtoStreamMarshaller());
+            cacheManagerForIndexableCaches = new RemoteCacheManager(builder.build());
         }
-        manager.getCache(SinkitCacheName.RULES_CACHE.toString()).start();
-        manager.getCache(SinkitCacheName.CUSTOM_LISTS_CACHE.toString()).start();
-        manager.getCache(SinkitCacheName.GSB_CACHE.toString()).start();
 
-        /**
-         * Local search result caches
-         */
-        manager.defineConfiguration(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE.toString(), localNotIndexed());
-        manager.getCache(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE.toString()).start();
-        manager.defineConfiguration(SinkitCacheName.RULES_LOCAL_CACHE.toString(), localNotIndexed());
-        manager.getCache(SinkitCacheName.RULES_LOCAL_CACHE.toString()).start();
-        log.log(Level.INFO, "Caches defined.");
+        if (cacheManager == null) {
+            org.infinispan.client.hotrod.configuration.ConfigurationBuilder builder = new org.infinispan.client.hotrod.configuration.ConfigurationBuilder();
+            builder.addServer()
+                    .host(SINKIT_HOTROD_HOST)
+                    .port(SINKIT_HOTROD_PORT);
+            cacheManager = new RemoteCacheManager(builder.build());
+        }
+
+        final SerializationContext ctx = ProtoStreamMarshaller.getSerializationContext(cacheManagerForIndexableCaches);
+        ctx.registerProtoFiles(FileDescriptorSource.fromResources(RULE_PROTOBUF_DEFINITION_RESOURCE));
+        ctx.registerMarshaller(new RuleMarshaller());
+        ctx.registerMarshaller(new ImmutablePairMarshaller());
+        ctx.registerProtoFiles(FileDescriptorSource.fromResources(CUSTOM_LIST_PROTOBUF_DEFINITION_RESOURCE));
+        ctx.registerMarshaller(new CustomListMarshaller());
+
+        final RemoteCache<String, String> metadataCache = cacheManagerForIndexableCaches.getCache(ProtobufMetadataManagerConstants.PROTOBUF_METADATA_CACHE_NAME);
+        metadataCache.put(RULE_PROTOBUF_DEFINITION_RESOURCE, readResource(RULE_PROTOBUF_DEFINITION_RESOURCE));
+        metadataCache.put(CUSTOM_LIST_PROTOBUF_DEFINITION_RESOURCE, readResource(CUSTOM_LIST_PROTOBUF_DEFINITION_RESOURCE));
+        final String errors = metadataCache.get(ProtobufMetadataManagerConstants.ERRORS_KEY_SUFFIX);
+        if (errors != null) {
+            throw new IllegalStateException("Protobuffer files, either Rule or CustomLists contained errors:\n" + errors);
+        }
+
+        log.log(Level.INFO, "Managers started.");
     }
 
     @Produces
     @ApplicationScoped
-    @SinkitCache(SinkitCacheName.BLACKLIST_CACHE)
-    public Cache<String, BlacklistedRecord> getBlacklistCache() {
-        if (manager == null) {
+    @SinkitCache(SinkitCacheName.infinispan_blacklist)
+    public RemoteCache<String, BlacklistedRecord> getBlacklistCache() {
+        if (cacheManager == null) {
             throw new IllegalArgumentException("Manager must not be null.");
         }
         log.log(Level.INFO, "getBlacklistCache called.");
-        return manager.getCache(SinkitCacheName.BLACKLIST_CACHE.toString());
+        return cacheManager.getCache(SinkitCacheName.infinispan_blacklist.toString());
     }
 
     @Produces
     @ApplicationScoped
-    @SinkitCache(SinkitCacheName.WHITELIST_CACHE)
-    public Cache<String, WhitelistedRecord> getWhitelistCache() {
-        if (manager == null) {
+    @SinkitCache(SinkitCacheName.infinispan_whitelist)
+    public RemoteCache<String, WhitelistedRecord> getWhitelistCache() {
+        if (cacheManager == null) {
             throw new IllegalArgumentException("Manager must not be null.");
         }
         log.log(Level.INFO, "getWhitelistCache called.");
-        if (manager.cacheExists(SinkitCacheName.WHITELIST_CACHE.toString())) {
-            return manager.getCache(SinkitCacheName.WHITELIST_CACHE.toString());
-        }
-        throw new IllegalStateException("getWhitelistCache called on a node that ain't supposed to be running it. DNS node?");
+        return cacheManager.getCache(SinkitCacheName.infinispan_whitelist.toString());
     }
 
     @Produces
     @ApplicationScoped
-    @SinkitCache(SinkitCacheName.CUSTOM_LISTS_CACHE)
-    public Cache<String, CustomList> getCustomListCache() {
-        if (manager == null) {
+    @SinkitCache(SinkitCacheName.infinispan_custom_lists)
+    public RemoteCache<String, CustomList> getCustomListCache() {
+        if (cacheManagerForIndexableCaches == null) {
             throw new IllegalArgumentException("Manager must not be null.");
         }
         log.log(Level.INFO, "getCustomListCache called.");
-        return manager.getCache(SinkitCacheName.CUSTOM_LISTS_CACHE.toString());
+        return cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_custom_lists.toString());
     }
 
     @Produces
     @ApplicationScoped
-    @SinkitCache(SinkitCacheName.RULES_CACHE)
-    public Cache<String, Rule> getRuleCache() {
-        if (manager == null) {
+    @SinkitCache(SinkitCacheName.infinispan_rules)
+    public RemoteCache<String, Rule> getRuleCache() {
+        if (cacheManagerForIndexableCaches == null) {
             throw new IllegalArgumentException("Manager must not be null.");
         }
         log.log(Level.INFO, "getRuleCache called.");
-        return manager.getCache(SinkitCacheName.RULES_CACHE.toString());
+        return cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
     }
 
     @Produces
     @ApplicationScoped
-    @SinkitCache(SinkitCacheName.GSB_CACHE)
-    public Cache<String, GSBRecord> getGsbCache() {
-        if (manager == null) {
+    @SinkitCache(SinkitCacheName.infinispan_gsb)
+    public RemoteCache<String, GSBRecord> getGsbCache() {
+        if (cacheManager == null) {
             throw new IllegalArgumentException("Manager must not be null.");
         }
         log.log(Level.INFO, "getGsbCache called.");
-        return manager.getCache(SinkitCacheName.GSB_CACHE.toString());
+        return cacheManager.getCache(SinkitCacheName.infinispan_gsb.toString());
     }
 
     @Produces
     @ApplicationScoped
-    @SinkitCache(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE)
-    public Cache<String, List<CustomList>> getCustomListLocalCache() {
-        if (manager == null) {
+    @SinkitCache(SinkitCacheName.custom_lists_local_cache)
+    public BasicCache<String, List<CustomList>> getCustomListLocalCache() {
+        if (localCacheManager == null) {
             throw new IllegalArgumentException("Manager must not be null.");
         }
         log.log(Level.INFO, "getCustomListLocalCache called.");
-        return manager.getCache(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE.toString());
+        return localCacheManager.getCache(SinkitCacheName.custom_lists_local_cache.toString());
     }
 
     @Produces
     @ApplicationScoped
-    @SinkitCache(SinkitCacheName.RULES_LOCAL_CACHE)
-    public Cache<String, List<Rule>> getRuleLocalCache() {
-        if (manager == null) {
+    @SinkitCache(SinkitCacheName.rules_local_cache)
+    public BasicCache<String, List<Rule>> getRuleLocalCache() {
+        if (localCacheManager == null) {
             throw new IllegalArgumentException("Manager must not be null.");
         }
         log.log(Level.INFO, "getRuleLocalCache called.");
-        return manager.getCache(SinkitCacheName.RULES_LOCAL_CACHE.toString());
+        return localCacheManager.getCache(SinkitCacheName.rules_local_cache.toString());
     }
 
     public void destroy(@Observes @Destroyed(ApplicationScoped.class) Object init) {
-        if (manager != null) {
-            manager.getCache(SinkitCacheName.BLACKLIST_CACHE.toString()).stop();
-            manager.getCache(SinkitCacheName.RULES_CACHE.toString()).stop();
-            manager.getCache(SinkitCacheName.CUSTOM_LISTS_CACHE.toString()).stop();
-            manager.getCache(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE.toString()).stop();
-            manager.getCache(SinkitCacheName.RULES_LOCAL_CACHE.toString()).stop();
-            manager.getCache(SinkitCacheName.GSB_CACHE.toString()).stop();
-            manager.undefineConfiguration(SinkitCacheName.BLACKLIST_CACHE.toString());
-            manager.undefineConfiguration(SinkitCacheName.RULES_CACHE.toString());
-            manager.undefineConfiguration(SinkitCacheName.CUSTOM_LISTS_CACHE.toString());
-            manager.undefineConfiguration(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE.toString());
-            manager.undefineConfiguration(SinkitCacheName.RULES_LOCAL_CACHE.toString());
-            manager.undefineConfiguration(SinkitCacheName.GSB_CACHE.toString());
+        if (localCacheManager != null) {
+            localCacheManager.stop();
+        }
+        if (cacheManager != null) {
+            cacheManager.stop();
+        }
+        if (cacheManagerForIndexableCaches != null) {
+            cacheManagerForIndexableCaches.stop();
+        }
+    }
 
-            if (manager.cacheExists(SinkitCacheName.WHITELIST_CACHE.toString())) {
-                manager.getCache(SinkitCacheName.WHITELIST_CACHE.toString()).stop();
-                manager.undefineConfiguration(SinkitCacheName.WHITELIST_CACHE.toString());
+    private String readResource(String resourcePath) throws IOException {
+        try (final InputStream is = getClass().getResourceAsStream(resourcePath)) {
+            final Reader r = new InputStreamReader(is, "UTF-8");
+            final StringWriter w = new StringWriter();
+            char[] buf = new char[1024];
+            int len;
+            while ((len = r.read(buf)) != -1) {
+                w.write(buf, 0, len);
             }
-
-            manager.stop();
-            manager = null;
+            return w.toString();
         }
     }
 }

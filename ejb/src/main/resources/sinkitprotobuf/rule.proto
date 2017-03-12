@@ -1,0 +1,25 @@
+/* author Michal Karm Babacek */
+package sinkitprotobuf;
+// Semantic in comments, what could possibly go wrong?
+/* @Indexed */
+message Rule {
+    /* @IndexedField */
+    optional string startAddress = 1;
+    /* @IndexedField */
+    optional string endAddress = 2;
+    /* @IndexedField */
+    optional string cidrAddress = 3;
+    /* @IndexedField */
+    optional int32 customerId = 4;
+    /* @Indexed */
+    message Map {
+        /* @IndexedField */
+        optional string feedUid = 1;
+        /* @IndexedField */
+        optional string mode = 2;
+    }
+    /* @IndexedField */
+    repeated Map sources = 5;
+}
+//https://issues.jboss.org/browse/IPROTO-3
+//optional map<string, string> sources = 5;

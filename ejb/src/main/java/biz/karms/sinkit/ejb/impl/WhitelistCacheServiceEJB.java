@@ -9,6 +9,7 @@ import biz.karms.sinkit.ioc.IoCRecord;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.infinispan.Cache;
+import org.infinispan.client.hotrod.RemoteCache;
 
 import javax.ejb.Stateless;
 import javax.inject.Inject;
@@ -27,8 +28,8 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
     private Logger log;
 
     @Inject
-    @SinkitCache(SinkitCacheName.WHITELIST_CACHE)
-    private Cache<String, WhitelistedRecord> whitelistCache;
+    @SinkitCache(SinkitCacheName.infinispan_whitelist)
+    private RemoteCache<String, WhitelistedRecord> whitelistCache;
 
     @Override
     public WhitelistedRecord put(final IoCRecord iocRecord, final boolean completed) {

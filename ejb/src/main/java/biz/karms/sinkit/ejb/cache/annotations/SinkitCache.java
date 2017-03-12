@@ -1,6 +1,5 @@
 package biz.karms.sinkit.ejb.cache.annotations;
 
-
 import javax.inject.Qualifier;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;

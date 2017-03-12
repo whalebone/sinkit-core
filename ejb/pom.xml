@@ -33,27 +33,6 @@
 
     <dependencies>
 
-        <dependency>
-            <groupId>org.jboss.msc</groupId>
-            <artifactId>jboss-msc</artifactId>
-            <version>${version.jboss.msc}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.wildfly</groupId>
-            <artifactId>wildfly-clustering-common</artifactId>
-            <version>${version.wildfly}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.wildfly</groupId>
-            <artifactId>wildfly-clustering-singleton-api</artifactId>
-            <version>${version.wildfly}</version>
-            <scope>provided</scope>
-        </dependency>
-
         <!-- Import the CDI API, we use provided scope as the API is included in JBoss WildFly -->
         <dependency>
             <groupId>javax.enterprise</groupId>
@@ -89,56 +68,13 @@
         </dependency>
 
         <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-search</artifactId>
-            <version>${hibernate.search.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-search-orm</artifactId>
-            <version>${hibernate.search.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.mchange</groupId>
-            <artifactId>c3p0</artifactId>
-            <version>${com.mchange.c3p0.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <version>${postgresql.driver.version}</version>
-        </dependency>
-
-        <dependency>
             <groupId>org.infinispan</groupId>
-            <artifactId>infinispan-cachestore-jdbc</artifactId>
-            <version>${infinispan.cachestore.jdbc.version}</version>
+            <artifactId>infinispan-remote</artifactId>
         </dependency>
-
-<!--
-        <dependency>
-            <groupId>org.infinispan</groupId>
-            <artifactId>infinispan-cachestore-mongodb</artifactId>
-            <version>${infinispan.cachestore.mongo.version}</version>
-        </dependency>
--->
 
         <dependency>
             <groupId>org.infinispan</groupId>
             <artifactId>infinispan-core</artifactId>
-            <version>${infinispan.core.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.infinispan</groupId>
-            <artifactId>infinispan-query</artifactId>
-            <version>${infinispan.query.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -223,11 +159,6 @@
                     <ejbVersion>${version.ejb}</ejbVersion>
                     <archive>
                         <addMavenDescriptor>false</addMavenDescriptor>
-                        <manifestEntries>
-                            <Dependencies>
-                                org.infinispan,org.infinispan.commons,org.infinispan.query,org.jboss.msc,org.wildfly.clustering.singleton,org.jboss.as.server,org.jgroups
-                            </Dependencies>
-                        </manifestEntries>
                     </archive>
                 </configuration>
             </plugin>

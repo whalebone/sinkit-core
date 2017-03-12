@@ -37,9 +37,9 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.validator.routines.DomainValidator;
-import org.infinispan.Cache;
-import org.infinispan.context.Flag;
-import org.infinispan.query.Search;
+import org.infinispan.client.hotrod.RemoteCache;
+import org.infinispan.client.hotrod.Search;
+import org.infinispan.commons.api.BasicCache;
 import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
 
@@ -84,24 +84,24 @@ public class DNSApiEJB implements DNSApi {
     private GSBService gsbService;
 
     @Inject
-    @SinkitCache(SinkitCacheName.BLACKLIST_CACHE)
-    private Cache<String, BlacklistedRecord> blacklistCache;
+    @SinkitCache(SinkitCacheName.infinispan_blacklist)
+    private RemoteCache<String, BlacklistedRecord> blacklistCache;
 
     @Inject
-    @SinkitCache(SinkitCacheName.RULES_CACHE)
-    private Cache<String, Rule> ruleCache;
+    @SinkitCache(SinkitCacheName.infinispan_rules)
+    private RemoteCache<String, Rule> ruleCache;
 
     @Inject
-    @SinkitCache(SinkitCacheName.CUSTOM_LISTS_CACHE)
-    private Cache<String, CustomList> customListsCache;
+    @SinkitCache(SinkitCacheName.infinispan_custom_lists)
+    private RemoteCache<String, CustomList> customListsCache;
 
     @Inject
-    @SinkitCache(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE)
-    private Cache<String, List<CustomList>> customListsLocalCache;
+    @SinkitCache(SinkitCacheName.custom_lists_local_cache)
+    private BasicCache<String, List<CustomList>> customListsLocalCache;
 
     @Inject
-    @SinkitCache(SinkitCacheName.RULES_LOCAL_CACHE)
-    private Cache<String, List<Rule>> ruleLocalCache;
+    @SinkitCache(SinkitCacheName.rules_local_cache)
+    private BasicCache<String, List<Rule>> ruleLocalCache;
 
     //private static final List<String> FEEDTYPES = Arrays.asList("c&c", "malware", "ransomware", "malware configuration", "phishing", "blacklist", "unwanted software");
     private static final String IPV6SINKHOLE = System.getenv("SINKIT_SINKHOLE_IPV6");
@@ -137,12 +137,12 @@ public class DNSApiEJB implements DNSApi {
                 return cached;
             } else {
                 // Let's try to hit it
-                final Rule rule = ruleCache.getAdvancedCache().withFlags(Flag.SKIP_INDEXING).get(clientIPAddressPaddedBigInt);
+                final Rule rule = ruleCache.get(clientIPAddressPaddedBigInt);
                 if (rule != null) {
                     return Collections.singletonList(rule);
                 }
                 final QueryFactory qf = Search.getQueryFactory(ruleCache);
-                Query query = qf.from(Rule.class)
+                final Query query = qf.from(Rule.class)
                         .having("startAddress").lte(clientIPAddressPaddedBigInt)
                         .and()
                         .having("endAddress").gte(clientIPAddressPaddedBigInt)
@@ -184,7 +184,7 @@ public class DNSApiEJB implements DNSApi {
                 return cached;
             } else {
                 final QueryFactory qf = Search.getQueryFactory(ruleCache);
-                Query query = qf.from(Rule.class)
+                final Query query = qf.from(Rule.class)
                         .having("customerId").eq(customerId)
                         .toBuilder().build();
                 if (query != null) {
@@ -352,7 +352,7 @@ public class DNSApiEJB implements DNSApi {
         // Lookup BlacklistedRecord from IoC cache (gives feeds)
         log.log(Level.FINE, "getSinkHole: getting IoC key " + fqdnOrIp);
         start = System.currentTimeMillis();
-        final BlacklistedRecord blacklistedRecord = blacklistCache.getAdvancedCache().withFlags(Flag.SKIP_CACHE_STORE).get(DigestUtils.md5Hex(fqdnOrIp));
+        final BlacklistedRecord blacklistedRecord = blacklistCache.get(DigestUtils.md5Hex(fqdnOrIp));
         log.log(Level.FINE, "blacklistCache.get took: " + (System.currentTimeMillis() - start) + " ms.");
 
         Set<ThreatType> gsbResults = null;

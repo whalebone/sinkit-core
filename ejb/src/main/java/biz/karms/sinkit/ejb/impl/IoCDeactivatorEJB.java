@@ -5,7 +5,14 @@ import biz.karms.sinkit.ejb.IoCDeactivator;
 import biz.karms.sinkit.exception.ArchiveException;
 
 import javax.annotation.Resource;
-import javax.ejb.*;
+import javax.ejb.AccessTimeout;
+import javax.ejb.EJB;
+import javax.ejb.ScheduleExpression;
+import javax.ejb.Stateless;
+import javax.ejb.Timeout;
+import javax.ejb.Timer;
+import javax.ejb.TimerConfig;
+import javax.ejb.TimerService;
 import javax.inject.Inject;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
