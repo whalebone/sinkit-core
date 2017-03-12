@@ -4,12 +4,11 @@ import biz.karms.sinkit.ejb.DNSApi;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import org.infinispan.util.concurrent.TimeoutException;
 
 import javax.ejb.Asynchronous;
 import javax.ejb.EJB;
 import javax.ejb.EJBException;
-import javax.enterprise.context.RequestScoped;
+import javax.enterprise.context.SessionScoped;
 import javax.inject.Inject;
 import java.io.Serializable;
 import java.util.logging.Level;
@@ -20,7 +19,7 @@ import java.util.logging.Logger;
  *         <p>
  *         TODO: Validation and filtering :-)
  */
-@RequestScoped
+@SessionScoped
 public class DnsService implements Serializable {
 
     private static final long serialVersionUID = 4307429873614798L;
@@ -39,7 +38,7 @@ public class DnsService implements Serializable {
         String returned = "null";
         try {
             returned = gson.toJson(dnsApi.getSinkHole(client, key, fqdn, clientId));
-        } catch (TimeoutException | EJBException e) {
+        } catch (EJBException e) {
             log.log(Level.SEVERE, "getSinkHole went south:", e);
         }
         log.log(Level.FINE, "getSinkHole took: " + (System.currentTimeMillis() - start) + " ms.");

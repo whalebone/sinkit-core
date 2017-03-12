@@ -1,6 +1,6 @@
 package biz.karms.sinkit.rest;
 
-import javax.enterprise.context.RequestScoped;
+import javax.enterprise.context.SessionScoped;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
@@ -10,20 +10,16 @@ import javax.ws.rs.Produces;
 
 /**
  * @author Michal Karm Babacek
- *         <p>
- *         TODO: Validation :-)
- *         TODO: OAuth
  */
-@RequestScoped
+@SessionScoped
 @Path("/blacklist/dns/")
 public class DnsREST {
 
     @Inject
-    DnsService dnsService;
+    private DnsService dnsService;
 
-    public static final String AUTH_HEADER_PARAM = "X-sinkit-token";
-    public static final String CLIENT_ID_HEADER_PARAM = "X-client-id";
-    public static final String AUTH_FAIL = "❤ AUTH ERROR ❤";
+    private static final String AUTH_HEADER_PARAM = "X-sinkit-token";
+    private static final String CLIENT_ID_HEADER_PARAM = "X-client-id";
 
     /**
      * @param token  Access token
@@ -40,11 +36,7 @@ public class DnsREST {
                               @PathParam("client") String client,
                               @PathParam("key") String key,
                               @PathParam("fqdn") String fqdn) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            return dnsService.getSinkHole(client, key, fqdn, clientId);
-        } else {
-            return AUTH_FAIL;
-        }
+        return dnsService.getSinkHole(client, key, fqdn, clientId);
     }
 
     @GET
@@ -55,12 +47,8 @@ public class DnsREST {
                                    @PathParam("client") String client,
                                    @PathParam("key") String key,
                                    @PathParam("fqdn") String fqdn) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            dnsService.getAsyncSinkHole(client, key, fqdn, clientId);
-            // TODO: API FTW
-            return "";
-        } else {
-            return AUTH_FAIL;
-        }
+        dnsService.getAsyncSinkHole(client, key, fqdn, clientId);
+        // TODO: API FTW
+        return "";
     }
 }

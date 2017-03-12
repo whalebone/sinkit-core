@@ -20,7 +20,6 @@ public class IoCSource implements Serializable {
     @SerializedName("reverse_domain_name")
     private String reverseDomainName;
 
-    @NumericField
     private Integer asn;
 
     @SerializedName("asn_name")

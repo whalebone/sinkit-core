@@ -38,7 +38,7 @@ import java.util.logging.Logger;
 @RequestScoped
 public class SinkitService implements Serializable {
 
-    public static final String ERR_MSG = "Error, please, check your input.";
+    private static final String ERR_MSG = "Error, please, check your input.";
     private static final long serialVersionUID = 4301258460502614798L;
 
     @EJB
