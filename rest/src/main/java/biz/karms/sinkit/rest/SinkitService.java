@@ -21,6 +21,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import javax.ejb.EJB;
 import javax.enterprise.context.RequestScoped;
+import javax.enterprise.context.SessionScoped;
 import javax.inject.Inject;
 import java.io.Serializable;
 import java.util.HashMap;
@@ -32,10 +33,8 @@ import java.util.logging.Logger;
 
 /**
  * @author Michal Karm Babacek
- *         <p>
- *         TODO: Validation and filtering :-)
  */
-@RequestScoped
+@SessionScoped
 public class SinkitService implements Serializable {
 
     private static final String ERR_MSG = "Error, please, check your input.";

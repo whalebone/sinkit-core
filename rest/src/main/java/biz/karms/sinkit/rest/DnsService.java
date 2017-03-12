@@ -16,13 +16,11 @@ import java.util.logging.Logger;
 
 /**
  * @author Michal Karm Babacek
- *         <p>
- *         TODO: Validation and filtering :-)
  */
 @SessionScoped
 public class DnsService implements Serializable {
 
-    private static final long serialVersionUID = 4307429873614798L;
+    private static final long serialVersionUID = -6526195454588081093L;
 
     @EJB(beanInterface = DNSApi.class)
     private DNSApi dnsApi;

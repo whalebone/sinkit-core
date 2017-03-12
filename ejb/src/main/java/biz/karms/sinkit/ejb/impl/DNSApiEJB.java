@@ -103,14 +103,11 @@ public class DNSApiEJB implements DNSApi {
     @SinkitCache(SinkitCacheName.rules_local_cache)
     private BasicCache<String, List<Rule>> ruleLocalCache;
 
-    //private static final List<String> FEEDTYPES = Arrays.asList("c&c", "malware", "ransomware", "malware configuration", "phishing", "blacklist", "unwanted software");
     private static final String IPV6SINKHOLE = System.getenv("SINKIT_SINKHOLE_IPV6");
     private static final String IPV4SINKHOLE = System.getenv("SINKIT_SINKHOLE_IP");
     private static final String GSB_FEED_NAME = (System.getenv().containsKey("SINKIT_GSB_FEED_NAME")) ? System.getenv("SINKIT_GSB_FEED_NAME") : "google-safebrowsing-api";
     private static final boolean USE_LOGSTASH = StringUtils.isNotBlank(System.getenv(LogstashClient.LOGSTASH_URL_ENV));
-    //private static final String GSB_IOC_DOES_NOT_EXIST = "GSB-IOC-FAKE-ID";
     private static final int ARCHIVE_FAILED_TRIALS = 10;
-    //private static final String TOKEN = System.getenv("SINKIT_ACCESS_TOKEN");
     private static final boolean DNS_REQUEST_LOGGING_ENABLED = Boolean.parseBoolean((System.getenv().containsKey("SINKIT_DNS_REQUEST_LOGGING_ENABLED")) ? System.getenv("SINKIT_DNS_REQUEST_LOGGING_ENABLED") : "true");
 
     /**

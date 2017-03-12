@@ -75,7 +75,8 @@
         <dependency>
             <groupId>org.infinispan</groupId>
             <artifactId>infinispan-core</artifactId>
-            <scope>provided</scope>
+            <!-- We don't want to use Wildfly's older, private modules.
+            <scope>provided</scope> -->
         </dependency>
 
         <dependency>

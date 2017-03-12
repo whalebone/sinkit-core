@@ -8,13 +8,13 @@ import javax.inject.Inject;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Response;
+import java.io.Serializable;
 import java.util.logging.Logger;
 
 /**
@@ -22,7 +22,9 @@ import java.util.logging.Logger;
  */
 @SessionScoped
 @Path("/")
-public class SinkitREST {
+public class SinkitREST implements Serializable {
+
+    private static final long serialVersionUID = -811275040019884876L;
 
     @Inject
     SinkitService sinkitService;
@@ -30,41 +32,38 @@ public class SinkitREST {
     @Inject
     private Logger log;
 
-    public static final String AUTH_HEADER_PARAM = "X-sinkit-token";
-    public static final String AUTH_FAIL = "❤ AUTH ERROR ❤";
-
     @GET
     @Path("/hello/{name}")
     @Produces({"application/json;charset=UTF-8"})
-    public String getHelloMessage(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("name") String name) {
+    public String getHelloMessage(@PathParam("name") String name) {
         return sinkitService.createHelloMessage(name);
     }
 
     @GET
     @Path("/stats")
     @Produces({"application/json;charset=UTF-8"})
-    public String getStats(@HeaderParam(AUTH_HEADER_PARAM) String token) {
+    public String getStats() {
         return sinkitService.getStats();
     }
 
     @GET
     @Path("/blacklist/record/{key}")
     @Produces({"application/json;charset=UTF-8"})
-    public String getBlacklistedRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("key") String key) {
+    public String getBlacklistedRecord(@PathParam("key") String key) {
         return sinkitService.getBlacklistedRecord(key);
     }
 
     @GET
     @Path("/blacklist/records")
     @Produces({"application/json;charset=UTF-8"})
-    public String getBlacklistedRecordKeys(@HeaderParam(AUTH_HEADER_PARAM) String token) {
+    public String getBlacklistedRecordKeys() {
         return sinkitService.getBlacklistedRecordKeys();
     }
 
     @DELETE
     @Path("/blacklist/record/{key}")
     @Produces({"application/json;charset=UTF-8"})
-    public String deleteBlacklistedRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("key") String key) {
+    public String deleteBlacklistedRecord(@PathParam("key") String key) {
         return sinkitService.deleteBlacklistedRecord(key);
     }
 
@@ -72,7 +71,7 @@ public class SinkitREST {
     @Path("/blacklist/record/")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public String putBlacklistedRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @FormParam("record") String record) {
+    public String putBlacklistedRecord(@FormParam("record") String record) {
         return sinkitService.putBlacklistedRecord(record);
     }
 
@@ -80,7 +79,7 @@ public class SinkitREST {
     @Path("/blacklist/ioc/")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public Response putIoCRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, String ioc) {
+    public Response putIoCRecord(String ioc) {
         try {
             String response = sinkitService.processIoCRecord(ioc);
             return Response.status(Response.Status.OK).entity(response).build();
@@ -98,7 +97,7 @@ public class SinkitREST {
     @Path("/whitelist/ioc/")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public Response putWhitelistIoCRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, String ioc) {
+    public Response putWhitelistIoCRecord(String ioc) {
         try {
             String response = sinkitService.processWhitelistIoCRecord(ioc);
             return Response.status(Response.Status.OK).entity(response).build();
@@ -116,7 +115,7 @@ public class SinkitREST {
     @Path("/whitelist/isempty/")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public String isWhitelistEmpty(@HeaderParam(AUTH_HEADER_PARAM) String token) {
+    public String isWhitelistEmpty() {
         return sinkitService.isWhitelistEmpty();
     }
 
@@ -124,7 +123,7 @@ public class SinkitREST {
     @Path("/whitelist/record/{key}")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public String getWhitelistedRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("key") String key) {
+    public String getWhitelistedRecord(@PathParam("key") String key) {
         return sinkitService.getWhitelistedRecord(key);
     }
 
@@ -132,14 +131,14 @@ public class SinkitREST {
     @Path("/whitelist/record/{key}")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public String removeWhitelistedRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("key") String key) {
+    public String removeWhitelistedRecord(@PathParam("key") String key) {
         return sinkitService.getWhitelistedRecord(key);
     }
 
     @POST
     @Path("/rebuildCache/")
     @Produces({"application/json;charset=UTF-8"})
-    public Response rebuildCache(@HeaderParam(AUTH_HEADER_PARAM) String token) {
+    public Response rebuildCache() {
         String response = sinkitService.runCacheRebuilding();
         return Response.status(Response.Status.OK).entity(response).build();
     }
@@ -147,14 +146,14 @@ public class SinkitREST {
     @GET
     @Path("/rules/{ip}")
     @Produces({"application/json;charset=UTF-8"})
-    public String getRules(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("ip") String ip) {
+    public String getRules(@PathParam("ip") String ip) {
         return sinkitService.getRules(ip);
     }
 
     @GET
     @Path("/rules/all")
     @Produces({"application/json;charset=UTF-8"})
-    public String getAllRules(@HeaderParam(AUTH_HEADER_PARAM) String token) {
+    public String getAllRules() {
         return sinkitService.getAllRules();
     }
 
@@ -165,7 +164,7 @@ public class SinkitREST {
     @Path("/rules/customer/{customerId}")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public String putDNSClientSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("customerId") Integer customerId, String settings) {
+    public String putDNSClientSettings(@PathParam("customerId") Integer customerId, String settings) {
         return sinkitService.putDNSClientSettings(customerId, settings);
     }
 
@@ -173,7 +172,7 @@ public class SinkitREST {
     @Path("/rules/customer/{customerId}")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public String deleteDNSClientSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("customerId") Integer customerId) {
+    public String deleteDNSClientSettings(@PathParam("customerId") Integer customerId) {
         return sinkitService.deleteRulesByCustomer(customerId);
     }
 
@@ -181,7 +180,7 @@ public class SinkitREST {
     @Path("/rules/all")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public String postAllDNSClientSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, String rules) {
+    public String postAllDNSClientSettings(String rules) {
         return sinkitService.postAllDNSClientSettings(rules);
     }
 
@@ -190,7 +189,7 @@ public class SinkitREST {
     @Path("/lists/{customerId}")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public String putCustomLists(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("customerId") Integer customerId, String lists) {
+    public String putCustomLists(@PathParam("customerId") Integer customerId, String lists) {
         return sinkitService.putCustomLists(customerId, lists);
     }
 
@@ -198,7 +197,7 @@ public class SinkitREST {
     @Path("/feed/{feedUid}")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public String putFeedSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("feedUid") String feedUid, String settings) {
+    public String putFeedSettings(@PathParam("feedUid") String feedUid, String settings) {
         return sinkitService.putFeedSettings(feedUid, settings);
     }
 
@@ -206,13 +205,13 @@ public class SinkitREST {
     @Path("/feed/create")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public String postCreateFeedSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, String feed) {
+    public String postCreateFeedSettings(String feed) {
         return sinkitService.postCreateFeedSettings(feed);
     }
 
     @POST
     @Path("/log/record")
-    public String logRecrod(@HeaderParam(AUTH_HEADER_PARAM) String token, String logRecord) {
+    public String logRecrod(String logRecord) {
         try {
             sinkitService.addEventLogRecord(logRecord);
             return "OK";
@@ -224,7 +223,7 @@ public class SinkitREST {
 
     @POST
     @Path("/total/enrich")
-    public String enrich(@HeaderParam(AUTH_HEADER_PARAM) String token) {
+    public String enrich() {
         try {
             sinkitService.enrich();
             return "OK";
@@ -238,7 +237,7 @@ public class SinkitREST {
     @Path("/gsb/{hashPrefix}")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public Response putGSBHashRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("hashPrefix") String hashPrefix) {
+    public Response putGSBHashRecord(@PathParam("hashPrefix") String hashPrefix) {
         try {
             boolean response = sinkitService.putGSBHashPrefix(hashPrefix);
             Response.Status status;
@@ -259,7 +258,7 @@ public class SinkitREST {
     @Path("/gsb/{hashPrefix}")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public Response removeGSBHashRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("hashPrefix") String hashPrefix) {
+    public Response removeGSBHashRecord(@PathParam("hashPrefix") String hashPrefix) {
         try {
             boolean response = sinkitService.removeGSBHashPrefix(hashPrefix);
             Response.Status status;
@@ -279,21 +278,21 @@ public class SinkitREST {
     @GET
     @Path("/gsb/stats")
     @Produces({"application/json;charset=UTF-8"})
-    public String getGSBStats(@HeaderParam(AUTH_HEADER_PARAM) String token) {
+    public String getGSBStats() {
         return sinkitService.getGSBStats();
     }
 
     @GET
     @Path("/gsb/lookup/{url}")
     @Produces({"application/json;charset=UTF-8"})
-    public String gsbLookup(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("url") String url) {
+    public String gsbLookup(@PathParam("url") String url) {
         return sinkitService.gsbLookup(url);
     }
 
     @DELETE
     @Path("/gsb")
     @Produces({"application/json;charset=UTF-8"})
-    public String gsbClearCache(@HeaderParam(AUTH_HEADER_PARAM) String token) {
+    public String gsbClearCache() {
         return sinkitService.clearGSBCache();
     }
 }
