@@ -8,6 +8,7 @@ import com.google.gson.GsonBuilder;
 import javax.ejb.Asynchronous;
 import javax.ejb.EJB;
 import javax.ejb.EJBException;
+import javax.enterprise.context.RequestScoped;
 import javax.enterprise.context.SessionScoped;
 import javax.inject.Inject;
 import java.io.Serializable;
@@ -17,7 +18,7 @@ import java.util.logging.Logger;
 /**
  * @author Michal Karm Babacek
  */
-@SessionScoped
+@RequestScoped
 public class DnsService implements Serializable {
 
     private static final long serialVersionUID = -6526195454588081093L;

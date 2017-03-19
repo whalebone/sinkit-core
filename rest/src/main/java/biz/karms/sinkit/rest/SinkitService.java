@@ -34,7 +34,7 @@ import java.util.logging.Logger;
 /**
  * @author Michal Karm Babacek
  */
-@SessionScoped
+@RequestScoped
 public class SinkitService implements Serializable {
 
     private static final String ERR_MSG = "Error, please, check your input.";

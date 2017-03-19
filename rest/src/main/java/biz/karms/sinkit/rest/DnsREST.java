@@ -1,5 +1,6 @@
 package biz.karms.sinkit.rest;
 
+import javax.enterprise.context.RequestScoped;
 import javax.enterprise.context.SessionScoped;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
@@ -12,7 +13,7 @@ import java.io.Serializable;
 /**
  * @author Michal Karm Babacek
  */
-@SessionScoped
+@RequestScoped
 @Path("/blacklist/dns/")
 public class DnsREST implements Serializable {
 

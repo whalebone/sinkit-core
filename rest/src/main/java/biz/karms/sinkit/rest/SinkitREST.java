@@ -3,6 +3,7 @@ package biz.karms.sinkit.rest;
 import biz.karms.sinkit.exception.IoCValidationException;
 import com.google.gson.JsonSyntaxException;
 
+import javax.enterprise.context.RequestScoped;
 import javax.enterprise.context.SessionScoped;
 import javax.inject.Inject;
 import javax.ws.rs.DELETE;
@@ -20,7 +21,7 @@ import java.util.logging.Logger;
 /**
  * @author Michal Karm Babacek
  */
-@SessionScoped
+@RequestScoped
 @Path("/")
 public class SinkitREST implements Serializable {
 
