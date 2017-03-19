@@ -320,6 +320,7 @@ public class WebApiEJB implements WebApi {
             final List<CustomList> result = query.list();
             result.forEach(r -> {
                 final String key = r.getClientCidrAddress() + ((r.getFqdn() != null) ? r.getFqdn() : r.getListCidrAddress());
+                log.log(Level.FINE, "putCustomLists: removing key "+key);
                 customListsCache.remove(key);
             });
         } else {
