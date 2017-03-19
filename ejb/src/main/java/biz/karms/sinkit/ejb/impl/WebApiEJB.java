@@ -89,7 +89,7 @@ public class WebApiEJB implements WebApi {
         }
         try {
             log.log(Level.FINE, "Putting key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
-            blacklistCache.putAsync(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
+            blacklistCache.put(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
             // TODO: Is this O.K.? Maybe we should just return the same instance.
             return blacklistCache.get(DigestUtils.md5Hex(blacklistedRecord.getBlackListedDomainOrIP()));
         } catch (Exception e) {
@@ -184,7 +184,7 @@ public class WebApiEJB implements WebApi {
                     .toBuilder().build();
             Iterator iterator = query.list().iterator();
             while (iterator.hasNext()) {
-                ruleCache.removeAsync(((Rule) iterator.next()).getStartAddress());
+                ruleCache.remove(((Rule) iterator.next()).getStartAddress());
                 counter++;
             }
             return counter + " RULES DELETED FOR CUSTOMER ID: " + customerId;
@@ -236,18 +236,7 @@ public class WebApiEJB implements WebApi {
 
             if (query != null && query.getResultSize() > 0) {
                 // Remove all found rules
-                List<NotifyingFuture> futures = new ArrayList<>();
-                query.list().forEach(rule -> futures.add(ruleCache.removeAsync(((Rule) rule).getStartAddress())));
-                futures.forEach(future -> {
-                    try {
-                        // TODO: Tweak.
-                        future.get(30, TimeUnit.SECONDS);
-                    } catch (InterruptedException | ExecutionException e) {
-                        log.log(Level.SEVERE, "putDNSClientSettings: Removing obsolete rules error.", e);
-                    } catch (TimeoutException e) {
-                        log.log(Level.SEVERE, "putDNSClientSettings: Removing obsolete rules error. Timeout.", e);
-                    }
-                });
+                query.list().forEach(rule -> ruleCache.remove(((Rule) rule).getStartAddress()));
             }
 
             for (String cidr : customerDNSSetting.keySet()) {
@@ -259,7 +248,7 @@ public class WebApiEJB implements WebApi {
                 rule.setStartAddress(startEndAddresses.getLeft());
                 rule.setEndAddress(startEndAddresses.getRight());
                 log.log(Level.FINE, "Putting key [" + rule.getStartAddress() + "]");
-                ruleCache.putAsync(rule.getStartAddress(), rule);
+                ruleCache.put(rule.getStartAddress(), rule);
             }
 
         } catch (Exception e) {
@@ -288,7 +277,7 @@ public class WebApiEJB implements WebApi {
                 rule.setStartAddress(startEndAddresses.getLeft());
                 rule.setEndAddress(startEndAddresses.getRight());
                 log.log(Level.FINE, "Putting key [" + rule.getStartAddress() + "]");
-                ruleCache.putAsync(rule.getStartAddress(), rule);
+                ruleCache.put(rule.getStartAddress(), rule);
             } catch (Exception e) {
                 log.log(Level.SEVERE, "postAllDNSClientSettings", e);
                 // TODO: Proper Error codes.
@@ -331,7 +320,7 @@ public class WebApiEJB implements WebApi {
             final List<CustomList> result = query.list();
             result.forEach(r -> {
                 final String key = r.getClientCidrAddress() + ((r.getFqdn() != null) ? r.getFqdn() : r.getListCidrAddress());
-                customListsCache.removeAsync(key);
+                customListsCache.remove(key);
             });
         } else {
             final DomainValidator domainValidator = DomainValidator.getInstance();
@@ -411,7 +400,7 @@ public class WebApiEJB implements WebApi {
                     try {
                         log.log(Level.FINE, "pcustomListsCacheutCustomLists: Putting key [" + key + "]. customListsElementCounter: " + customListsElementCounter);
                         if (customListsCache.replace(key, customList) == null) {
-                            customListsCache.putAsync(key, customList);
+                            customListsCache.put(key, customList);
                         }
                         customListsElementCounter++;
                     } catch (Exception e) {

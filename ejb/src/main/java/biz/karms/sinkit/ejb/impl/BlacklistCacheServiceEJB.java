@@ -67,7 +67,7 @@ public class BlacklistCacheServiceEJB implements BlacklistCacheService {
                 blacklistedRecord.setSources(feedToTypeUpdate);
                 blacklistedRecord.setListed(Calendar.getInstance());
                 log.log(Level.FINE, "Replacing key [" + ioCRecord.getSource().getId().getValue() + "], hashed: " + key);
-                blacklistCache.replaceAsync(key, blacklistedRecord);
+                blacklistCache.replace(key, blacklistedRecord);
             } else {
                 HashMap<String, ImmutablePair<String, String>> feedToType = new HashMap<>();
                 if (ioCRecord.getFeed().getName() != null && ioCRecord.getClassification().getType() != null) {
@@ -77,7 +77,7 @@ public class BlacklistCacheServiceEJB implements BlacklistCacheService {
                 }
                 BlacklistedRecord blacklistedRecord = new BlacklistedRecord(key, Calendar.getInstance(), feedToType);
                 log.log(Level.FINE, "Putting new key [" + ioCRecord.getSource().getId().getValue() + "], hashed: " + key);
-                blacklistCache.putAsync(key, blacklistedRecord);
+                blacklistCache.put(key, blacklistedRecord);
             }
         } catch (Exception e) {
             log.log(Level.SEVERE, "addToCache", e);
@@ -111,11 +111,11 @@ public class BlacklistCacheServiceEJB implements BlacklistCacheService {
                 }
                 if (MapUtils.isEmpty(feedToTypeUpdate)) {
                     // As soon as there are no feeds, we remove the IoC from the cache
-                    blacklistCache.removeAsync(key);
+                    blacklistCache.remove(key);
                 } else {
                     blacklistedRecord.setSources(feedToTypeUpdate);
                     blacklistedRecord.setListed(Calendar.getInstance());
-                    blacklistCache.replaceAsync(key, blacklistedRecord);
+                    blacklistCache.replace(key, blacklistedRecord);
                 }
             }
         } catch (Exception e) {
@@ -135,7 +135,7 @@ public class BlacklistCacheServiceEJB implements BlacklistCacheService {
         final String key = DigestUtils.md5Hex(iocRecord.getSource().getId().getValue());
         try {
             if (blacklistCache.containsKey(key)) {
-                blacklistCache.removeAsync(key);
+                blacklistCache.remove(key);
             }
         } catch (Exception e) {
             log.log(Level.SEVERE, "removeFromCache", e);
@@ -155,7 +155,7 @@ public class BlacklistCacheServiceEJB implements BlacklistCacheService {
         try {
             // TODO: Clear is faster, but apparently quite ugly. Investigate clearAsync().
             // TODO: Could this handle millions of records in a dozen node cluster? :)
-            blacklistCache.keySet().forEach(key -> blacklistCache.removeAsync(key));
+            blacklistCache.keySet().forEach(key -> blacklistCache.remove(key));
         } catch (Exception e) {
             log.log(Level.SEVERE, "dropTheWholeCache", e);
             return false;

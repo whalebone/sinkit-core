@@ -101,7 +101,7 @@ public class GSBServiceEJB implements GSBService {
             logger.log(Level.FINE, "lookup: Full hashes for prefix " + hashStringPrefix + " expired -> updating.");
             FullHashLookupResponse resposne = gsbClient.getFullHashes(hashPrefix);
             gsbRecord = GSBCachePOJOFactory.createFullHashes(resposne);
-            gsbCache.putAsync(hashStringPrefix, gsbRecord);
+            gsbCache.put(hashStringPrefix, gsbRecord);
             fullHashes = gsbRecord.getFullHashes();
         }
 
@@ -136,7 +136,7 @@ public class GSBServiceEJB implements GSBService {
             HashMap<String, HashSet<String>> fullHashes = new HashMap<>();
 
             final GSBRecord gsbRecord = new GSBRecord(hashPrefix, fullHashesExpireAt, fullHashes);
-            gsbCache.putAsync(hashPrefix, gsbRecord);
+            gsbCache.put(hashPrefix, gsbRecord);
             logger.log(Level.FINEST, "putHashPrefix: Hash prefix " + hashPrefix + " added into cache.");
         } else {
             //Should not have happened often
@@ -152,7 +152,7 @@ public class GSBServiceEJB implements GSBService {
             logger.log(Level.SEVERE, "removeHashPrefix: Got null hash prefix. Can't process this.");
             return false;
         }
-        gsbCache.removeAsync(hashPrefix);
+        gsbCache.remove(hashPrefix);
         return true;
     }
 
@@ -171,7 +171,7 @@ public class GSBServiceEJB implements GSBService {
 //        Calendar fullHashesExpireAt = Calendar.getInstance();
 //        fullHashesExpireAt.add(Calendar.SECOND, validSeconds);
 //        GSBRecord gsbRecord = new GSBRecord(hashPrefix, fullHashesExpireAt, fullHashes);
-//        gsbCache.replaceAsync(hashPrefix, gsbRecord);
+//        gsbCache.replace(hashPrefix, gsbRecord);
 //        return true;
 //    }
 

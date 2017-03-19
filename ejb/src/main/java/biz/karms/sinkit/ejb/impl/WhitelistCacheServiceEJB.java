@@ -42,9 +42,9 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
         log.log(Level.FINE, "Whitelist key: " + key + ", ttl in s: " + iocRecord.getSource().getTTL());
         try {
             if (!whitelistCache.containsKey(key)) {
-                whitelistCache.putAsync(key, white, iocRecord.getSource().getTTL(), TimeUnit.SECONDS);
+                whitelistCache.put(key, white, iocRecord.getSource().getTTL(), TimeUnit.SECONDS);
             } else {
-                whitelistCache.replaceAsync(key, white, iocRecord.getSource().getTTL(), TimeUnit.SECONDS);
+                whitelistCache.replace(key, white, iocRecord.getSource().getTTL(), TimeUnit.SECONDS);
             }
         } catch (Exception e) {
             log.log(Level.SEVERE, "put", e);
@@ -95,7 +95,7 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
         }
         partialWhite.setCompleted(true);
         //TODO: Do we need it to be acurate? That woudl require changes in MyCacheManagerProvider
-        whitelistCache.replaceAsync(key, partialWhite, ttl, TimeUnit.MILLISECONDS);
+        whitelistCache.replace(key, partialWhite, ttl, TimeUnit.MILLISECONDS);
         return whitelistCache.get(key);
     }
 
@@ -107,7 +107,7 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
             log.log(Level.FINE, "remove: entry not found, key: " + id);
             return false;
         }
-        whitelistCache.removeAsync(key);
+        whitelistCache.remove(key);
         return true;
     }
 
