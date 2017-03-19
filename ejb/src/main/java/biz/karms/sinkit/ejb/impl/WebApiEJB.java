@@ -309,6 +309,7 @@ public class WebApiEJB implements WebApi {
             // TODO: Proper Error codes.
             return null;
         }
+        log.log(Level.FINE, "putCustomLists: customerId: "+customerId+", customerCustomLists.length: "+ customerCustomLists.length);
         int customListsElementCounter = 0;
         //TODO: If customerCustomLists is empty - should we clear/delete all customerId's lists? Ask Rattus.
         // Yes, we should, see:
@@ -318,6 +319,7 @@ public class WebApiEJB implements WebApi {
                     .having("customerId").eq(customerId)
                     .toBuilder().build();
             final List<CustomList> result = query.list();
+            log.log(Level.FINE, "putCustomLists: customerId: "+customerId+" yielded "+result.size()+ "results in search.");
             result.forEach(r -> {
                 final String key = r.getClientCidrAddress() + ((r.getFqdn() != null) ? r.getFqdn() : r.getListCidrAddress());
                 log.log(Level.FINE, "putCustomLists: removing key "+key);

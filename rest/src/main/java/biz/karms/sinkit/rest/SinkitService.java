@@ -191,8 +191,10 @@ public class SinkitService implements Serializable {
             log.log(Level.FINE, "Received JSON " + json);
             CustomerCustomListDTO[] customerCustomLists = new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().fromJson(json, CustomerCustomListDTO[].class);
             if (customerCustomLists == null) {
+                log.log(Level.FINE, "Returning error.");
                 return new GsonBuilder().create().toJson(ERR_MSG);
             }
+            log.log(Level.FINE, "Gonna call webapi...");
             return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapi.putCustomLists(customerId, customerCustomLists));
         } catch (Exception e) {
             log.log(Level.SEVERE, "putCustomLists", e);
