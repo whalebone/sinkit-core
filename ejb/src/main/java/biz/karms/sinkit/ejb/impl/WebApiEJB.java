@@ -16,8 +16,10 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.validator.routines.DomainValidator;
+import org.infinispan.Cache;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.Search;
+import org.infinispan.client.hotrod.impl.RemoteCacheImpl;
 import org.infinispan.commons.util.concurrent.NotifyingFuture;
 import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
@@ -60,7 +62,7 @@ public class WebApiEJB implements WebApi {
 
     @Inject
     @SinkitCache(SinkitCacheName.infinispan_custom_lists)
-    private RemoteCache<String, CustomList> customListsCache;
+    private RemoteCacheImpl<String, CustomList> customListsCache;
 
     // Testing/playground purposes
     @Override
