@@ -11,6 +11,7 @@ import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
 import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
 import com.google.common.collect.Lists;
+import org.apache.commons.codec.binary.StringUtils;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -311,9 +312,10 @@ public class WebApiEJB implements WebApi {
         }
         log.log(Level.FINE, "putCustomLists: customerId: "+customerId+", customerCustomLists.length: "+ customerCustomLists.length);
         int customListsElementCounter = 0;
-        //TODO: If customerCustomLists is empty - should we clear/delete all customerId's lists? Ask Rattus.
+        // TODO: If customerCustomLists is empty - should we clear/delete all customerId's lists? Ask Rattus.
         // Yes, we should, see:
-        if (customerCustomLists.length == 0) {
+        // TODO: This is a very dangerous asumption: A single empty list causes not only the particuler CIDR, but ALL customer's custom lists to disappear.
+        if (customerCustomLists.length == 0 || customerCustomLists[0].getLists().isEmpty()) {
             final QueryFactory qf = Search.getQueryFactory(customListsCache);
             final Query query = qf.from(CustomList.class)
                     .having("customerId").eq(customerId)
