@@ -10,5 +10,6 @@ public enum SinkitCacheName {
         infinispan_custom_lists,
         infinispan_gsb,
         rules_local_cache,
-        custom_lists_local_cache
+        custom_lists_local_cache,
+        cache_manager_indexable
 }

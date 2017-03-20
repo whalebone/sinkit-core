@@ -38,6 +38,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.validator.routines.DomainValidator;
 import org.infinispan.client.hotrod.RemoteCache;
+import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.infinispan.client.hotrod.Search;
 import org.infinispan.commons.api.BasicCache;
 import org.infinispan.query.dsl.Query;
@@ -88,20 +89,16 @@ public class DNSApiEJB implements DNSApi {
     private RemoteCache<String, BlacklistedRecord> blacklistCache;
 
     @Inject
-    @SinkitCache(SinkitCacheName.infinispan_rules)
-    private RemoteCache<String, Rule> ruleCache;
-
-    @Inject
-    @SinkitCache(SinkitCacheName.infinispan_custom_lists)
-    private RemoteCache<String, CustomList> customListsCache;
-
-    @Inject
-    @SinkitCache(SinkitCacheName.custom_lists_local_cache)
-    private BasicCache<String, List<CustomList>> customListsLocalCache;
+    @SinkitCache(SinkitCacheName.cache_manager_indexable)
+    private RemoteCacheManager cacheManagerForIndexableCaches;
 
     @Inject
     @SinkitCache(SinkitCacheName.rules_local_cache)
     private BasicCache<String, List<Rule>> ruleLocalCache;
+
+    @Inject
+    @SinkitCache(SinkitCacheName.custom_lists_local_cache)
+    private BasicCache<String, List<CustomList>> customListsLocalCache;
 
     private static final String IPV6SINKHOLE = System.getenv("SINKIT_SINKHOLE_IPV6");
     private static final String IPV4SINKHOLE = System.getenv("SINKIT_SINKHOLE_IP");
@@ -122,7 +119,7 @@ public class DNSApiEJB implements DNSApi {
      * @param clientIPAddressPaddedBigInt
      * @return list of rules
      */
-    private List<Rule> rulesLookup(final String clientIPAddressPaddedBigInt) {
+    private List<Rule> rulesLookup(final String clientIPAddressPaddedBigInt, final RemoteCache<String, Rule> ruleCache) {
         try {
             log.log(Level.FINE, "Getting key BigInteger zero padded representation " + clientIPAddressPaddedBigInt);
             // Let's search subnets
@@ -169,7 +166,7 @@ public class DNSApiEJB implements DNSApi {
      * @param customerId customer ID passed on from Resolver
      * @return list of rules
      */
-    private List<Rule> rulesLookup(final Integer customerId) {
+    private List<Rule> rulesLookup(final Integer customerId, final RemoteCache<String, Rule> ruleCache) {
         try {
             log.log(Level.FINE, "Getting key for customerId " + customerId);
             /* TODO: Could we have a collision between MD5 hash of customer (client) ID and an MD5 hash sum of clientIPAddressPaddedBigInt + clientIPAddressPaddedBigInt ? */
@@ -199,7 +196,7 @@ public class DNSApiEJB implements DNSApi {
     }
 
     private List<CustomList> customListsLookup(final Integer customerId, final boolean isFQDN, final String fqdnOrIp) {
-        final QueryFactory qf = Search.getQueryFactory(customListsCache);
+        final QueryFactory qf = Search.getQueryFactory(cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_custom_lists.toString()));
         Query query;
         if (isFQDN) {
 
@@ -280,6 +277,7 @@ public class DNSApiEJB implements DNSApi {
 
         final List<Rule> rules;
 
+        final RemoteCache<String, Rule> rulesCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
         // If we have customerId from Resolver, we don't need to search based on clientIPAddress.
         if (customerIdFromResolver == null || customerIdFromResolver < 0) {
             // At first, we lookup Rule
@@ -294,10 +292,10 @@ public class DNSApiEJB implements DNSApi {
             // Lookup Rules (gives customerId, feeds and their settings)
             //TODO: Add test that all such found rules have the same customerId
             //TODO: factor .getRules out of webApiEJB
-            rules = rulesLookup(clientIPAddressPaddedBigInt);
+            rules = rulesLookup(clientIPAddressPaddedBigInt, rulesCache);
             log.log(Level.FINE, "rulesLookup took: " + (System.currentTimeMillis() - start) + " ms.");
         } else {
-            rules = rulesLookup(customerIdFromResolver);
+            rules = rulesLookup(customerIdFromResolver, rulesCache);
         }
 
         //If there is no rule, we simply don't sinkhole anything.

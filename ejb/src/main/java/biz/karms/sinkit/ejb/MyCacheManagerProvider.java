@@ -12,6 +12,7 @@ import biz.karms.sinkit.ejb.cache.pojo.marshallers.ImmutablePairMarshaller;
 import biz.karms.sinkit.ejb.cache.pojo.marshallers.RuleMarshaller;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheManager;
+import org.infinispan.client.hotrod.impl.RemoteCacheImpl;
 import org.infinispan.client.hotrod.marshall.ProtoStreamMarshaller;
 import org.infinispan.commons.api.BasicCache;
 import org.infinispan.commons.api.BasicCacheContainer;
@@ -123,6 +124,16 @@ public class MyCacheManagerProvider implements Serializable {
 
     @Produces
     @ApplicationScoped
+    @SinkitCache(SinkitCacheName.cache_manager_indexable)
+    public RemoteCacheManager getCacheManagerForIndexableCaches() {
+        if(cacheManagerForIndexableCaches == null) {
+            throw new IllegalArgumentException("cacheManagerForIndexableCaches must not be null, check init");
+        }
+        return cacheManagerForIndexableCaches;
+    }
+
+    @Produces
+    @ApplicationScoped
     @SinkitCache(SinkitCacheName.infinispan_blacklist)
     public RemoteCache<String, BlacklistedRecord> getBlacklistCache() {
         if (cacheManager == null) {
@@ -141,28 +152,6 @@ public class MyCacheManagerProvider implements Serializable {
         }
         log.log(Level.INFO, "getWhitelistCache called.");
         return cacheManager.getCache(SinkitCacheName.infinispan_whitelist.toString());
-    }
-
-    @Produces
-    @ApplicationScoped
-    @SinkitCache(SinkitCacheName.infinispan_custom_lists)
-    public RemoteCache<String, CustomList> getCustomListCache() {
-        if (cacheManagerForIndexableCaches == null) {
-            throw new IllegalArgumentException("Manager must not be null.");
-        }
-        log.log(Level.INFO, "getCustomListCache called.");
-        return cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_custom_lists.toString());
-    }
-
-    @Produces
-    @ApplicationScoped
-    @SinkitCache(SinkitCacheName.infinispan_rules)
-    public RemoteCache<String, Rule> getRuleCache() {
-        if (cacheManagerForIndexableCaches == null) {
-            throw new IllegalArgumentException("Manager must not be null.");
-        }
-        log.log(Level.INFO, "getRuleCache called.");
-        return cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
     }
 
     @Produces

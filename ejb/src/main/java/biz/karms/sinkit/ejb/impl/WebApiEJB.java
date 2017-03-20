@@ -11,16 +11,14 @@ import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
 import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
 import com.google.common.collect.Lists;
-import org.apache.commons.codec.binary.StringUtils;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.validator.routines.DomainValidator;
-import org.infinispan.Cache;
 import org.infinispan.client.hotrod.RemoteCache;
+import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.infinispan.client.hotrod.Search;
-import org.infinispan.client.hotrod.impl.RemoteCacheImpl;
-import org.infinispan.commons.util.concurrent.NotifyingFuture;
 import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
 
@@ -30,16 +28,12 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 import java.lang.management.OperatingSystemMXBean;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -57,12 +51,8 @@ public class WebApiEJB implements WebApi {
     private RemoteCache<String, BlacklistedRecord> blacklistCache;
 
     @Inject
-    @SinkitCache(SinkitCacheName.infinispan_rules)
-    private RemoteCache<String, Rule> ruleCache;
-
-    @Inject
-    @SinkitCache(SinkitCacheName.infinispan_custom_lists)
-    private RemoteCacheImpl<String, CustomList> customListsCache;
+    @SinkitCache(SinkitCacheName.cache_manager_indexable)
+    private RemoteCacheManager cacheManagerForIndexableCaches;
 
     // Testing/playground purposes
     @Override
@@ -136,6 +126,7 @@ public class WebApiEJB implements WebApi {
     @Override
     public List<?> getRules(final String clientIPAddress) {
         try {
+            final RemoteCache<String, Rule> ruleCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
             final ImmutablePair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(clientIPAddress);
             final String clientIPAddressPaddedBigInt = startEndAddresses.getLeft();
             log.log(Level.FINE, "Getting key [" + clientIPAddress + "] which actually translates to BigInteger zero padded representation " + "[" + clientIPAddressPaddedBigInt + "]");
@@ -162,6 +153,7 @@ public class WebApiEJB implements WebApi {
     @Override
     public List<?> getAllRules() {
         try {
+            final RemoteCache<String, Rule> ruleCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
             log.log(Level.SEVERE, "getAllRules: This is a very expensive operation.");
             return Lists.newArrayList(ruleCache.values());
         } catch (Exception e) {
@@ -173,6 +165,7 @@ public class WebApiEJB implements WebApi {
 
     @Override
     public Set<String> getRuleKeys() {
+        final RemoteCache<String, Rule> ruleCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
         return ruleCache.keySet();
     }
 
@@ -181,7 +174,8 @@ public class WebApiEJB implements WebApi {
         int counter = 0;
         //TODO: Shouldn't this be done by a one Infinispan DSL removal call?
         try {
-            QueryFactory qf = Search.getQueryFactory(ruleCache);
+            final RemoteCache<String, Rule> ruleCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
+            final QueryFactory qf = Search.getQueryFactory(ruleCache);
             Query query = qf.from(Rule.class)
                     .having("customerId").eq(customerId)
                     .toBuilder().build();
@@ -201,6 +195,7 @@ public class WebApiEJB implements WebApi {
     @Override
     public String deleteRule(final String cidrAddress) {
         try {
+            final RemoteCache<String, Rule> ruleCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
             final ImmutablePair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(cidrAddress);
             final String clientIPAddressPaddedBigInt = startEndAddresses.getLeft();
             log.log(Level.FINE, "Deleting key [" + cidrAddress + "] which actually translates to BigInteger zero padded representation " +
@@ -232,8 +227,9 @@ public class WebApiEJB implements WebApi {
     @Override
     public String putDNSClientSettings(final Integer customerId, final HashMap<String, HashMap<String, String>> customerDNSSetting) {
         try {
-            QueryFactory qf = Search.getQueryFactory(ruleCache);
-            Query query = qf.from(Rule.class)
+            final RemoteCache<String, Rule> ruleCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
+            final QueryFactory qf = Search.getQueryFactory(ruleCache);
+            final Query query = qf.from(Rule.class)
                     .having("customerId").eq(customerId)
                     .toBuilder().build();
 
@@ -265,6 +261,7 @@ public class WebApiEJB implements WebApi {
     @Override
     public String postAllDNSClientSettings(final AllDNSSettingDTO[] allDNSSetting) {
         //TODO: Perhaps invert the flow: create 1 utx.begin();-utx.commit(); block and loop inside...
+        final RemoteCache<String, Rule> ruleCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
         for (AllDNSSettingDTO allDNSSettingDTO : allDNSSetting) {
             try {
                 if (allDNSSettingDTO == null || allDNSSettingDTO.getDnsClient() == null || allDNSSettingDTO.getDnsClient().length() < 7) {
@@ -307,12 +304,13 @@ public class WebApiEJB implements WebApi {
      */
     @Override
     public String putCustomLists(final Integer customerId, final CustomerCustomListDTO[] customerCustomLists) {
+        final RemoteCache<String, CustomList> customListsCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_custom_lists.toString());
         if (customerId == null || customerCustomLists == null) {
             log.log(Level.SEVERE, "putCustomLists: customerId and customerCustomLists cannot be null.");
             // TODO: Proper Error codes.
             return null;
         }
-        log.log(Level.FINE, "putCustomLists: customerId: "+customerId+", customerCustomLists.length: "+ customerCustomLists.length);
+        log.log(Level.FINE, "putCustomLists: customerId: " + customerId + ", customerCustomLists.length: " + customerCustomLists.length);
         int customListsElementCounter = 0;
         // TODO: If customerCustomLists is empty - should we clear/delete all customerId's lists? Ask Rattus.
         // Yes, we should, see:
@@ -323,10 +321,10 @@ public class WebApiEJB implements WebApi {
                     .having("customerId").eq(customerId)
                     .toBuilder().build();
             final List<CustomList> result = query.list();
-            log.log(Level.FINE, "putCustomLists: customerId: "+customerId+" yielded "+result.size()+ "results in search.");
+            log.log(Level.FINE, "putCustomLists: customerId: " + customerId + " yielded " + result.size() + "results in search.");
             result.forEach(r -> {
                 final String key = r.getClientCidrAddress() + ((r.getFqdn() != null) ? r.getFqdn() : r.getListCidrAddress());
-                log.log(Level.FINE, "putCustomLists: removing key "+key);
+                log.log(Level.FINE, "putCustomLists: removing key " + key);
                 customListsCache.remove(key);
             });
         } else {
@@ -336,6 +334,10 @@ public class WebApiEJB implements WebApi {
             for (CustomerCustomListDTO customerCustomList : customerCustomLists) {
                 // Let's calculate DNS Client address
                 try {
+                    if (StringUtils.isEmpty(customerCustomList.getDnsClient())) {
+                        log.log(Level.SEVERE, "putCustomLists: DNS client CIDR was null: Lists: " + customerCustomList.getLists().toString());
+                        return "putCustomLists: DNS client CIDR was null: Lists: " + customerCustomList.getLists().toString();
+                    }
                     final ImmutablePair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(customerCustomList.getDnsClient());
                     dnsClientStartAddress = startEndAddresses.getLeft();
                     dnsClientEndAddress = startEndAddresses.getRight();
@@ -460,8 +462,8 @@ public class WebApiEJB implements WebApi {
         Query query;
         int updated = 0;
         try {
-
-            QueryFactory qf = Search.getQueryFactory(ruleCache);
+            final RemoteCache<String, Rule> ruleCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
+            final QueryFactory qf = Search.getQueryFactory(ruleCache);
             query = qf.from(Rule.class)
                     .having("sources.feedUid").eq(feedUid)
                     .toBuilder().build();
