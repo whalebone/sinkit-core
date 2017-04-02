@@ -3,6 +3,7 @@ package biz.karms.sinkit.rest;
 import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Response;
@@ -17,9 +18,12 @@ import java.nio.file.Files;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static biz.karms.sinkit.ejb.protostream.CustomlistProtostreamGenerator.SINKIT_CUSTOMLIST_PROTOSTREAM_GENERATOR_D_H_M_S;
+import static biz.karms.sinkit.ejb.protostream.CustomlistProtostreamGenerator.customListFileMd5;
 import static biz.karms.sinkit.ejb.protostream.WhitelistProtostreamGenerator.SINKIT_WHITELIST_PROTOSTREAM_GENERATOR_D_H_M_S;
 import static biz.karms.sinkit.ejb.protostream.WhitelistProtostreamGenerator.whiteListFileMd5;
 import static biz.karms.sinkit.ejb.protostream.WhitelistProtostreamGenerator.whiteListFilePath;
+import static biz.karms.sinkit.rest.DnsREST.CLIENT_ID_HEADER_PARAM;
 
 /**
  * @author Michal Karm Babacek
@@ -78,12 +82,41 @@ public class ProtostreamREST implements Serializable {
         }
     }
 
-    /*
-     * @returns huge byte array Protocol Buffer with Whitelist records
-     *
+    /**
+     * @returns huge byte array Protocol Buffer with custom list records
+     */
     @GET
-    @Path("/protostream/whitelist")
+    @Path("/protostream/customlist")
     @Produces({"application/x-protobuf"})
-    public byte[] getProtostremWhditelist(@HeaderParam(CLIENT_ID_HEADER_PARAM) Integer clientId) {
-    }*/
+    public Response getProtostreamCustomList(@HeaderParam(CLIENT_ID_HEADER_PARAM) Integer clientId) {
+        if (SINKIT_CUSTOMLIST_PROTOSTREAM_GENERATOR_D_H_M_S == null) {
+            return Response.status(Response.Status.NOT_FOUND).header(X_ERROR, "This is a wrong node. Protostream generator is not started.").build();
+        }
+        if (clientId == null || clientId < 0) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).header(X_ERROR, CLIENT_ID_HEADER_PARAM + " seems to be invalid or missing").build();
+        }
+        final File customListBinary = new File(customListFilePath + clientId);
+        final File customlistBinaryMD5 = new File(customListFileMd5 + clientId);
+        if (customListBinary.exists() && customlistBinaryMD5.exists()) {
+            InputStream is;
+            String md5sum;
+            try {
+                is = new FileInputStream(customListBinary);
+                md5sum = new String(Files.readAllBytes(customlistBinaryMD5.toPath()), StandardCharsets.UTF_8);
+            } catch (FileNotFoundException e) {
+                log.log(Level.SEVERE, customListFilePath + clientId + " not found.");
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).header(X_ERROR, customListFilePath + clientId + " not found.").build();
+            } catch (IOException e) {
+                log.log(Level.SEVERE, customListFileMd5 + clientId + " not found.");
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).header(X_ERROR, customListFileMd5 + clientId + " not found.").build();
+            }
+            return Response.ok().entity(is)
+                    .header(X_FILE_LENGTH, String.valueOf(customListBinary.length()))
+                    .header(X_FILE_MD5, md5sum)
+                    .build();
+        } else {
+            return Response.status(TRY_LATER).header(X_ERROR, "Try later, please.").build();
+        }
+    }
+
 }
