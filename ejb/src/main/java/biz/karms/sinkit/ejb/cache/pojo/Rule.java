@@ -1,42 +1,26 @@
 package biz.karms.sinkit.ejb.cache.pojo;
 
-import biz.karms.sinkit.ejb.util.SettingsMapBridge;
-import org.hibernate.search.annotations.*;
-
-import javax.persistence.Entity;
 import java.io.Serializable;
 import java.util.HashMap;
-//import org.infinispan.protostream.annotations.ProtoField;
-//import org.infinispan.protostream.annotations.ProtoMessage;
 
 /**
  * @author Michal Karm Babacek
  */
-//@ProtoMessage(name = "Rule")
-@Indexed(index = "Rule")
-@Entity
 public class Rule implements Serializable {
 
     private static final long serialVersionUID = 187732233347691L;
 
-    //@ProtoField(number = 1, required = true)
-    @Field(index = Index.YES, analyze = Analyze.NO)
     private String startAddress;
 
-    @Field(index = Index.YES, analyze = Analyze.NO)
     private String endAddress;
 
-    @Field(index = Index.YES, analyze = Analyze.NO)
     private String cidrAddress;
 
-    @Field(index = Index.YES, analyze = Analyze.NO)
     private int customerId;
 
     /**
      * Feed UID : Mode <L|S|D>
      */
-    @FieldBridge(impl = SettingsMapBridge.class)
-    @Field(index = Index.YES, analyze = Analyze.YES)
     private HashMap<String, String> sources;
 
     public String getStartAddress() {

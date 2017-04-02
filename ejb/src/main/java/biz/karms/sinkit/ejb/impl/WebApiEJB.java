@@ -13,20 +13,15 @@ import biz.karms.sinkit.ejb.util.CIDRUtils;
 import com.google.common.collect.Lists;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.validator.routines.DomainValidator;
-import org.infinispan.Cache;
-import org.infinispan.commons.util.concurrent.NotifyingFuture;
-import org.infinispan.context.Flag;
-import org.infinispan.manager.EmbeddedCacheManager;
-import org.infinispan.query.Search;
+import org.infinispan.client.hotrod.Flag;
+import org.infinispan.client.hotrod.RemoteCache;
+import org.infinispan.client.hotrod.RemoteCacheManager;
+import org.infinispan.client.hotrod.Search;
 import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
-import org.infinispan.remoting.transport.jgroups.JGroupsAddress;
-import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
-import org.infinispan.remoting.transport.Address;
-import org.jgroups.Event;
-import org.jgroups.stack.IpAddress;
 
 import javax.ejb.Stateless;
 import javax.inject.Inject;
@@ -34,16 +29,12 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 import java.lang.management.OperatingSystemMXBean;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -57,16 +48,12 @@ public class WebApiEJB implements WebApi {
     private Logger log;
 
     @Inject
-    @SinkitCache(SinkitCacheName.BLACKLIST_CACHE)
-    private Cache<String, BlacklistedRecord> blacklistCache;
+    @SinkitCache(SinkitCacheName.infinispan_blacklist)
+    private RemoteCache<String, BlacklistedRecord> blacklistCache;
 
     @Inject
-    @SinkitCache(SinkitCacheName.RULES_CACHE)
-    private Cache<String, Rule> ruleCache;
-
-    @Inject
-    @SinkitCache(SinkitCacheName.CUSTOM_LISTS_CACHE)
-    private Cache<String, CustomList> customListsCache;
+    @SinkitCache(SinkitCacheName.cache_manager_indexable)
+    private RemoteCacheManager cacheManagerForIndexableCaches;
 
     // Testing/playground purposes
     @Override
@@ -83,25 +70,7 @@ public class WebApiEJB implements WebApi {
     @Override
     public Map<String, String> getStats() {
         final Map<String, String> info = new HashMap<>();
-        //info.put("blacklistCache empty?", Boolean.toString(blacklistCache.isEmpty()));
-        //info.put("ruleCache empty?", Boolean.toString(ruleCache.isEmpty()));
-        //info.put("customListsCache empty?", Boolean.toString(customListsCache.isEmpty()));
-
-        final StringBuilder membersInfo = new StringBuilder();
-
-        final EmbeddedCacheManager container = blacklistCache.getCacheManager();
-        final List<Address> members = container.getMembers();
-        membersInfo.append("Members: ").append(members).append(System.getProperty("line.separator"));
-        final JGroupsTransport transport = (JGroupsTransport) container.getTransport();
-        for (Address infinispanWrapAddr : members) {
-            JGroupsAddress jgroupsWrapAddr = (JGroupsAddress) infinispanWrapAddr;
-            org.jgroups.Address ipAddress = (org.jgroups.Address) transport.getChannel().down(new Event(Event.GET_PHYSICAL_ADDRESS, jgroupsWrapAddr.getJGroupsAddress()));
-            IpAddress ipAddr = (IpAddress) ipAddress;
-            membersInfo.append(ipAddr.getIpAddress().getHostAddress()).append(":").append(((IpAddress) ipAddress).getPort()).append("; ");
-        }
-
-        info.put("blacklistCache transport stats", membersInfo.toString());
-
+        info.put("Stats", "Not implemented");
         return info;
     }
 
@@ -114,7 +83,7 @@ public class WebApiEJB implements WebApi {
         }
         try {
             log.log(Level.FINE, "Putting key [" + blacklistedRecord.getBlackListedDomainOrIP() + "]");
-            blacklistCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).putAsync(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
+            blacklistCache.put(blacklistedRecord.getBlackListedDomainOrIP(), blacklistedRecord);
             // TODO: Is this O.K.? Maybe we should just return the same instance.
             return blacklistCache.get(DigestUtils.md5Hex(blacklistedRecord.getBlackListedDomainOrIP()));
         } catch (Exception e) {
@@ -127,12 +96,12 @@ public class WebApiEJB implements WebApi {
     @Override
     public BlacklistedRecord getBlacklistedRecord(final String key) {
         log.log(Level.FINE, "getting key [" + key + "]");
-        return blacklistCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).get(DigestUtils.md5Hex(key));
+        return blacklistCache.get(DigestUtils.md5Hex(key));
     }
 
     @Override
     public Object[] getBlacklistedRecordKeys() {
-        return blacklistCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).keySet().toArray();
+        return blacklistCache.keySet().toArray();
     }
 
     @Override
@@ -140,8 +109,8 @@ public class WebApiEJB implements WebApi {
         try {
             String response;
             final String hashedKey = DigestUtils.md5Hex(key);
-            if (blacklistCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).containsKey(hashedKey)) {
-                blacklistCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).remove(hashedKey);
+            if (blacklistCache.containsKey(hashedKey)) {
+                blacklistCache.remove(hashedKey);
                 response = key + " DELETED";
             } else {
                 response = key + " DOES NOT EXIST";
@@ -158,23 +127,22 @@ public class WebApiEJB implements WebApi {
     @Override
     public List<?> getRules(final String clientIPAddress) {
         try {
+            final RemoteCache<String, Rule> ruleCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
             final ImmutablePair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(clientIPAddress);
             final String clientIPAddressPaddedBigInt = startEndAddresses.getLeft();
             log.log(Level.FINE, "Getting key [" + clientIPAddress + "] which actually translates to BigInteger zero padded representation " + "[" + clientIPAddressPaddedBigInt + "]");
             // Let's try to hit it
-            Rule rule = ruleCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).get(clientIPAddressPaddedBigInt);
+            Rule rule = ruleCache.withFlags(Flag.SKIP_CACHE_LOAD).get(clientIPAddressPaddedBigInt);
             if (rule != null) {
                 return Collections.singletonList(rule);
             }
-
             QueryFactory qf = Search.getQueryFactory(ruleCache);
             Query query = qf.from(Rule.class)
                     .having("startAddress").lte(clientIPAddressPaddedBigInt)
                     .and()
                     .having("endAddress").gte(clientIPAddressPaddedBigInt)
                     .toBuilder().build();
-            List<Rule> list = query.list();
-            return list;
+            return query.list();
         } catch (Exception e) {
             log.log(Level.SEVERE, "getRules client address troubles", e);
             // TODO: Proper Error codes.
@@ -186,8 +154,9 @@ public class WebApiEJB implements WebApi {
     @Override
     public List<?> getAllRules() {
         try {
+            final RemoteCache<String, Rule> ruleCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
             log.log(Level.SEVERE, "getAllRules: This is a very expensive operation.");
-            return Lists.newArrayList(ruleCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).values());
+            return Lists.newArrayList(ruleCache.values());
         } catch (Exception e) {
             log.log(Level.SEVERE, "getRules client address troubles", e);
             // TODO: Proper Error codes.
@@ -197,7 +166,8 @@ public class WebApiEJB implements WebApi {
 
     @Override
     public Set<String> getRuleKeys() {
-        return ruleCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).keySet();
+        final RemoteCache<String, Rule> ruleCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
+        return ruleCache.keySet();
     }
 
     @Override
@@ -205,13 +175,14 @@ public class WebApiEJB implements WebApi {
         int counter = 0;
         //TODO: Shouldn't this be done by a one Infinispan DSL removal call?
         try {
-            QueryFactory qf = Search.getQueryFactory(ruleCache);
+            final RemoteCache<String, Rule> ruleCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
+            final QueryFactory qf = Search.getQueryFactory(ruleCache);
             Query query = qf.from(Rule.class)
                     .having("customerId").eq(customerId)
                     .toBuilder().build();
             Iterator iterator = query.list().iterator();
             while (iterator.hasNext()) {
-                ruleCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).removeAsync(((Rule) iterator.next()).getStartAddress());
+                ruleCache.remove(((Rule) iterator.next()).getStartAddress());
                 counter++;
             }
             return counter + " RULES DELETED FOR CUSTOMER ID: " + customerId;
@@ -225,13 +196,14 @@ public class WebApiEJB implements WebApi {
     @Override
     public String deleteRule(final String cidrAddress) {
         try {
+            final RemoteCache<String, Rule> ruleCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
             final ImmutablePair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(cidrAddress);
             final String clientIPAddressPaddedBigInt = startEndAddresses.getLeft();
             log.log(Level.FINE, "Deleting key [" + cidrAddress + "] which actually translates to BigInteger zero padded representation " +
                     "[" + clientIPAddressPaddedBigInt + "]");
             String response;
             if (ruleCache.containsKey(clientIPAddressPaddedBigInt)) {
-                ruleCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).remove(clientIPAddressPaddedBigInt);
+                ruleCache.remove(clientIPAddressPaddedBigInt);
                 response = clientIPAddressPaddedBigInt + " DELETED";
             } else {
                 response = clientIPAddressPaddedBigInt + " DOES NOT EXIST";
@@ -256,28 +228,15 @@ public class WebApiEJB implements WebApi {
     @Override
     public String putDNSClientSettings(final Integer customerId, final HashMap<String, HashMap<String, String>> customerDNSSetting) {
         try {
-            QueryFactory qf = Search.getQueryFactory(ruleCache);
-            Query query = qf.from(Rule.class)
+            final RemoteCache<String, Rule> ruleCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
+            final QueryFactory qf = Search.getQueryFactory(ruleCache);
+            final Query query = qf.from(Rule.class)
                     .having("customerId").eq(customerId)
                     .toBuilder().build();
 
             if (query != null && query.getResultSize() > 0) {
                 // Remove all found rules
-                List<NotifyingFuture> futures = new ArrayList<>();
-                query.list().forEach(rule -> futures.add(ruleCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).removeAsync(((Rule) rule).getStartAddress())));
-                futures.forEach(future -> {
-                    try {
-                        // TODO: Tweak.
-                        future.get(30, TimeUnit.SECONDS);
-                    } catch (InterruptedException e) {
-                        log.log(Level.SEVERE, "putDNSClientSettings: Removing obsolete rules error.", e);
-                    } catch (ExecutionException e) {
-                        log.log(Level.SEVERE, "putDNSClientSettings: Removing obsolete rules error.", e);
-                    } catch (TimeoutException e) {
-                        log.log(Level.SEVERE, "putDNSClientSettings: Removing obsolete rules error. Timeout.", e);
-                    }
-                });
-
+                query.list().forEach(rule -> ruleCache.remove(((Rule) rule).getStartAddress()));
             }
 
             for (String cidr : customerDNSSetting.keySet()) {
@@ -289,7 +248,7 @@ public class WebApiEJB implements WebApi {
                 rule.setStartAddress(startEndAddresses.getLeft());
                 rule.setEndAddress(startEndAddresses.getRight());
                 log.log(Level.FINE, "Putting key [" + rule.getStartAddress() + "]");
-                ruleCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).putAsync(rule.getStartAddress(), rule);
+                ruleCache.put(rule.getStartAddress(), rule);
             }
 
         } catch (Exception e) {
@@ -303,6 +262,7 @@ public class WebApiEJB implements WebApi {
     @Override
     public String postAllDNSClientSettings(final AllDNSSettingDTO[] allDNSSetting) {
         //TODO: Perhaps invert the flow: create 1 utx.begin();-utx.commit(); block and loop inside...
+        final RemoteCache<String, Rule> ruleCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
         for (AllDNSSettingDTO allDNSSettingDTO : allDNSSetting) {
             try {
                 if (allDNSSettingDTO == null || allDNSSettingDTO.getDnsClient() == null || allDNSSettingDTO.getDnsClient().length() < 7) {
@@ -318,7 +278,7 @@ public class WebApiEJB implements WebApi {
                 rule.setStartAddress(startEndAddresses.getLeft());
                 rule.setEndAddress(startEndAddresses.getRight());
                 log.log(Level.FINE, "Putting key [" + rule.getStartAddress() + "]");
-                ruleCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).putAsync(rule.getStartAddress(), rule);
+                ruleCache.put(rule.getStartAddress(), rule);
             } catch (Exception e) {
                 log.log(Level.SEVERE, "postAllDNSClientSettings", e);
                 // TODO: Proper Error codes.
@@ -345,97 +305,119 @@ public class WebApiEJB implements WebApi {
      */
     @Override
     public String putCustomLists(final Integer customerId, final CustomerCustomListDTO[] customerCustomLists) {
+        final RemoteCache<String, CustomList> customListsCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_custom_lists.toString());
         if (customerId == null || customerCustomLists == null) {
             log.log(Level.SEVERE, "putCustomLists: customerId and customerCustomLists cannot be null.");
             // TODO: Proper Error codes.
             return null;
         }
-        //TODO: If customerCustomLists is empty - should we clear/delete all customerId's lists? Ask Rattus.
-        final DomainValidator domainValidator = DomainValidator.getInstance();
-        String dnsClientStartAddress;
-        String dnsClientEndAddress;
+        log.log(Level.FINE, "putCustomLists: customerId: " + customerId + ", customerCustomLists.length: " + customerCustomLists.length);
         int customListsElementCounter = 0;
-        for (CustomerCustomListDTO customerCustomList : customerCustomLists) {
-            // Let's calculate DNS Client address
-            try {
-                final ImmutablePair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(customerCustomList.getDnsClient());
-                dnsClientStartAddress = startEndAddresses.getLeft();
-                dnsClientEndAddress = startEndAddresses.getRight();
-                if (dnsClientStartAddress == null || dnsClientEndAddress == null) {
-                    log.log(Level.SEVERE, "putCustomLists: dnsClientStartAddress or dnsClientEndAddress were null. This cannot happen.");
-                    // TODO: Proper Error codes.
-                    return null;
-                }
-            } catch (Exception e) {
-                // TODO: More robust approach would be break();, but it could violate consistency...
-                // Furthermore, with validation in Portal, this really shouldn't happen, hence return null;
-                log.log(Level.SEVERE, "putCustomLists: Invalid CIDR " + customerCustomList.getDnsClient(), e);
-                // TODO: Proper Error codes.
-                return null;
-            }
-
-            // Let's process list of Blacklisted / Whitelisted / Logged CIDRs and FQDNs.
-            for (String fqdnOrCIDR : customerCustomList.getLists().keySet()) {
-                // TODO: OMG, this should go to some CustomList factory.
-                final CustomList customList = new CustomList();
-                customList.setCustomerId(customerId);
-                customList.setClientCidrAddress(customerCustomList.getDnsClient());
-                customList.setClientStartAddress(dnsClientStartAddress);
-                customList.setClientEndAddress(dnsClientEndAddress);
-                final String blacklistWhitelistLog = customerCustomList.getLists().get(fqdnOrCIDR);
-                if (!(blacklistWhitelistLog != null && ("B".equals(blacklistWhitelistLog) || "W".equals(blacklistWhitelistLog) || "L".equals(blacklistWhitelistLog)))) {
-                    log.log(Level.SEVERE, "putCustomLists: Expected one of <B|W|L> but got: " + blacklistWhitelistLog + ". customListsElementCounter: " + customListsElementCounter);
-                    // TODO: Proper Error codes.
-                    return null;
-                }
-                customList.setWhiteBlackLog(blacklistWhitelistLog);
-                if (domainValidator.isValid(fqdnOrCIDR)) {
-                    //Let's assume it is a Domain name, not a CIDR formatted IP address or subnet
-                    customList.setFqdn(fqdnOrCIDR);
-                } else {
-                    // In this case, we have to calculate CIDR subnet start and end address
-                    try {
-                        final ImmutablePair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(fqdnOrCIDR);
-                        final String startAddress = startEndAddresses.getLeft();
-                        final String endAddress = startEndAddresses.getRight();
-                        if (startAddress == null || endAddress == null) {
-                            log.log(Level.SEVERE, "putCustomLists: endAddress or startAddress were null for CIDR " + fqdnOrCIDR + ". This cannot happen. customListsElementCounter: " + customListsElementCounter);
-                            // TODO: Proper Error codes.
-                            return null;
-                        }
-                        customList.setListCidrAddress(fqdnOrCIDR);
-                        customList.setListStartAddress(startAddress);
-                        customList.setListEndAddress(endAddress);
-                    } catch (Exception e) {
-                        // TODO: More robust approach would be break();, but it could violate consistency...
-                        // Furthermore, with validation in Portal, this really shouldn't happen, hence return null;
-                        log.log(Level.SEVERE, "putCustomLists: Invalid CIDR " + customerCustomList.getDnsClient() + ", customListsElementCounter: " + customListsElementCounter, e);
+        // TODO: If customerCustomLists is empty - should we clear/delete all customerId's lists? Ask Rattus.
+        // Yes, we should, see:
+        // TODO: This is a very dangerous asumption: A single empty list causes not only the particuler CIDR, but ALL customer's custom lists to disappear.
+        if (customerCustomLists.length == 0 || customerCustomLists[0].getLists().isEmpty()) {
+            final QueryFactory qf = Search.getQueryFactory(customListsCache);
+            final Query query = qf.from(CustomList.class)
+                    .having("customerId").eq(customerId)
+                    .toBuilder().build();
+            final List<CustomList> result = query.list();
+            log.log(Level.FINE, "putCustomLists: customerId: " + customerId + " yielded " + result.size() + "results in search.");
+            result.forEach(r -> {
+                final String key = r.getClientCidrAddress() + ((r.getFqdn() != null) ? r.getFqdn() : r.getListCidrAddress());
+                log.log(Level.FINE, "putCustomLists: removing key " + key);
+                customListsCache.remove(key);
+            });
+        } else {
+            final DomainValidator domainValidator = DomainValidator.getInstance();
+            String dnsClientStartAddress;
+            String dnsClientEndAddress;
+            for (CustomerCustomListDTO customerCustomList : customerCustomLists) {
+                // Let's calculate DNS Client address
+                try {
+                    if (StringUtils.isEmpty(customerCustomList.getDnsClient())) {
+                        log.log(Level.SEVERE, "putCustomLists: DNS client CIDR was null: Lists: " + customerCustomList.getLists().toString());
+                        return "putCustomLists: DNS client CIDR was null: Lists: " + customerCustomList.getLists().toString();
+                    }
+                    final ImmutablePair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(customerCustomList.getDnsClient());
+                    dnsClientStartAddress = startEndAddresses.getLeft();
+                    dnsClientEndAddress = startEndAddresses.getRight();
+                    if (dnsClientStartAddress == null || dnsClientEndAddress == null) {
+                        log.log(Level.SEVERE, "putCustomLists: dnsClientStartAddress or dnsClientEndAddress were null. This cannot happen.");
                         // TODO: Proper Error codes.
                         return null;
                     }
-                }
-
-                //At this point, we have a valid CustomList instance, let's process it with the cache.
-                // Sanity check
-                if ((customList.getFqdn() != null && customList.getListCidrAddress() != null) || (customList.getFqdn() == null && customList.getListCidrAddress() == null)) {
-                    log.log(Level.SEVERE, "putCustomLists: Sanity violation, customList has exactly one of [FQDN,CIDR] set, not both, not none. customListsElementCounter: " + customListsElementCounter);
-                    // TODO: Proper Error codes.
-                    return null;
-                }
-
-                // TODO: Talk to Rattus. ClientCidrAddresses cannot be arbitrary and must be thoroughly validated in Portal. Should we hash this?
-                final String key = customList.getClientCidrAddress() + ((customList.getFqdn() != null) ? customList.getFqdn() : customList.getListCidrAddress());
-
-                try {
-                    log.log(Level.FINE, "pcustomListsCacheutCustomLists: Putting key [" + key + "]. customListsElementCounter: " + customListsElementCounter);
-                    if (customListsCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).replace(key, customList) == null) {
-                        customListsCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).putAsync(key, customList);
-                    }
-                    customListsElementCounter++;
                 } catch (Exception e) {
-                    log.log(Level.SEVERE, "putCustomLists: customListsElementCounter: " + customListsElementCounter, e);
+                    // TODO: More robust approach would be break();, but it could violate consistency...
+                    // Furthermore, with validation in Portal, this really shouldn't happen, hence return null;
+                    log.log(Level.SEVERE, "putCustomLists: Invalid CIDR " + customerCustomList.getDnsClient(), e);
                     // TODO: Proper Error codes.
                     return null;
+                }
+
+                // Let's process list of Blacklisted / Whitelisted / Logged CIDRs and FQDNs.
+                for (String fqdnOrCIDR : customerCustomList.getLists().keySet()) {
+                    // TODO: OMG, this should go to some CustomList factory.
+                    final CustomList customList = new CustomList();
+                    customList.setCustomerId(customerId);
+                    customList.setClientCidrAddress(customerCustomList.getDnsClient());
+                    customList.setClientStartAddress(dnsClientStartAddress);
+                    customList.setClientEndAddress(dnsClientEndAddress);
+                    final String blacklistWhitelistLog = customerCustomList.getLists().get(fqdnOrCIDR);
+                    if (!(blacklistWhitelistLog != null && ("B".equals(blacklistWhitelistLog) || "W".equals(blacklistWhitelistLog) || "L".equals(blacklistWhitelistLog)))) {
+                        log.log(Level.SEVERE, "putCustomLists: Expected one of <B|W|L> but got: " + blacklistWhitelistLog + ". customListsElementCounter: " + customListsElementCounter);
+                        // TODO: Proper Error codes.
+                        return null;
+                    }
+                    customList.setWhiteBlackLog(blacklistWhitelistLog);
+                    if (domainValidator.isValid(fqdnOrCIDR)) {
+                        //Let's assume it is a Domain name, not a CIDR formatted IP address or subnet
+                        customList.setFqdn(fqdnOrCIDR);
+                    } else {
+                        // In this case, we have to calculate CIDR subnet start and end address
+                        try {
+                            final ImmutablePair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(fqdnOrCIDR);
+                            final String startAddress = startEndAddresses.getLeft();
+                            final String endAddress = startEndAddresses.getRight();
+                            if (startAddress == null || endAddress == null) {
+                                log.log(Level.SEVERE, "putCustomLists: endAddress or startAddress were null for CIDR " + fqdnOrCIDR + ". This cannot happen. customListsElementCounter: " + customListsElementCounter);
+                                // TODO: Proper Error codes.
+                                return null;
+                            }
+                            customList.setListCidrAddress(fqdnOrCIDR);
+                            customList.setListStartAddress(startAddress);
+                            customList.setListEndAddress(endAddress);
+                        } catch (Exception e) {
+                            // TODO: More robust approach would be break();, but it could violate consistency...
+                            // Furthermore, with validation in Portal, this really shouldn't happen, hence return null;
+                            log.log(Level.SEVERE, "putCustomLists: Invalid CIDR " + customerCustomList.getDnsClient() + ", customListsElementCounter: " + customListsElementCounter, e);
+                            // TODO: Proper Error codes.
+                            return null;
+                        }
+                    }
+
+                    //At this point, we have a valid CustomList instance, let's process it with the cache.
+                    // Sanity check
+                    if ((customList.getFqdn() != null && customList.getListCidrAddress() != null) || (customList.getFqdn() == null && customList.getListCidrAddress() == null)) {
+                        log.log(Level.SEVERE, "putCustomLists: Sanity violation, customList has exactly one of [FQDN,CIDR] set, not both, not none. customListsElementCounter: " + customListsElementCounter);
+                        // TODO: Proper Error codes.
+                        return null;
+                    }
+
+                    // TODO: Talk to Rattus. ClientCidrAddresses cannot be arbitrary and must be thoroughly validated in Portal. Should we hash this?
+                    final String key = customList.getClientCidrAddress() + ((customList.getFqdn() != null) ? customList.getFqdn() : customList.getListCidrAddress());
+
+                    try {
+                        log.log(Level.FINE, "pcustomListsCacheutCustomLists: Putting key [" + key + "]. customListsElementCounter: " + customListsElementCounter);
+                        if (customListsCache.replace(key, customList) == null) {
+                            customListsCache.put(key, customList);
+                        }
+                        customListsElementCounter++;
+                    } catch (Exception e) {
+                        log.log(Level.SEVERE, "putCustomLists: customListsElementCounter: " + customListsElementCounter, e);
+                        // TODO: Proper Error codes.
+                        return null;
+                    }
                 }
             }
         }
@@ -481,10 +463,10 @@ public class WebApiEJB implements WebApi {
         Query query;
         int updated = 0;
         try {
-
-            QueryFactory qf = Search.getQueryFactory(ruleCache);
+            final RemoteCache<String, Rule> ruleCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
+            final QueryFactory qf = Search.getQueryFactory(ruleCache);
             query = qf.from(Rule.class)
-                    .having("sources").contains(feedUid)
+                    .having("sources.feedUid").eq(feedUid)
                     .toBuilder().build();
 
             if (query != null && query.getResultSize() > 0) {
@@ -495,7 +477,7 @@ public class WebApiEJB implements WebApi {
                         //TODO This is certainly wrong and overengineered... Let's talk to Rattus.
                         rule.getSources().replace(feedUid, cidrMode.get(rule.getCidrAddress()));
                         try {
-                            ruleCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).replace(rule.getStartAddress(), rule);
+                            ruleCache.replace(rule.getStartAddress(), rule);
                             updated++;
                         } catch (Exception e) {
                             log.log(Level.SEVERE, "putFeedSettings", e);

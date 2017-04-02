@@ -4,28 +4,28 @@ import biz.karms.sinkit.exception.IoCValidationException;
 import com.google.gson.JsonSyntaxException;
 
 import javax.enterprise.context.RequestScoped;
+import javax.enterprise.context.SessionScoped;
 import javax.inject.Inject;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Response;
+import java.io.Serializable;
 import java.util.logging.Logger;
 
 /**
  * @author Michal Karm Babacek
- *         <p>
- *         TODO: Validation :-)
- *         TODO: OAuth
  */
 @RequestScoped
 @Path("/")
-public class SinkitREST {
+public class SinkitREST implements Serializable {
+
+    private static final long serialVersionUID = -811275040019884876L;
 
     @Inject
     SinkitService sinkitService;
@@ -33,84 +33,54 @@ public class SinkitREST {
     @Inject
     private Logger log;
 
-    public static final String AUTH_HEADER_PARAM = "X-sinkit-token";
-    public static final String AUTH_FAIL = "❤ AUTH ERROR ❤";
-
     @GET
     @Path("/hello/{name}")
     @Produces({"application/json;charset=UTF-8"})
-    public String getHelloMessage(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("name") String name) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            return sinkitService.createHelloMessage(name);
-        } else {
-            return AUTH_FAIL;
-        }
+    public String getHelloMessage(@PathParam("name") String name) {
+        return sinkitService.createHelloMessage(name);
     }
 
     @GET
     @Path("/stats")
     @Produces({"application/json;charset=UTF-8"})
-    public String getStats(@HeaderParam(AUTH_HEADER_PARAM) String token) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            return sinkitService.getStats();
-        } else {
-            return AUTH_FAIL;
-        }
+    public String getStats() {
+        return sinkitService.getStats();
     }
 
     @GET
     @Path("/blacklist/record/{key}")
     @Produces({"application/json;charset=UTF-8"})
-    public String getBlacklistedRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("key") String key) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            return sinkitService.getBlacklistedRecord(key);
-        } else {
-            return AUTH_FAIL;
-        }
+    public String getBlacklistedRecord(@PathParam("key") String key) {
+        return sinkitService.getBlacklistedRecord(key);
     }
 
     @GET
     @Path("/blacklist/records")
     @Produces({"application/json;charset=UTF-8"})
-    public String getBlacklistedRecordKeys(@HeaderParam(AUTH_HEADER_PARAM) String token) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            return sinkitService.getBlacklistedRecordKeys();
-        } else {
-            return AUTH_FAIL;
-        }
+    public String getBlacklistedRecordKeys() {
+        return sinkitService.getBlacklistedRecordKeys();
     }
 
     @DELETE
     @Path("/blacklist/record/{key}")
     @Produces({"application/json;charset=UTF-8"})
-    public String deleteBlacklistedRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("key") String key) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            return sinkitService.deleteBlacklistedRecord(key);
-        } else {
-            return AUTH_FAIL;
-        }
+    public String deleteBlacklistedRecord(@PathParam("key") String key) {
+        return sinkitService.deleteBlacklistedRecord(key);
     }
 
     @POST
     @Path("/blacklist/record/")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public String putBlacklistedRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @FormParam("record") String record) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            return sinkitService.putBlacklistedRecord(record);
-        } else {
-            return AUTH_FAIL;
-        }
+    public String putBlacklistedRecord(@FormParam("record") String record) {
+        return sinkitService.putBlacklistedRecord(record);
     }
 
     @POST
     @Path("/blacklist/ioc/")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public Response putIoCRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, String ioc) {
-        if (!StupidAuthenticator.isAuthenticated(token)) {
-            return Response.status(Response.Status.UNAUTHORIZED).entity(AUTH_FAIL).build();
-        }
+    public Response putIoCRecord(String ioc) {
         try {
             String response = sinkitService.processIoCRecord(ioc);
             return Response.status(Response.Status.OK).entity(response).build();
@@ -128,10 +98,7 @@ public class SinkitREST {
     @Path("/whitelist/ioc/")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public Response putWhitelistIoCRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, String ioc) {
-        if (!StupidAuthenticator.isAuthenticated(token)) {
-            return Response.status(Response.Status.UNAUTHORIZED).entity(AUTH_FAIL).build();
-        }
+    public Response putWhitelistIoCRecord(String ioc) {
         try {
             String response = sinkitService.processWhitelistIoCRecord(ioc);
             return Response.status(Response.Status.OK).entity(response).build();
@@ -149,10 +116,7 @@ public class SinkitREST {
     @Path("/whitelist/isempty/")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public String isWhitelistEmpty(@HeaderParam(AUTH_HEADER_PARAM) String token) {
-        if (!StupidAuthenticator.isAuthenticated(token)) {
-            return AUTH_FAIL;
-        }
+    public String isWhitelistEmpty() {
         return sinkitService.isWhitelistEmpty();
     }
 
@@ -160,10 +124,7 @@ public class SinkitREST {
     @Path("/whitelist/record/{key}")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public String getWhitelistedRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("key") String key) {
-        if (!StupidAuthenticator.isAuthenticated(token)) {
-            return AUTH_FAIL;
-        }
+    public String getWhitelistedRecord(@PathParam("key") String key) {
         return sinkitService.getWhitelistedRecord(key);
     }
 
@@ -171,22 +132,14 @@ public class SinkitREST {
     @Path("/whitelist/record/{key}")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public String removeWhitelistedRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("key") String key) {
-        if (!StupidAuthenticator.isAuthenticated(token)) {
-            return AUTH_FAIL;
-        }
+    public String removeWhitelistedRecord(@PathParam("key") String key) {
         return sinkitService.getWhitelistedRecord(key);
     }
 
     @POST
     @Path("/rebuildCache/")
     @Produces({"application/json;charset=UTF-8"})
-    public Response rebuildCache(@HeaderParam(AUTH_HEADER_PARAM) String token) {
-
-        if (!StupidAuthenticator.isAuthenticated(token)) {
-            return Response.status(Response.Status.UNAUTHORIZED).entity(AUTH_FAIL).build();
-        }
-
+    public Response rebuildCache() {
         String response = sinkitService.runCacheRebuilding();
         return Response.status(Response.Status.OK).entity(response).build();
     }
@@ -194,23 +147,15 @@ public class SinkitREST {
     @GET
     @Path("/rules/{ip}")
     @Produces({"application/json;charset=UTF-8"})
-    public String getRules(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("ip") String ip) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            return sinkitService.getRules(ip);
-        } else {
-            return AUTH_FAIL;
-        }
+    public String getRules(@PathParam("ip") String ip) {
+        return sinkitService.getRules(ip);
     }
 
     @GET
     @Path("/rules/all")
     @Produces({"application/json;charset=UTF-8"})
-    public String getAllRules(@HeaderParam(AUTH_HEADER_PARAM) String token) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            return sinkitService.getAllRules();
-        } else {
-            return AUTH_FAIL;
-        }
+    public String getAllRules() {
+        return sinkitService.getAllRules();
     }
 
     /**
@@ -220,36 +165,24 @@ public class SinkitREST {
     @Path("/rules/customer/{customerId}")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public String putDNSClientSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("customerId") Integer customerId, String settings) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            return sinkitService.putDNSClientSettings(customerId, settings);
-        } else {
-            return AUTH_FAIL;
-        }
+    public String putDNSClientSettings(@PathParam("customerId") Integer customerId, String settings) {
+        return sinkitService.putDNSClientSettings(customerId, settings);
     }
 
     @DELETE
     @Path("/rules/customer/{customerId}")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public String deleteDNSClientSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("customerId") Integer customerId) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            return sinkitService.deleteRulesByCustomer(customerId);
-        } else {
-            return AUTH_FAIL;
-        }
+    public String deleteDNSClientSettings(@PathParam("customerId") Integer customerId) {
+        return sinkitService.deleteRulesByCustomer(customerId);
     }
 
     @POST
     @Path("/rules/all")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public String postAllDNSClientSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, String rules) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            return sinkitService.postAllDNSClientSettings(rules);
-        } else {
-            return AUTH_FAIL;
-        }
+    public String postAllDNSClientSettings(String rules) {
+        return sinkitService.postAllDNSClientSettings(rules);
     }
 
 
@@ -257,67 +190,47 @@ public class SinkitREST {
     @Path("/lists/{customerId}")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public String putCustomLists(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("customerId") Integer customerId, String lists) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            return sinkitService.putCustomLists(customerId, lists);
-        } else {
-            return AUTH_FAIL;
-        }
+    public String putCustomLists(@PathParam("customerId") Integer customerId, String lists) {
+        return sinkitService.putCustomLists(customerId, lists);
     }
 
     @PUT
     @Path("/feed/{feedUid}")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public String putFeedSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("feedUid") String feedUid, String settings) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            return sinkitService.putFeedSettings(feedUid, settings);
-        } else {
-            return AUTH_FAIL;
-        }
+    public String putFeedSettings(@PathParam("feedUid") String feedUid, String settings) {
+        return sinkitService.putFeedSettings(feedUid, settings);
     }
 
     @POST
     @Path("/feed/create")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public String postCreateFeedSettings(@HeaderParam(AUTH_HEADER_PARAM) String token, String feed) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            return sinkitService.postCreateFeedSettings(feed);
-        } else {
-            return AUTH_FAIL;
-        }
+    public String postCreateFeedSettings(String feed) {
+        return sinkitService.postCreateFeedSettings(feed);
     }
 
     @POST
     @Path("/log/record")
-    public String logRecrod(@HeaderParam(AUTH_HEADER_PARAM) String token, String logRecord) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            try {
-                sinkitService.addEventLogRecord(logRecord);
-                return "OK";
-            } catch (Exception e) {
-                e.printStackTrace();
-                return "Not Ok";
-            }
-        } else {
-            return AUTH_FAIL;
+    public String logRecrod(String logRecord) {
+        try {
+            sinkitService.addEventLogRecord(logRecord);
+            return "OK";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Not Ok";
         }
     }
 
     @POST
     @Path("/total/enrich")
-    public String enrich(@HeaderParam(AUTH_HEADER_PARAM) String token) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            try {
-                sinkitService.enrich();
-                return "OK";
-            } catch (Exception e) {
-                e.printStackTrace();
-                return "Not Ok";
-            }
-        } else {
-            return AUTH_FAIL;
+    public String enrich() {
+        try {
+            sinkitService.enrich();
+            return "OK";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Not Ok";
         }
     }
 
@@ -325,10 +238,7 @@ public class SinkitREST {
     @Path("/gsb/{hashPrefix}")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public Response putGSBHashRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("hashPrefix") String hashPrefix) {
-        if (!StupidAuthenticator.isAuthenticated(token)) {
-            return Response.status(Response.Status.UNAUTHORIZED).entity(AUTH_FAIL).build();
-        }
+    public Response putGSBHashRecord(@PathParam("hashPrefix") String hashPrefix) {
         try {
             boolean response = sinkitService.putGSBHashPrefix(hashPrefix);
             Response.Status status;
@@ -349,10 +259,7 @@ public class SinkitREST {
     @Path("/gsb/{hashPrefix}")
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
-    public Response removeGSBHashRecord(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("hashPrefix") String hashPrefix) {
-        if (!StupidAuthenticator.isAuthenticated(token)) {
-            return Response.status(Response.Status.UNAUTHORIZED).entity(AUTH_FAIL).build();
-        }
+    public Response removeGSBHashRecord(@PathParam("hashPrefix") String hashPrefix) {
         try {
             boolean response = sinkitService.removeGSBHashPrefix(hashPrefix);
             Response.Status status;
@@ -372,33 +279,21 @@ public class SinkitREST {
     @GET
     @Path("/gsb/stats")
     @Produces({"application/json;charset=UTF-8"})
-    public String getGSBStats(@HeaderParam(AUTH_HEADER_PARAM) String token) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            return sinkitService.getGSBStats();
-        } else {
-            return AUTH_FAIL;
-        }
+    public String getGSBStats() {
+        return sinkitService.getGSBStats();
     }
 
     @GET
     @Path("/gsb/lookup/{url}")
     @Produces({"application/json;charset=UTF-8"})
-    public String gsbLookup(@HeaderParam(AUTH_HEADER_PARAM) String token, @PathParam("url") String url) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            return sinkitService.gsbLookup(url);
-        } else {
-            return AUTH_FAIL;
-        }
+    public String gsbLookup(@PathParam("url") String url) {
+        return sinkitService.gsbLookup(url);
     }
 
     @DELETE
     @Path("/gsb")
     @Produces({"application/json;charset=UTF-8"})
-    public String gsbClearCache(@HeaderParam(AUTH_HEADER_PARAM) String token) {
-        if (StupidAuthenticator.isAuthenticated(token)) {
-            return sinkitService.clearGSBCache();
-        } else {
-            return AUTH_FAIL;
-        }
+    public String gsbClearCache() {
+        return sinkitService.clearGSBCache();
     }
 }

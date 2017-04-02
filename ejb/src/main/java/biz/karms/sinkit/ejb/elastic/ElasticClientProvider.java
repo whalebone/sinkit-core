@@ -12,7 +12,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Created by Tomas Kozel
+ * @author Tomas Kozel
  */
 @ApplicationScoped
 public class ElasticClientProvider {

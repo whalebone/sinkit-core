@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 /**
- * Created by Tomas Kozel
+ * @author Tomas Kozel
  */
 @Stateless
 public class VirusTotalServiceEJB implements VirusTotalService {

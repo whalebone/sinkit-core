@@ -1,7 +1,7 @@
 package biz.karms.sinkit.exception;
 
 /**
- * Created by Tomas Kozel
+ * @author Tomas Kozel
  */
 public class IoCValidationException extends Exception {
     public IoCValidationException() {

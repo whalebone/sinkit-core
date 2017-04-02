@@ -3,7 +3,7 @@ package biz.karms.sinkit.ioc;
 import com.google.gson.annotations.SerializedName;
 
 /**
- * Created by Tomas Kozel
+ * @author Tomas Kozel
  */
 public enum IoCSourceIdType {
 

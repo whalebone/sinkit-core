@@ -1,7 +1,7 @@
 package biz.karms.sinkit.ejb.virustotal;
 
 import biz.karms.sinkit.ejb.ArchiveService;
-import biz.karms.sinkit.ejb.virustotal.impl.VirusTotalEnricherEJB;
+import biz.karms.sinkit.ejb.virustotal.impl.VirusTotalEnricher;
 import biz.karms.sinkit.eventlog.EventLogRecord;
 import biz.karms.sinkit.eventlog.EventReason;
 import biz.karms.sinkit.eventlog.VirusTotalRequest;
@@ -36,10 +36,10 @@ import static org.mockito.Mockito.when;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 /**
- * Created by Tomas Kozel
+ * @author Tomas Kozel
  */
 @RunWith(MockitoJUnitRunner.class)
-public class VirusTotalEnricherEJBTest {
+public class VirusTotalEnricherTest {
 
     @Mock
     private ArchiveService archiveService;
@@ -57,7 +57,7 @@ public class VirusTotalEnricherEJBTest {
     ArgumentCaptor<IoCVirusTotalReport[]> reportCaptor;
 
     @InjectMocks
-    private VirusTotalEnricherEJB enricher;
+    private VirusTotalEnricher enricher;
 
     @Test
     public void testSuccessfulEnrichment() throws Exception {

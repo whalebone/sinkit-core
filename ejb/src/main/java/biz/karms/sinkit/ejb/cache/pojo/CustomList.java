@@ -1,18 +1,10 @@
 package biz.karms.sinkit.ejb.cache.pojo;
 
-import org.hibernate.search.annotations.Analyze;
-import org.hibernate.search.annotations.Field;
-import org.hibernate.search.annotations.Index;
-import org.hibernate.search.annotations.Indexed;
-
-import javax.persistence.Entity;
 import java.io.Serializable;
 
 /**
  * @author Michal Karm Babacek
  */
-@Indexed(index = "CustomList")
-@Entity
 public class CustomList implements Serializable {
 
     private static final long serialVersionUID = 14109218311141111L;
@@ -20,19 +12,15 @@ public class CustomList implements Serializable {
     /**
      * Client DNS server identification
      */
-    @Field(index = Index.YES, analyze = Analyze.NO)
     private String clientStartAddress;
 
-    @Field(index = Index.YES, analyze = Analyze.NO)
     private String clientEndAddress;
 
-    @Field(index = Index.YES, analyze = Analyze.NO)
     private String clientCidrAddress;
 
     /**
      * Customer identification
      */
-    @Field(index = Index.YES, analyze = Analyze.NO)
     private int customerId;
 
 
@@ -41,23 +29,18 @@ public class CustomList implements Serializable {
      * <p>
      * While, Black, Log, defined as either CIDR or FQDN
      */
-    @Field(index = Index.YES, analyze = Analyze.NO)
     private String fqdn;
 
-    @Field(index = Index.YES, analyze = Analyze.NO)
     private String listStartAddress;
 
-    @Field(index = Index.YES, analyze = Analyze.NO)
     private String listEndAddress;
 
-    @Field(index = Index.YES, analyze = Analyze.NO)
     private String listCidrAddress;
 
 
     /**
      * ```<B|W|L>``` stands for Black White Log
      */
-    @Field(index = Index.YES, analyze = Analyze.NO)
     private String whiteBlackLog;
 
     public String getClientStartAddress() {

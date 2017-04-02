@@ -21,6 +21,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import javax.ejb.EJB;
 import javax.enterprise.context.RequestScoped;
+import javax.enterprise.context.SessionScoped;
 import javax.inject.Inject;
 import java.io.Serializable;
 import java.util.HashMap;
@@ -32,13 +33,11 @@ import java.util.logging.Logger;
 
 /**
  * @author Michal Karm Babacek
- *         <p>
- *         TODO: Validation and filtering :-)
  */
 @RequestScoped
 public class SinkitService implements Serializable {
 
-    public static final String ERR_MSG = "Error, please, check your input.";
+    private static final String ERR_MSG = "Error, please, check your input.";
     private static final long serialVersionUID = 4301258460502614798L;
 
     @EJB
@@ -192,8 +191,10 @@ public class SinkitService implements Serializable {
             log.log(Level.FINE, "Received JSON " + json);
             CustomerCustomListDTO[] customerCustomLists = new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().fromJson(json, CustomerCustomListDTO[].class);
             if (customerCustomLists == null) {
+                log.log(Level.FINE, "Returning error.");
                 return new GsonBuilder().create().toJson(ERR_MSG);
             }
+            log.log(Level.FINE, "Gonna call webapi...");
             return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapi.putCustomLists(customerId, customerCustomLists));
         } catch (Exception e) {
             log.log(Level.SEVERE, "putCustomLists", e);

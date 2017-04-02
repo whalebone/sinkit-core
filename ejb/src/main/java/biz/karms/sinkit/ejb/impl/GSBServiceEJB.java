@@ -14,9 +14,9 @@ import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.ArrayUtils;
-import org.infinispan.Cache;
+import org.infinispan.client.hotrod.Flag;
+import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.commons.util.concurrent.NotifyingFuture;
-import org.infinispan.context.Flag;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.EJB;
@@ -44,8 +44,8 @@ public class GSBServiceEJB implements GSBService {
     private Logger logger;
 
     @Inject
-    @SinkitCache(SinkitCacheName.GSB_CACHE)
-    private Cache<String, GSBRecord> gsbCache;
+    @SinkitCache(SinkitCacheName.infinispan_gsb)
+    private RemoteCache<String, GSBRecord> gsbCache;
 
     @EJB
     private GSBClient gsbClient;
@@ -62,7 +62,7 @@ public class GSBServiceEJB implements GSBService {
         if (ipOrFQDN == null) {
             throw new IllegalArgumentException("lookup: URL must not be null, cannot perform lookup.");
         }
-        // canonicalization and prefix/suffix variants for lookup is done here
+        // canonization and prefix/suffix variants for lookup is done here
         final List<String> lookupVariants = GSBUtils.getLookupVariants(ipOrFQDN);
         // try to lookup for each variant until first match is found
         Set<String> gsbBlacklists;
@@ -86,7 +86,7 @@ public class GSBServiceEJB implements GSBService {
         final String fullHashString = Hex.encodeHexString(hash);
         final String hashStringPrefix = fullHashString.substring(0, PREFIX_LENGTH * 2);
 
-        GSBRecord gsbRecord = gsbCache.getAdvancedCache().withFlags(Flag.SKIP_CACHE_STORE).get(hashStringPrefix);
+        GSBRecord gsbRecord = gsbCache.withFlags(Flag.SKIP_CACHE_LOAD).get(hashStringPrefix);
         // if hash prefix is not in the cache then URL is not blacklisted for sure
         if (gsbRecord == null) {
             return null;
@@ -102,7 +102,7 @@ public class GSBServiceEJB implements GSBService {
             logger.log(Level.FINE, "lookup: Full hashes for prefix " + hashStringPrefix + " expired -> updating.");
             FullHashLookupResponse resposne = gsbClient.getFullHashes(hashPrefix);
             gsbRecord = GSBCachePOJOFactory.createFullHashes(resposne);
-            gsbCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).putAsync(hashStringPrefix, gsbRecord);
+            gsbCache.put(hashStringPrefix, gsbRecord);
             fullHashes = gsbRecord.getFullHashes();
         }
 
@@ -137,7 +137,7 @@ public class GSBServiceEJB implements GSBService {
             HashMap<String, HashSet<String>> fullHashes = new HashMap<>();
 
             final GSBRecord gsbRecord = new GSBRecord(hashPrefix, fullHashesExpireAt, fullHashes);
-            gsbCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).putAsync(hashPrefix, gsbRecord);
+            gsbCache.put(hashPrefix, gsbRecord);
             logger.log(Level.FINEST, "putHashPrefix: Hash prefix " + hashPrefix + " added into cache.");
         } else {
             //Should not have happened often
@@ -153,7 +153,7 @@ public class GSBServiceEJB implements GSBService {
             logger.log(Level.SEVERE, "removeHashPrefix: Got null hash prefix. Can't process this.");
             return false;
         }
-        gsbCache.removeAsync(hashPrefix);
+        gsbCache.remove(hashPrefix);
         return true;
     }
 
@@ -172,14 +172,14 @@ public class GSBServiceEJB implements GSBService {
 //        Calendar fullHashesExpireAt = Calendar.getInstance();
 //        fullHashesExpireAt.add(Calendar.SECOND, validSeconds);
 //        GSBRecord gsbRecord = new GSBRecord(hashPrefix, fullHashesExpireAt, fullHashes);
-//        gsbCache.replaceAsync(hashPrefix, gsbRecord);
+//        gsbCache.replace(hashPrefix, gsbRecord);
 //        return true;
 //    }
 
     @Override
     public boolean dropTheWholeCache(boolean async) {
         try {
-            NotifyingFuture<Void> cleared = gsbCache.getAdvancedCache().withFlags(Flag.IGNORE_RETURN_VALUES).clearAsync();
+            NotifyingFuture<Void> cleared = gsbCache.clearAsync();
             if (!async) {
                 cleared.get();
             }

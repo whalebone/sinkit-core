@@ -15,7 +15,7 @@ import java.util.logging.Logger;
  */
 @Local
 public interface DNSApi {
-    Sinkhole getSinkHole(final String clientIPAddress, final String fqdnOrIp, String fqdn);
+    Sinkhole getSinkHole(String clientIPAddress, String fqdnOrIp, String fqdn, Integer clientId);
 
     void logDNSEvent(
             EventLogAction action,

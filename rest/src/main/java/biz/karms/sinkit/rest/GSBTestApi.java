@@ -3,27 +3,28 @@ package biz.karms.sinkit.rest;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.enterprise.context.RequestScoped;
-import javax.ws.rs.HeaderParam;
+import javax.enterprise.context.SessionScoped;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.xml.bind.DatatypeConverter;
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Random;
 
 /**
- * Created by tom on 12/22/15.
- *
  * @author Tomas Kozel
  */
 @RequestScoped
 @Path("/gsbapitest")
-public class GSBTestApi {
+public class GSBTestApi implements Serializable {
+
+    private static final long serialVersionUID = 5541951331672323961L;
 
     @POST
     @Path("/fullhash")
     @Produces({"application/octet-stream"})
-    public byte[] testApiFullHashes(@HeaderParam(SinkitREST.AUTH_HEADER_PARAM) String token, byte[] fullHashRequest) {
+    public byte[] testApiFullHashes(byte[] fullHashRequest) {
         byte[] prefix = ArrayUtils.subarray(fullHashRequest, fullHashRequest.length - 4, fullHashRequest.length);
         byte[] googleHash = DatatypeConverter.parseHexBinary("88981e6263be34a6c0b53ada73d168b68828dd643723d34a812e9f8a6abb5ee9"); // google.com/
         byte[] evilHash = DatatypeConverter.parseHexBinary("c759a0aaa49a133ff527065e3d18c51388eae5c72c927b5703d07ca2e80c0f35"); // evil.com/

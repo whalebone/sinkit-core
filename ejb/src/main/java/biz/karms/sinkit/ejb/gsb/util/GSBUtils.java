@@ -35,7 +35,7 @@ public class GSBUtils {
             return lookupVariants;
         } else if (hostParts.length > 2 && hostParts.length <= MAX_HOST_PARTS) {
             // if hostname contains num of parts between 3 and MAX_HOST_PARTS (inclusive) then
-            // only contained parts - 1 is extracted, since the whole hostname is alredy
+            // only contained parts - 1 is extracted, since the whole hostname is already
             // added as variant
             maxHostParts = hostParts.length - 1;
         } else {

@@ -6,7 +6,7 @@ import com.google.gson.annotations.SerializedName;
 import java.util.Arrays;
 
 /**
- * Created by Tomas Kozel
+ * @author Tomas Kozel
  */
 public class IoCRecord implements Indexable {
 

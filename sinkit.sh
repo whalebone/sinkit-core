@@ -30,11 +30,6 @@ fi
 # Replace NIC
 sed -i "s/@SINKITNIC@/${SINKIT_NIC:-eth0}/g" ${WF_CONFIG}
 
-# Replace TCPPING config
-sed -i "s/@SINKIT_TCPPING_INITIAL_HOSTS@/${SINKIT_TCPPING_INITIAL_HOSTS:-[${HOSTNAME}]7800}/g" ${WF_CONFIG}
-sed -i "s/@SINKIT_TCPPING_TIMEOUT@/${SINKIT_TCPPING_TIMEOUT:-60000}/g" ${WF_CONFIG}
-sed -i "s/@SINKIT_TCPPING_NUM_MEMBERS@/${SINKIT_TCPPING_NUM_MEMBERS:-1}/g" ${WF_CONFIG}
-
 # Replace Logging level
 sed -i "s/@SINKITLOGGING@/${SINKIT_LOGLEVEL:-INFO}/g" ${WF_CONFIG}
 
@@ -47,21 +42,76 @@ fi
 
 sed -i "s/<core-environment>/<core-environment node-identifier=\"${HOSTNAME}\">/g" ${WF_CONFIG}
 
+# Generate and configure JKS from injected certificates
+if [[ "${SINKIT_CA_CRT_BASE64}X" == "X" ]]; then
+    echo "SINKIT_CA_CRT_BASE64 must contain PEM certificate, base64 encoded but was empty."
+    exit 1
+fi
+if [[ "${SINKIT_SERVER_CRT_BASE64}X" == "X" ]]; then
+    echo "SINKIT_SERVER_CRT_BASE64 must contain PEM certificate, base64 encoded but was empty."
+    exit 1
+fi
+if [[ "${SINKIT_SERVER_KEY_BASE64}X" == "X" ]]; then
+    echo "SINKIT_SERVER_KEY_BASE64 must contain PEM certificate, base64 encoded but was empty."
+    exit 1
+fi
+if [[ "${SINKIT_KEYSTORE_PASS}X" == "X" ]]; then
+    echo "SINKIT_KEYSTORE_PASS must contain a string but was empty."
+    exit 1
+fi
+
+echo ${SINKIT_CA_CRT_BASE64} | base64 -d  > /opt/sinkit/certs/oraculum_ca.crt
+echo ${SINKIT_SERVER_CRT_BASE64} | base64 -d > /opt/sinkit/certs/oraculum_server.crt
+echo ${SINKIT_SERVER_KEY_BASE64} | base64 -d > /opt/sinkit/certs/oraculum_server.key
+
+if ! [[ -s /opt/sinkit/certs/oraculum_ca.crt ]]; then
+    echo "File /opt/sinkit/certs/oraculum_ca.crt must not be empty."
+    exit 1
+fi
+
+if ! [[ -s /opt/sinkit/certs/oraculum_server.crt ]]; then
+    echo "File /opt/sinkit/certs/oraculum_server.crt must not be empty."
+    exit 1
+fi
+
+if ! [[ -s /opt/sinkit/certs/oraculum_server.key ]]; then
+    echo "File /opt/sinkit/certs/oraculum_server.key must not be empty."
+    exit 1
+fi
+
+yes | keytool -import -file /opt/sinkit/certs/oraculum_ca.crt -keystore /opt/sinkit/certs/ca-cert.jks -storepass "${SINKIT_KEYSTORE_PASS}"
+openssl pkcs12 -export -in /opt/sinkit/certs/oraculum_server.crt -inkey /opt/sinkit/certs/oraculum_server.key -out /opt/sinkit/certs/oraculum_server.pfx -passout pass:"${SINKIT_KEYSTORE_PASS}"
+echo -e "${SINKIT_KEYSTORE_PASS}\n${SINKIT_KEYSTORE_PASS}\n${SINKIT_KEYSTORE_PASS}" | keytool -importkeystore -destkeystore /opt/sinkit/certs/server-cert-key.jks -srckeystore /opt/sinkit/certs/oraculum_server.pfx -srcstoretype PKCS12
+
+if ! [[ -s /opt/sinkit/certs/ca-cert.jks ]]; then
+    echo "File /opt/sinkit/certs/ca-cert.jks must not be empty."
+    exit 1
+fi
+
+if ! [[ -s /opt/sinkit/certs/server-cert-key.jks  ]]; then
+    echo "File /opt/sinkit/certs/server-cert-key.jks  must not be empty."
+    exit 1
+fi
+
+sed -i "s/@SSL_PROTOCOL@/${SINKIT_SSL_PROTOCOL:-TLSv1.2}/g" ${WF_CONFIG}
+#sed -i "s/@ENABLED_CIPHER_SUITES@/${SINKIT_ENABLED_CIPHER_SUITES:-}/g" ${WF_CONFIG}
+sed -i "s/@ORACULUM_SERVER_KEYSTORE_PATH@/\/opt\/sinkit\/certs\/server-cert-key.jks/g" ${WF_CONFIG}
+sed -i "s/@ORACULUM_SERVER_KEYSTORE_PASS@/${SINKIT_KEYSTORE_PASS}/g" ${WF_CONFIG}
+sed -i "s/@ORACULUM_SERVER_KEYSTORE_ALIAS@/1/g" ${WF_CONFIG}
+sed -i "s/@ORACULUM_SERVER_VERIFY_CLIENT@/${SINKIT_VERIFY_CLIENT:-REQUIRED}/g" ${WF_CONFIG}
+sed -i "s/@ORACULUM_TRUST_STORE_PATH@/\/opt\/sinkit\/certs\/ca-cert.jks/g" ${WF_CONFIG}
+sed -i "s/@ORACULUM_TRUST_STORE_PASS@/${SINKIT_KEYSTORE_PASS}/g" ${WF_CONFIG}
+
 /opt/sinkit/wildfly/bin/standalone.sh \
  -b ${MYIP} \
- -c standalone-ha.xml \
+ -c standalone.xml \
  -Djava.net.preferIPv4Stack=true \
  -Djboss.modules.system.pkgs=org.jboss.byteman \
  -Djava.awt.headless=true \
  -Djboss.bind.address.management=${MYIP} \
  -Djboss.bind.address=${MYIP} \
  -Djboss.bind.address.private=${MYIP} \
- -Djgroups.bind_addr=${MYIP} \
- -Djgroups.tcp.address=${MYIP} \
  -Djboss.node.name="${HOSTNAME}" \
  -Djboss.host.name="${HOSTNAME}" \
  -Djboss.qualified.host.name="${HOSTNAME}" \
- -Djboss.as.management.blocking.timeout=1800 \
- -Djboss.jgroups.azure_ping.storage_account_name="${SINKIT_AZURE_ACCOUNT_NAME}" \
- -Djboss.jgroups.azure_ping.storage_access_key="${SINKIT_AZURE_ACCESS_KEY}" \
- -Djboss.jgroups.azure_ping.container="${SINKIT_AZURE_CONTAINER}"
+ -Djboss.as.management.blocking.timeout=1800

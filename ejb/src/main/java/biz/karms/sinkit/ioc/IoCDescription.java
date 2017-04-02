@@ -3,7 +3,7 @@ package biz.karms.sinkit.ioc;
 import java.io.Serializable;
 
 /**
- * Created by Tomas Kozel
+ * @author Tomas Kozel
  */
 public class IoCDescription implements Serializable {
 

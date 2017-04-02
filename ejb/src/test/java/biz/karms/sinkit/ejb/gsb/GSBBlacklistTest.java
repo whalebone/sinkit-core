@@ -5,7 +5,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 /**
- * Created by Tomas Kozel
+ * @author Tomas Kozel
  */
 public class GSBBlacklistTest {
 

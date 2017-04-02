@@ -37,9 +37,11 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.validator.routines.DomainValidator;
-import org.infinispan.Cache;
-import org.infinispan.context.Flag;
-import org.infinispan.query.Search;
+import org.infinispan.client.hotrod.Flag;
+import org.infinispan.client.hotrod.RemoteCache;
+import org.infinispan.client.hotrod.RemoteCacheManager;
+import org.infinispan.client.hotrod.Search;
+import org.infinispan.commons.api.BasicCache;
 import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
 
@@ -52,7 +54,6 @@ import javax.inject.Inject;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -61,7 +62,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 /**
  * @author Michal Karm Babacek
@@ -86,38 +86,41 @@ public class DNSApiEJB implements DNSApi {
     private GSBService gsbService;
 
     @Inject
-    @SinkitCache(SinkitCacheName.BLACKLIST_CACHE)
-    private Cache<String, BlacklistedRecord> blacklistCache;
+    @SinkitCache(SinkitCacheName.infinispan_blacklist)
+    private RemoteCache<String, BlacklistedRecord> blacklistCache;
 
     @Inject
-    @SinkitCache(SinkitCacheName.RULES_CACHE)
-    private Cache<String, Rule> ruleCache;
+    @SinkitCache(SinkitCacheName.cache_manager_indexable)
+    private RemoteCacheManager cacheManagerForIndexableCaches;
 
     @Inject
-    @SinkitCache(SinkitCacheName.CUSTOM_LISTS_CACHE)
-    private Cache<String, CustomList> customListsCache;
+    @SinkitCache(SinkitCacheName.rules_local_cache)
+    private BasicCache<String, List<Rule>> ruleLocalCache;
 
     @Inject
-    @SinkitCache(SinkitCacheName.CUSTOM_LISTS_LOCAL_CACHE)
-    private Cache<String, List<CustomList>> customListsLocalCache;
+    @SinkitCache(SinkitCacheName.custom_lists_local_cache)
+    private BasicCache<String, List<CustomList>> customListsLocalCache;
 
-    @Inject
-    @SinkitCache(SinkitCacheName.RULES_LOCAL_CACHE)
-    private Cache<String, List<Rule>> ruleLocalCache;
-
-    //private static final List<String> FEEDTYPES = Arrays.asList("c&c", "malware", "ransomware", "malware configuration", "phishing", "blacklist", "unwanted software");
     private static final String IPV6SINKHOLE = System.getenv("SINKIT_SINKHOLE_IPV6");
     private static final String IPV4SINKHOLE = System.getenv("SINKIT_SINKHOLE_IP");
     private static final String GSB_FEED_NAME = (System.getenv().containsKey("SINKIT_GSB_FEED_NAME")) ? System.getenv("SINKIT_GSB_FEED_NAME") : "google-safebrowsing-api";
     private static final boolean USE_LOGSTASH = StringUtils.isNotBlank(System.getenv(LogstashClient.LOGSTASH_URL_ENV));
-    //private static final String GSB_IOC_DOES_NOT_EXIST = "GSB-IOC-FAKE-ID";
     private static final int ARCHIVE_FAILED_TRIALS = 10;
-    //private static final String TOKEN = System.getenv("SINKIT_ACCESS_TOKEN");
     private static final boolean DNS_REQUEST_LOGGING_ENABLED = Boolean.parseBoolean((System.getenv().containsKey("SINKIT_DNS_REQUEST_LOGGING_ENABLED")) ? System.getenv("SINKIT_DNS_REQUEST_LOGGING_ENABLED") : "true");
 
-    // TODO: List? Array? Map with additional data? Let's think this over.
-    // TODO: Replace/factor out duplicated code in .getRules out of webApiEJB
-    private List<Rule> rulesLookup(final String clientIPAddressPaddedBigInt) {
+    /**
+     * There are 3 ways to find the result, in ascending order by their cost:
+     * 1. local cache of already found results based on clientIPAddressPaddedBigInt
+     * 2. getting key clientIPAddressPaddedBigInt from the cache of Rules
+     * 3. lookup in the cache of Rules based on subnets
+     * <p>
+     * TODO: List? Array? Map with additional data? Let's think this over.
+     * TODO: Replace/factor out duplicated code in .getRules out of webApiEJB
+     *
+     * @param clientIPAddressPaddedBigInt
+     * @return list of rules
+     */
+    private List<Rule> rulesLookup(final String clientIPAddressPaddedBigInt, final RemoteCache<String, Rule> ruleCache) {
         try {
             log.log(Level.FINE, "Getting key BigInteger zero padded representation " + clientIPAddressPaddedBigInt);
             // Let's search subnets
@@ -129,12 +132,12 @@ public class DNSApiEJB implements DNSApi {
                 return cached;
             } else {
                 // Let's try to hit it
-                final Rule rule = ruleCache.getAdvancedCache().withFlags(Flag.SKIP_INDEXING).get(clientIPAddressPaddedBigInt);
+                final Rule rule = ruleCache.withFlags(Flag.SKIP_CACHE_LOAD).get(clientIPAddressPaddedBigInt);
                 if (rule != null) {
                     return Collections.singletonList(rule);
                 }
                 final QueryFactory qf = Search.getQueryFactory(ruleCache);
-                Query query = qf.from(Rule.class)
+                final Query query = qf.from(Rule.class)
                         .having("startAddress").lte(clientIPAddressPaddedBigInt)
                         .and()
                         .having("endAddress").gte(clientIPAddressPaddedBigInt)
@@ -153,9 +156,49 @@ public class DNSApiEJB implements DNSApi {
         }
     }
 
+    /**
+     * There are 2 ways to find the result, in ascending order by their cost:
+     * 1. local cache of already found results based on customerId
+     * 2. lookup in the cache of Rules based on customerId
+     * <p>
+     * TODO: List? Array? Map with additional data? Let's think this over.
+     * TODO: Replace/factor out duplicated code in .getRules out of webApiEJB
+     *
+     * @param customerId customer ID passed on from Resolver
+     * @return list of rules
+     */
+    private List<Rule> rulesLookup(final Integer customerId, final RemoteCache<String, Rule> ruleCache) {
+        try {
+            log.log(Level.FINE, "Getting key for customerId " + customerId);
+            /* TODO: Could we have a collision between MD5 hash of customer (client) ID and an MD5 hash sum of clientIPAddressPaddedBigInt + clientIPAddressPaddedBigInt ? */
+            final String keyInCache = DigestUtils.md5Hex(customerId.toString());
+            log.log(Level.FINE, "keyInCache: " + keyInCache + ", from: " + customerId);
+
+            final List<Rule> cached = ruleLocalCache.get(keyInCache);
+            if (cached != null) {
+                return cached;
+            } else {
+                final QueryFactory qf = Search.getQueryFactory(ruleCache);
+                final Query query = qf.from(Rule.class)
+                        .having("customerId").eq(customerId)
+                        .toBuilder().build();
+                if (query != null) {
+                    final List<Rule> result = query.list();
+                    ruleLocalCache.put(keyInCache, result);
+                    return result;
+
+                }
+                return Collections.emptyList();
+            }
+        } catch (Exception e) {
+            log.log(Level.SEVERE, "getRules client customerId troubles", e);
+            return null;
+        }
+    }
+
     private List<CustomList> customListsLookup(final Integer customerId, final boolean isFQDN, final String fqdnOrIp) {
-        final QueryFactory qf = Search.getQueryFactory(customListsCache);
-        Query query = null;
+        final QueryFactory qf = Search.getQueryFactory(cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_custom_lists.toString()));
+        Query query;
         if (isFQDN) {
 
             final String keyInCache = DigestUtils.md5Hex(customerId + fqdnOrIp);
@@ -221,31 +264,40 @@ public class DNSApiEJB implements DNSApi {
     /**
      * Sinkhole, to be called by DNS client.
      *
-     * @param clientIPAddress - DNS server IP
-     * @param fqdnOrIp        - FQDN DNS is trying to resolve or resolved IP (v6 or v4)
-     * @param fqdn
+     * @param clientIPAddress        - DNS server IP
+     * @param fqdnOrIp               - FQDN DNS is trying to resolve or resolved IP (v6 or v4)
+     * @param fqdn                   - FQDN original DNS query
+     * @param customerIdFromResolver - customerId, if resolver knows it
      * @return null if there is an error and/or there is no reason to sinkhole or Sinkhole instance on positive hit
      */
     @Override
-    public Sinkhole getSinkHole(final String clientIPAddress, final String fqdnOrIp, final String fqdn) {
-        /**
-         * At first, we lookup Rules
-         */
-        final String clientIPAddressPaddedBigInt;
-        try {
-            clientIPAddressPaddedBigInt = CIDRUtils.getStartEndAddresses(clientIPAddress).getLeft();
-        } catch (UnknownHostException e) {
-            log.log(Level.SEVERE, "getSinkHole: clientIPAddress " + clientIPAddress + " in not a valid address.");
-            return null;
-        }
-        final boolean probablyIsIPv6 = fqdnOrIp.contains(":");
+    public Sinkhole getSinkHole(final String clientIPAddress, final String fqdnOrIp, final String fqdn, final Integer customerIdFromResolver) {
 
-        long start = System.currentTimeMillis();
-        // Lookup Rules (gives customerId, feeds and their settings)
-        //TODO: Add test that all such found rules have the same customerId
-        //TODO: factor .getRules out of webApiEJB
-        final List<Rule> rules = rulesLookup(clientIPAddressPaddedBigInt);
-        log.log(Level.FINE, "rulesLookup took: " + (System.currentTimeMillis() - start) + " ms.");
+        // USed for benchmarking
+        long start;
+
+        final List<Rule> rules;
+
+        final RemoteCache<String, Rule> rulesCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
+        // If we have customerId from Resolver, we don't need to search based on clientIPAddress.
+        if (customerIdFromResolver == null || customerIdFromResolver < 0) {
+            // At first, we lookup Rule
+            final String clientIPAddressPaddedBigInt;
+            try {
+                clientIPAddressPaddedBigInt = CIDRUtils.getStartEndAddresses(clientIPAddress).getLeft();
+            } catch (UnknownHostException e) {
+                log.log(Level.SEVERE, "getSinkHole: clientIPAddress " + clientIPAddress + " in not a valid address.");
+                return null;
+            }
+            start = System.currentTimeMillis();
+            // Lookup Rules (gives customerId, feeds and their settings)
+            //TODO: Add test that all such found rules have the same customerId
+            //TODO: factor .getRules out of webApiEJB
+            rules = rulesLookup(clientIPAddressPaddedBigInt, rulesCache);
+            log.log(Level.FINE, "rulesLookup took: " + (System.currentTimeMillis() - start) + " ms.");
+        } else {
+            rules = rulesLookup(customerIdFromResolver, rulesCache);
+        }
 
         //If there is no rule, we simply don't sinkhole anything.
         if (CollectionUtils.isEmpty(rules)) {
@@ -256,16 +308,22 @@ public class DNSApiEJB implements DNSApi {
         //TODO: regarding get(0): Solve overlapping customer settings.
         // Customer ID for this whole method context
         final int customerId = rules.get(0).getCustomerId();
+
+        // Sanity check. If we have a customer ID from resolver, it must be the same as the one we found.
+        if ((customerIdFromResolver != null && customerIdFromResolver > 0) && (customerId != customerIdFromResolver)) {
+            log.log(Level.SEVERE, "customerIdFromResolver is " + customerIdFromResolver + " and customerId from rules is "
+                    + customerId + ", they MUST be the same. Returning null without further processing.");
+            return null;
+        }
+
         // To determine whether key is a FQDN or an IP address
         final boolean isFQDN = DomainValidator.getInstance().isValid(fqdnOrIp);
 
-        /**
-         * Next we fetch one and only one or none CustomList for a given fqdnOrIp
-         */
+        // Next we fetch one and only one or none CustomList for a given fqdnOrIp
         start = System.currentTimeMillis();
         final CustomList customList = retrieveOneCustomList(customerId, isFQDN, fqdnOrIp);
         log.log(Level.FINE, "retrieveOneCustomList took: " + (System.currentTimeMillis() - start) + " ms.");
-
+        final boolean probablyIsIPv6 = fqdnOrIp.contains(":");
         // Was it found in any of customer's Black/White/Log lists?
         // TODO: Implement logging for whitelisted stuff that's positive on IoC.
         if (customList != null) {
@@ -286,20 +344,16 @@ public class DNSApiEJB implements DNSApi {
             }
         }
 
-        /**
-         * Now it's the time to search IoC cache
-         */
+        // Now it's the time to search IoC cache
         // Lookup BlacklistedRecord from IoC cache (gives feeds)
         log.log(Level.FINE, "getSinkHole: getting IoC key " + fqdnOrIp);
         start = System.currentTimeMillis();
-        final BlacklistedRecord blacklistedRecord = blacklistCache.getAdvancedCache().withFlags(Flag.SKIP_CACHE_STORE).get(DigestUtils.md5Hex(fqdnOrIp));
+        final BlacklistedRecord blacklistedRecord = blacklistCache.withFlags(Flag.SKIP_CACHE_LOAD).get(DigestUtils.md5Hex(fqdnOrIp));
         log.log(Level.FINE, "blacklistCache.get took: " + (System.currentTimeMillis() - start) + " ms.");
 
         Set<ThreatType> gsbResults = null;
         if (isFQDN) {
-            /**
-             * Let's search GSB cache
-             */
+            // Let's search GSB cache
             log.log(Level.FINE, "getSinkHole: getting GSB key " + fqdnOrIp);
             start = System.currentTimeMillis();
             gsbResults = gsbService.lookup(fqdnOrIp);
@@ -315,11 +369,7 @@ public class DNSApiEJB implements DNSApi {
         final Map<String, Set<ImmutablePair<String, String>>> feedTypeMap = new HashMap<>();
 
         if (blacklistedRecord != null && MapUtils.isNotEmpty(blacklistedRecord.getSources())) {
-
-            /**
-             * once blacklisted source issue is fixed
-             * replace this for-loop for feedTypeMap.putAll(blacklistedRecord.getSources());
-             */
+            // Once blacklisted source issue is fixed replace this for-loop for feedTypeMap.putAll(blacklistedRecord.getSources());
             Set<ImmutablePair<String, String>> blacklistedRecordSource;
             for (Map.Entry<String, ImmutablePair<String, String>> typeIoCImmutablePair : blacklistedRecord.getSources().entrySet()) {
                 blacklistedRecordSource = new HashSet<>();
@@ -386,9 +436,8 @@ public class DNSApiEJB implements DNSApi {
                 log.log(Level.FINE, "getSinkHole: coreService.logDNSEvent returned.");
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging BLOCK failed: ", e);
-            } finally {
-                return new Sinkhole(probablyIsIPv6 ? IPV6SINKHOLE : IPV4SINKHOLE);
             }
+            return new Sinkhole(probablyIsIPv6 ? IPV6SINKHOLE : IPV4SINKHOLE);
         } else if ("L".equals(mode)) {
             //Log it for customer
             log.log(Level.FINE, "getSinkHole: Log.");
@@ -398,10 +447,9 @@ public class DNSApiEJB implements DNSApi {
                 }
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging AUDIT failed: ", e);
-            } finally {
-                //TODO: Distinguish this from an error state.
-                return null;
             }
+            //TODO: Distinguish this from an error state.
+            return null;
         } else if ("D".equals(mode)) {
             //Log it for us
             log.log(Level.FINE, "getSinkHole: Log internally.");
@@ -411,10 +459,9 @@ public class DNSApiEJB implements DNSApi {
                 }
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging INTERNAL failed: ", e);
-            } finally {
-                //TODO: Distinguish this from an error state.
-                return null;
             }
+            // TODO: Distinguish this from an error state.
+            return null;
         } else {
             log.log(Level.SEVERE, "getSinkHole: Feed mode must be one of L,S,D, null but was: " + mode);
             return null;
@@ -422,9 +469,9 @@ public class DNSApiEJB implements DNSApi {
 
     }
 
-    private static Set<String> unwrapDocumentIds(Collection<ImmutablePair<String, String>> ImmutablePairs) {
+    /*private static Set<String> unwrapDocumentIds(Collection<ImmutablePair<String, String>> ImmutablePairs) {
         return ImmutablePairs.stream().map(ImmutablePair::getRight).collect(Collectors.toCollection(HashSet::new));
-    }
+    }*/
 
     /**
      * Fire and Forget pattern
@@ -440,7 +487,7 @@ public class DNSApiEJB implements DNSApi {
      * @param reasonFqdn  IOC hit
      * @param reasonIp    IOC hit
      * @param matchedIoCs IoCs with the same feed listed
-     * @throws ArchiveException
+     * @throws ArchiveException When things go south.
      */
     @Asynchronous
     public void logDNSEvent(

@@ -1,12 +1,11 @@
 package biz.karms.sinkit.ioc;
 
 import com.google.gson.annotations.SerializedName;
-import org.hibernate.search.annotations.NumericField;
 
 import java.io.Serializable;
 
 /**
- * Created by Tomas Kozel
+ * @author Tomas Kozel
  */
 public class IoCSource implements Serializable {
 
@@ -21,7 +20,6 @@ public class IoCSource implements Serializable {
     @SerializedName("reverse_domain_name")
     private String reverseDomainName;
 
-    @NumericField
     private Integer asn;
 
     @SerializedName("asn_name")

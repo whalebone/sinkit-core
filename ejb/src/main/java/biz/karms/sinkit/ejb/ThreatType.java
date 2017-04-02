@@ -3,7 +3,7 @@ package biz.karms.sinkit.ejb;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * Created by tkozel on 5/23/16.
+ * @author Tomas Kozel
  */
 public enum ThreatType {
 

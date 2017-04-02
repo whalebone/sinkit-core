@@ -27,7 +27,7 @@ import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * Created by Tomas Kozel
+ * @author Tomas Kozel
  */
 @RunWith(MockitoJUnitRunner.class)
 public class CoreServiceEJBTest {

@@ -1,7 +1,6 @@
 package biz.karms.sinkit.ejb.virustotal.impl;
 
 import biz.karms.sinkit.ejb.ArchiveService;
-import biz.karms.sinkit.ejb.virustotal.VirusTotalEnricher;
 import biz.karms.sinkit.ejb.virustotal.VirusTotalService;
 import biz.karms.sinkit.ejb.virustotal.exception.VirusTotalException;
 import biz.karms.sinkit.eventlog.EventLogRecord;
@@ -14,32 +13,50 @@ import com.kanishka.virustotal.exception.InvalidArguentsException;
 import com.kanishka.virustotal.exception.QuotaExceededException;
 import com.kanishka.virustotal.exception.UnauthorizedAccessException;
 import org.apache.commons.lang3.StringUtils;
+import org.infinispan.context.InvocationContext;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
-import javax.ejb.*;
+import javax.ejb.EJB;
+import javax.ejb.LocalBean;
+import javax.ejb.ScheduleExpression;
+import javax.ejb.Singleton;
+import javax.ejb.Startup;
+import javax.ejb.Timeout;
 import javax.ejb.Timer;
+import javax.ejb.TimerConfig;
+import javax.ejb.TimerService;
 import javax.inject.Inject;
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
 import java.util.logging.Logger;
 
 /**
- * Created by Tomas Kozel
+ * @author Tomas Kozel
  */
-@Stateless
-public class VirusTotalEnricherEJB implements VirusTotalEnricher {
+@Singleton
+@LocalBean
+@Startup
+public class VirusTotalEnricher {
 
     // we can call the Virus Total API only 4 times per minute
-    private static final int SHOTS_PER_RUN = 4;
+    public static final int SHOTS_PER_RUN = 4;
     // max attempts of VT enrichment before VT request status is set to FAILED
-    private static final int MAX_FAILED_ATTEMPTS = 3;
+    public static final int MAX_FAILED_ATTEMPTS = 3;
     // minutes that have to last after unsuccessful VT enrichment attempt than VT request can be processed again
     // this prevents the VT request to be processed immediately again after it fails
-    private static final int NOT_ALLOWED_FAILED_MINUTES = 2;
+    public static final int NOT_ALLOWED_FAILED_MINUTES = 2;
     // max of VT request that can be processed whiting single run of enrichment
     // this prevents enrichment to go through all requests in archive within single run in case that each VT request fails
-    private static final int MAX_RECORDS_PER_RUN = 50;
+    public static final int MAX_RECORDS_PER_RUN = 50;
+
+    public static final boolean SINKIT_VIRUS_TOTAL_SKIP = (System.getenv().containsKey("SINKIT_VIRUS_TOTAL_SKIP")) && Boolean.parseBoolean(System.getenv("SINKIT_VIRUS_TOTAL_SKIP"));
 
     @Inject
     private Logger log;
@@ -53,19 +70,18 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
     @Resource
     private TimerService timerService;
 
-    @Override
-    public void initialize(String info) {
-        ScheduleExpression sexpr = new ScheduleExpression();
-        // Every 40 seconds
-        sexpr.hour("*").minute("*").second("0/40");
-        timerService.createCalendarTimer(sexpr, new TimerConfig(info, false));
+    @PostConstruct
+    private void initialize() {
+        if (!SINKIT_VIRUS_TOTAL_SKIP) {
+            timerService.createCalendarTimer(new ScheduleExpression().hour("*").minute("*").second("0/40"), new TimerConfig("VirusTotalEnricher", false));
+        }
     }
 
-    @Override
+    @PreDestroy
     public void stop() {
-        log.info("Stop all existing VirusTotalEnricher HASingleton timers.");
+        log.info("Stop all existing VirusTotalEnricher timers.");
         for (Timer timer : timerService.getTimers()) {
-            log.fine("Stop VirusTotalEnricher HASingleton timer: " + timer.getInfo());
+            log.fine("Stop VirusTotalEnricher timer: " + timer.getInfo());
             timer.cancel();
         }
     }
@@ -73,9 +89,7 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
     @Timeout
     public void scheduler(Timer timer) {
         log.info("VirusTotalEnricher HASingletonTimer: Info=" + timer.getInfo());
-        if (!Boolean.parseBoolean(System.getenv("SINKIT_VIRUS_TOTAL_SKIP"))) {
-            doEnrichment();
-        }
+        doEnrichment();
     }
 
     public void doEnrichment() {
@@ -196,7 +210,7 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
                 virusTotalService.scanUrl("http://" + scanTarget + "/");
             } catch (InvalidArguentsException | UnauthorizedAccessException e) {
                 throw new VirusTotalException(e, true);
-            } catch (IOException e)  {
+            } catch (IOException e) {
                 throw new VirusTotalException(e, false);
             }
         } else {
@@ -255,7 +269,7 @@ public class VirusTotalEnricherEJB implements VirusTotalEnricher {
             } else {
                 List<IoCVirusTotalReport> reportsList = new ArrayList<>(Arrays.asList(ioc.getVirusTotalReports()));
                 reportsList.add(total);
-                archiveService.setVirusTotalReportToIoCRecord(ioc,reportsList.toArray(new IoCVirusTotalReport[reportsList.size()]));
+                archiveService.setVirusTotalReportToIoCRecord(ioc, reportsList.toArray(new IoCVirusTotalReport[reportsList.size()]));
                 log.finest("IoC does have some reports already -> adding new one");
             }
         }

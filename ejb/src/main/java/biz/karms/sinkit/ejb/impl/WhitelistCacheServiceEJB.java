@@ -9,6 +9,8 @@ import biz.karms.sinkit.ioc.IoCRecord;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.infinispan.Cache;
+import org.infinispan.client.hotrod.Flag;
+import org.infinispan.client.hotrod.RemoteCache;
 
 import javax.ejb.Stateless;
 import javax.inject.Inject;
@@ -27,8 +29,8 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
     private Logger log;
 
     @Inject
-    @SinkitCache(SinkitCacheName.WHITELIST_CACHE)
-    private Cache<String, WhitelistedRecord> whitelistCache;
+    @SinkitCache(SinkitCacheName.infinispan_whitelist)
+    private RemoteCache<String, WhitelistedRecord> whitelistCache;
 
     @Override
     public WhitelistedRecord put(final IoCRecord iocRecord, final boolean completed) {
@@ -41,9 +43,9 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
         log.log(Level.FINE, "Whitelist key: " + key + ", ttl in s: " + iocRecord.getSource().getTTL());
         try {
             if (!whitelistCache.containsKey(key)) {
-                whitelistCache.putAsync(key, white, iocRecord.getSource().getTTL(), TimeUnit.SECONDS);
+                whitelistCache.put(key, white, iocRecord.getSource().getTTL(), TimeUnit.SECONDS);
             } else {
-                whitelistCache.replaceAsync(key, white, iocRecord.getSource().getTTL(), TimeUnit.SECONDS);
+                whitelistCache.replace(key, white, iocRecord.getSource().getTTL(), TimeUnit.SECONDS);
             }
         } catch (Exception e) {
             log.log(Level.SEVERE, "put", e);
@@ -93,9 +95,8 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
             return null;
         }
         partialWhite.setCompleted(true);
-        //TODO: Do we need it to be acurate? That woudl require changes in MyCacheManagerProvider
-        whitelistCache.replaceAsync(key, partialWhite, ttl, TimeUnit.MILLISECONDS);
-        return whitelistCache.get(key);
+        whitelistCache.withFlags(Flag.SKIP_CACHE_LOAD).replace(key, partialWhite, ttl, TimeUnit.MILLISECONDS);
+        return whitelistCache.withFlags(Flag.SKIP_CACHE_LOAD).get(key);
     }
 
     @Override
@@ -106,7 +107,7 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
             log.log(Level.FINE, "remove: entry not found, key: " + id);
             return false;
         }
-        whitelistCache.removeAsync(key);
+        whitelistCache.remove(key);
         return true;
     }
 

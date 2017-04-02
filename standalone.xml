@@ -3,7 +3,6 @@
 <server xmlns="urn:jboss:domain:4.2">
     <extensions>
         <extension module="org.jboss.as.clustering.infinispan"/>
-        <extension module="org.jboss.as.clustering.jgroups"/>
         <extension module="org.jboss.as.connector"/>
         <extension module="org.jboss.as.deployment-scanner"/>
         <extension module="org.jboss.as.ee"/>
@@ -24,12 +23,15 @@
         <extension module="org.jboss.as.weld"/>
         <extension module="org.wildfly.extension.batch.jberet"/>
         <extension module="org.wildfly.extension.bean-validation"/>
-        <extension module="org.wildfly.extension.clustering.singleton"/>
         <extension module="org.wildfly.extension.io"/>
         <extension module="org.wildfly.extension.request-controller"/>
         <extension module="org.wildfly.extension.security.manager"/>
         <extension module="org.wildfly.extension.undertow"/>
     </extensions>
+    <!--<system-properties>
+        <property name="javax.net.ssl.trustStore" value="@ORACULUM_TRUST_STORE_PATH@"/>
+        <property name="javax.net.ssl.trustStorePassword" value="@ORACULUM_TRUST_STORE_PASS@"/>
+    </system-properties>-->
     <management>
         <security-realms>
             <security-realm name="ManagementRealm">
@@ -54,6 +56,17 @@
                 <authorization>
                     <properties path="application-roles.properties" relative-to="jboss.server.config.dir"/>
                 </authorization>
+            </security-realm>
+            <security-realm name="SinkitOraculum">
+                <server-identities>
+                    <ssl protocol="@SSL_PROTOCOL@">
+                        <!--<engine enabled-cipher-suites="@ENABLED_CIPHER_SUITES@"/>-->
+                        <keystore provider="JKS" path="@ORACULUM_SERVER_KEYSTORE_PATH@" keystore-password="@ORACULUM_SERVER_KEYSTORE_PASS@" alias="@ORACULUM_SERVER_KEYSTORE_ALIAS@"/>
+                    </ssl>
+                </server-identities>
+                <authentication>
+                    <truststore path="@ORACULUM_TRUST_STORE_PATH@" keystore-password="@ORACULUM_TRUST_STORE_PASS@"/>
+                </authentication>
             </security-realm>
         </security-realms>
         <audit-log>
@@ -151,13 +164,9 @@
             </datasources>
         </subsystem>
         <subsystem xmlns="urn:jboss:domain:deployment-scanner:2.0">
-            <deployment-scanner path="deployments" relative-to="jboss.server.base.dir" scan-interval="10000" deployment-timeout="780" runtime-failure-causes-rollback="${jboss.deployment.scanner.rollback.on.failure:false}"/>
+            <deployment-scanner path="deployments" relative-to="jboss.server.base.dir" scan-interval="10000" deployment-timeout="1200" runtime-failure-causes-rollback="${jboss.deployment.scanner.rollback.on.failure:false}"/>
         </subsystem>
         <subsystem xmlns="urn:jboss:domain:ee:4.0">
-            <global-modules>
-                <module name="org.infinispan.query.dsl" slot="main" />
-                <module name="org.infinispan.query" slot="main" />
-            </global-modules>
             <spec-descriptor-property-replacement>false</spec-descriptor-property-replacement>
             <concurrent>
                 <context-services>
@@ -185,7 +194,6 @@
             </session-bean>
             <pools>
                 <bean-instance-pools>
-                    <!-- Automatically configure pools. Alternatively, max-pool-size can be set to a specific value -->
                     <strict-max-pool name="slsb-strict-max-pool" derive-size="from-worker-pools" instance-acquisition-timeout="5" instance-acquisition-timeout-unit="MINUTES"/>
                     <strict-max-pool name="mdb-strict-max-pool" derive-size="from-cpu-count" instance-acquisition-timeout="5" instance-acquisition-timeout-unit="MINUTES"/>
                 </bean-instance-pools>
@@ -219,24 +227,11 @@
             <buffer-pool name="default"/>
         </subsystem>
         <subsystem xmlns="urn:jboss:domain:infinispan:4.0">
-<!--
-            <cache-container name="sinkitcontainer" module="org.infinispan.query">
-                <transport channel="eetcp" lock-timeout="600000"/>
+            <cache-container name="server" default-cache="default" module="org.wildfly.clustering.server">
+                <local-cache name="default">
+                    <transaction mode="BATCH"/>
+                </local-cache>
             </cache-container>
--->
-
-
-            <cache-container name="server" aliases="singleton cluster" default-cache="default" module="org.wildfly.clustering.server">
-                <transport channel="eetcpx" lock-timeout="600000"/>
-                <distributed-cache name="default" mode="SYNC" l1-lifespan="0" owners="2">
-                    <locking isolation="READ_COMMITTED"/>
-                    <transaction mode="NONE"/>
-                    <state-transfer timeout="600000"/>
-                </distributed-cache>
-            </cache-container>
-
-
-
             <cache-container name="web" default-cache="passivation" module="org.wildfly.clustering.web.infinispan">
                 <local-cache name="passivation">
                     <locking isolation="REPEATABLE_READ"/>
@@ -298,105 +293,6 @@
             <cached-connection-manager/>
         </subsystem>
         <subsystem xmlns="urn:jboss:domain:jdr:1.0"/>
-        <subsystem xmlns="urn:jboss:domain:jgroups:4.0">
-            <channels default="ee">
-                <channel name="eetcp" stack="azure"/>
-                <channel name="eetcpx" stack="azurex"/>
-            </channels>
-            <stacks>
-                <stack name="azure">
-                    <transport type="TCP" socket-binding="jgroups-tcp"/>
-                    <protocol type="azure.AZURE_PING">
-                        <property name="storage_account_name">
-                            ${jboss.jgroups.azure_ping.storage_account_name}
-                        </property>
-                        <property name="storage_access_key">
-                            ${jboss.jgroups.azure_ping.storage_access_key}
-                        </property>
-                        <property name="container">
-                            ${jboss.jgroups.azure_ping.container}
-                        </property>
-                    </protocol>
-                    <protocol type="MERGE3"/>
-                    <protocol type="FD_SOCK" socket-binding="jgroups-tcp-fd">
-                        <property name="get_cache_timeout">
-                            3000
-                        </property>
-                        <property name="sock_conn_timeout">
-                            2000
-                        </property>
-                    </protocol>
-                    <protocol type="FD_ALL"/>
-                    <protocol type="VERIFY_SUSPECT">
-                        <property name="bind_interface_str">
-                            @SINKITNIC@
-                        </property>
-                        <property name="bind_addr">
-                            ${jboss.bind.address:127.0.0.1}"
-                        </property>
-                        <property name="timeout">
-                            20000
-                        </property>
-                    </protocol>
-                    <protocol type="pbcast.NAKACK2">
-                        <property name="use_mcast_xmit">
-                            false
-                        </property>
-                        <property name="print_stability_history_on_failed_xmit">
-                            true
-                        </property>
-                    </protocol>
-                    <protocol type="UNICAST3">
-                        <property name="ack_batches_immediately">
-                            true
-                        </property>
-                    </protocol>
-                    <protocol type="pbcast.STABLE">
-                        <property name="max_bytes">
-                            10485760
-                        </property>
-                    </protocol>
-                    <protocol type="pbcast.GMS">
-                        <property name="join_timeout">
-                            10000
-                        </property>
-                        <property name="max_join_attempts">
-                            24
-                        </property>
-                        <property name="merge_timeout">
-                            10000
-                        </property>
-                        <property name="print_physical_addrs">
-                            true
-                        </property>
-                    </protocol>
-                    <protocol type="MFC"/>
-                    <protocol type="FRAG2">
-                        <property name="frag_size">
-                            1400
-                        </property>
-                    </protocol>
-                </stack>
-
-                <stack name="azurex">
-                    <transport type="TCP" socket-binding="jgroups-tcpx"/>
-                    <protocol type="azure.AZURE_PING">
-                        <property name="storage_account_name">${jboss.jgroups.azure_ping.storage_account_name}</property>
-                        <property name="storage_access_key">${jboss.jgroups.azure_ping.storage_access_key}</property>
-                        <property name="container">${jboss.jgroups.azure_ping.container}</property>
-                    </protocol>
-                    <protocol type="MERGE3"/>
-                    <protocol type="FD_SOCK" socket-binding="jgroups-tcp-fdx"/>
-                    <protocol type="FD"/>
-                    <protocol type="VERIFY_SUSPECT"/>
-                    <protocol type="pbcast.NAKACK2"/>
-                    <protocol type="UNICAST3"/>
-                    <protocol type="pbcast.STABLE"/>
-                    <protocol type="pbcast.GMS"/>
-                    <protocol type="FRAG2"/>
-                </stack>
-            </stacks>
-        </subsystem>
         <subsystem xmlns="urn:jboss:domain:jmx:1.3">
             <expose-resolved-model/>
             <expose-expression-model/>
@@ -461,13 +357,6 @@
                 </security-domain>
             </security-domains>
         </subsystem>
-        <subsystem xmlns="urn:jboss:domain:singleton:1.0">
-            <singleton-policies default="default">
-                <singleton-policy name="default" cache-container="server">
-                    <simple-election-policy/>
-                </singleton-policy>
-            </singleton-policies>
-        </subsystem>
         <subsystem xmlns="urn:jboss:domain:transactions:3.0">
             <core-environment>
                 <process-id>
@@ -479,9 +368,8 @@
         <subsystem xmlns="urn:jboss:domain:undertow:3.1">
             <buffer-cache name="default"/>
             <server name="default-server">
-                <ajp-listener name="ajp" socket-binding="ajp"/>
                 <http-listener name="default" socket-binding="http" redirect-socket="https" enable-http2="true"/>
-                <https-listener name="https" socket-binding="https" security-realm="ApplicationRealm" enable-http2="true"/>
+                <https-listener name="https" socket-binding="https" security-realm="SinkitOraculum" enable-http2="true" verify-client="@ORACULUM_SERVER_VERIFY_CLIENT@"/>
                 <host name="default-host" alias="localhost">
                     <location name="/" handler="welcome-content"/>
                     <filter-ref name="server-header"/>
@@ -521,13 +409,6 @@
         <socket-binding name="ajp" port="${jboss.ajp.port:8009}"/>
         <socket-binding name="http" port="${jboss.http.port:8080}"/>
         <socket-binding name="https" port="${jboss.https.port:8443}"/>
-        <socket-binding name="jgroups-mping" port="0" multicast-address="${jboss.default.multicast.address:230.0.0.4}" multicast-port="45700" interface="public"/>
-        <socket-binding name="jgroups-tcp" port="7600" interface="public"/>
-        <socket-binding name="jgroups-tcp-fd" port="57600" interface="public"/>
-        <socket-binding name="jgroups-tcpx" port="7618" interface="public"/>
-        <socket-binding name="jgroups-tcp-fdx" port="57618" interface="public"/>
-        <socket-binding name="jgroups-udp" port="55200" multicast-address="${jboss.default.multicast.address:230.0.0.4}" multicast-port="45688" interface="public"/>
-        <socket-binding name="jgroups-udp-fd" port="54200" interface="public"/>
         <socket-binding name="txn-recovery-environment" port="4712"/>
         <socket-binding name="txn-status-manager" port="4713"/>
         <outbound-socket-binding name="mail-smtp">

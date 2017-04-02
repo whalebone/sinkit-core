@@ -4,11 +4,12 @@ package biz.karms.sinkit.ejb.cache.annotations;
  * @author Michal Karm Babacek
  */
 public enum SinkitCacheName {
-        BLACKLIST_CACHE,
-        WHITELIST_CACHE,
-        RULES_CACHE,
-        RULES_LOCAL_CACHE,
-        CUSTOM_LISTS_CACHE,
-        CUSTOM_LISTS_LOCAL_CACHE,
-        GSB_CACHE;
+        infinispan_blacklist,
+        infinispan_whitelist,
+        infinispan_rules,
+        infinispan_custom_lists,
+        infinispan_gsb,
+        rules_local_cache,
+        custom_lists_local_cache,
+        cache_manager_indexable
 }

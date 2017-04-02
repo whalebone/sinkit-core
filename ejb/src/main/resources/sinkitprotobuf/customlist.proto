@@ -1,0 +1,23 @@
+/* author Michal Karm Babacek */
+package sinkitprotobuf;
+/* @Indexed */
+message CustomList {
+    /* @IndexedField */
+    optional string clientStartAddress = 1;
+    /* @IndexedField */
+    optional string clientEndAddress = 2;
+    /* @IndexedField */
+    optional string clientCidrAddress = 3;
+    /* @IndexedField */
+    optional int32 customerId = 4;
+    /* @IndexedField */
+    optional string fqdn = 5;
+    /* @IndexedField */
+    optional string listStartAddress = 6;
+    /* @IndexedField */
+    optional string listEndAddress = 7;
+    /* @IndexedField */
+    optional string listCidrAddress = 8;
+    /* @IndexedField */
+    optional string whiteBlackLog = 9;
+}
