@@ -27,7 +27,7 @@ public class CustomList implements Serializable {
     /**
      * Either fqdn or listCidrAddress is set, not both.
      * <p>
-     * While, Black, Log, defined as either CIDR or FQDN
+     * White, Black, Log, defined as either CIDR or FQDN
      */
     private String fqdn;
 
