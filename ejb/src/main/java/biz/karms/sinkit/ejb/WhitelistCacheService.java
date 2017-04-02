@@ -6,7 +6,7 @@ import biz.karms.sinkit.ioc.IoCRecord;
 import javax.ejb.Local;
 
 /**
- * Created by Tomas Kozel
+ * @author Tomas Kozel
  */
 @Local
 public interface WhitelistCacheService {

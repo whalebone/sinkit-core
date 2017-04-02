@@ -16,6 +16,7 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.validator.routines.DomainValidator;
+import org.infinispan.client.hotrod.Flag;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.infinispan.client.hotrod.Search;
@@ -131,7 +132,7 @@ public class WebApiEJB implements WebApi {
             final String clientIPAddressPaddedBigInt = startEndAddresses.getLeft();
             log.log(Level.FINE, "Getting key [" + clientIPAddress + "] which actually translates to BigInteger zero padded representation " + "[" + clientIPAddressPaddedBigInt + "]");
             // Let's try to hit it
-            Rule rule = ruleCache.get(clientIPAddressPaddedBigInt);
+            Rule rule = ruleCache.withFlags(Flag.SKIP_CACHE_LOAD).get(clientIPAddressPaddedBigInt);
             if (rule != null) {
                 return Collections.singletonList(rule);
             }

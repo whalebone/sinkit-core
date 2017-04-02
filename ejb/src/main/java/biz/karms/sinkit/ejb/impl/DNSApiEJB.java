@@ -37,6 +37,7 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.validator.routines.DomainValidator;
+import org.infinispan.client.hotrod.Flag;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.infinispan.client.hotrod.Search;
@@ -131,7 +132,7 @@ public class DNSApiEJB implements DNSApi {
                 return cached;
             } else {
                 // Let's try to hit it
-                final Rule rule = ruleCache.get(clientIPAddressPaddedBigInt);
+                final Rule rule = ruleCache.withFlags(Flag.SKIP_CACHE_LOAD).get(clientIPAddressPaddedBigInt);
                 if (rule != null) {
                     return Collections.singletonList(rule);
                 }
@@ -347,7 +348,7 @@ public class DNSApiEJB implements DNSApi {
         // Lookup BlacklistedRecord from IoC cache (gives feeds)
         log.log(Level.FINE, "getSinkHole: getting IoC key " + fqdnOrIp);
         start = System.currentTimeMillis();
-        final BlacklistedRecord blacklistedRecord = blacklistCache.get(DigestUtils.md5Hex(fqdnOrIp));
+        final BlacklistedRecord blacklistedRecord = blacklistCache.withFlags(Flag.SKIP_CACHE_LOAD).get(DigestUtils.md5Hex(fqdnOrIp));
         log.log(Level.FINE, "blacklistCache.get took: " + (System.currentTimeMillis() - start) + " ms.");
 
         Set<ThreatType> gsbResults = null;

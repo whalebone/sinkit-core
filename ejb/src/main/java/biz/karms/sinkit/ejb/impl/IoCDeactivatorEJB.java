@@ -1,31 +1,32 @@
 package biz.karms.sinkit.ejb.impl;
 
 import biz.karms.sinkit.ejb.CoreService;
-import biz.karms.sinkit.ejb.IoCDeactivator;
 import biz.karms.sinkit.exception.ArchiveException;
+import org.infinispan.context.InvocationContext;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
-import javax.ejb.AccessTimeout;
 import javax.ejb.EJB;
+import javax.ejb.LocalBean;
 import javax.ejb.ScheduleExpression;
-import javax.ejb.Stateless;
+import javax.ejb.Singleton;
+import javax.ejb.Startup;
 import javax.ejb.Timeout;
 import javax.ejb.Timer;
 import javax.ejb.TimerConfig;
 import javax.ejb.TimerService;
 import javax.inject.Inject;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 /**
- * Created by Tomas Kozel
+ * @author Tomas Kozel
+ * @author Michal Karm Babacek
  */
-@Stateless
-@AccessTimeout(value = 40, unit = TimeUnit.MINUTES)
-public class IoCDeactivatorEJB implements IoCDeactivator {
-
-    private AtomicBoolean busy = new AtomicBoolean(false);
+@Singleton
+@LocalBean
+@Startup
+public class IoCDeactivatorEJB {
 
     @EJB
     private CoreService coreService;
@@ -36,41 +37,27 @@ public class IoCDeactivatorEJB implements IoCDeactivator {
     @Resource
     private TimerService timerService;
 
-    @Override
-    public void initialize(String info) {
-        ScheduleExpression sexpr = new ScheduleExpression();
-        // Every hour
-        sexpr.hour("*").minute("0").second("0");
-        timerService.createCalendarTimer(sexpr, new TimerConfig(info, false));
+    public static final boolean SINKIT_IOC_DEACTIVATOR_SKIP = (System.getenv().containsKey("SINKIT_IOC_DEACTIVATOR_SKIP")) && Boolean.parseBoolean(System.getenv("SINKIT_IOC_DEACTIVATOR_SKIP"));
+
+    @PostConstruct
+    private void initialize() {
+        if (!SINKIT_IOC_DEACTIVATOR_SKIP) {
+            timerService.createCalendarTimer(new ScheduleExpression().hour("*").minute("0").second("0"), new TimerConfig("IoCDeactivator", false));
+        }
     }
 
-    @Override
+    @PreDestroy
     public void stop() {
-        log.info("Stop all existing IoCDeactivator HASingleton timers.");
+        log.info("Stop all existing IoCDeactivator timers.");
         for (Timer timer : timerService.getTimers()) {
-            log.fine("Stop IoCDeactivator HASingleton timer: " + timer.getInfo());
+            log.fine("Stop IoCDeactivator timer: " + timer.getInfo());
             timer.cancel();
         }
     }
 
     @Timeout
     public void scheduler(Timer timer) throws InterruptedException, ArchiveException {
-        log.info("IoCDeactivator HASingletonTimer: Info=" + timer.getInfo());
-
-        if (!busy.compareAndSet(false, true)) {
-            log.info("Deactivation still in progress -> skipping next run");
-            return;
-        }
-
-        try {
-            if (Boolean.parseBoolean(System.getenv("SINKIT_IOC_DEACTIVATOR_SKIP"))) {
-                log.fine("IoCDeactivator: Skipping deactivation, SINKIT_IOC_DEACTIVATOR_SKIP is true.");
-            } else {
-                log.fine("IoCDeactivator: Running deactivation, SINKIT_IOC_DEACTIVATOR_SKIP is false or null.");
-                coreService.deactivateIocs();
-            }
-        } finally {
-            busy.set(false);
-        }
+        log.info("IoCDeactivator: Info=" + timer.getInfo());
+        coreService.deactivateIocs();
     }
 }

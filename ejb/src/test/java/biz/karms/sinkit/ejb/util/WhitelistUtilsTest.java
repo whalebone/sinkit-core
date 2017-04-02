@@ -6,7 +6,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 /**
- * Created by Tomas Kozel
+ * @author Tomas Kozel
  */
 public class WhitelistUtilsTest {
 

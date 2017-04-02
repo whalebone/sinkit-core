@@ -22,7 +22,7 @@ public class DnsREST implements Serializable {
     @Inject
     private DnsService dnsService;
 
-    private static final String CLIENT_ID_HEADER_PARAM = "X-client-id";
+    public static final String CLIENT_ID_HEADER_PARAM = "X-client-id";
 
     /**
      * @param client IP address of the DNS client that queried resolver

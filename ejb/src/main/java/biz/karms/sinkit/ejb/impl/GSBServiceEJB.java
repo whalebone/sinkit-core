@@ -14,6 +14,7 @@ import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.ArrayUtils;
+import org.infinispan.client.hotrod.Flag;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.commons.util.concurrent.NotifyingFuture;
 
@@ -85,7 +86,7 @@ public class GSBServiceEJB implements GSBService {
         final String fullHashString = Hex.encodeHexString(hash);
         final String hashStringPrefix = fullHashString.substring(0, PREFIX_LENGTH * 2);
 
-        GSBRecord gsbRecord = gsbCache.get(hashStringPrefix);
+        GSBRecord gsbRecord = gsbCache.withFlags(Flag.SKIP_CACHE_LOAD).get(hashStringPrefix);
         // if hash prefix is not in the cache then URL is not blacklisted for sure
         if (gsbRecord == null) {
             return null;

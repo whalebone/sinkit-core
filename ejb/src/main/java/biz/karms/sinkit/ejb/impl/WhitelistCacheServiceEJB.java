@@ -9,6 +9,7 @@ import biz.karms.sinkit.ioc.IoCRecord;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.infinispan.Cache;
+import org.infinispan.client.hotrod.Flag;
 import org.infinispan.client.hotrod.RemoteCache;
 
 import javax.ejb.Stateless;
@@ -94,9 +95,8 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
             return null;
         }
         partialWhite.setCompleted(true);
-        //TODO: Do we need it to be acurate? That woudl require changes in MyCacheManagerProvider
-        whitelistCache.replace(key, partialWhite, ttl, TimeUnit.MILLISECONDS);
-        return whitelistCache.get(key);
+        whitelistCache.withFlags(Flag.SKIP_CACHE_LOAD).replace(key, partialWhite, ttl, TimeUnit.MILLISECONDS);
+        return whitelistCache.withFlags(Flag.SKIP_CACHE_LOAD).get(key);
     }
 
     @Override

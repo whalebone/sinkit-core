@@ -11,7 +11,7 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 
 /**
- * Created by Tomas Kozel
+ * @author Tomas Kozel
  */
 @Dependent
 public class ElasticResources {

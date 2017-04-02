@@ -1,0 +1,11 @@
+/* author Michal Karm Babacek */
+package sinkitprotobuf;
+
+message Pair {
+    optional string key = 1;
+    optional bool value = 2;
+}
+
+message CoreCache {
+    repeated Pair record = 1;
+}

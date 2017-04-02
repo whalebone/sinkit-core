@@ -9,6 +9,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.infinispan.client.hotrod.Flag;
 import org.infinispan.client.hotrod.RemoteCache;
 
 import javax.ejb.Stateless;
@@ -47,7 +48,7 @@ public class BlacklistCacheServiceEJB implements BlacklistCacheService {
         final String key = DigestUtils.md5Hex(ioCRecord.getSource().getId().getValue());
         try {
             if (blacklistCache.containsKey(key)) {
-                final BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
+                final BlacklistedRecord blacklistedRecord = blacklistCache.withFlags(Flag.SKIP_CACHE_LOAD).get(key);
                 if (blacklistedRecord == null) {
                     log.log(Level.SEVERE, "addToCache: blacklistedRecord allegedly exists in the Cache already under key " + key + ", but we failed to retrieve it.");
                     return false;
@@ -96,7 +97,7 @@ public class BlacklistCacheServiceEJB implements BlacklistCacheService {
         final String key = DigestUtils.md5Hex(ioCRecord.getSource().getId().getValue());
         try {
             if (blacklistCache.containsKey(key)) {
-                final BlacklistedRecord blacklistedRecord = blacklistCache.get(key);
+                final BlacklistedRecord blacklistedRecord = blacklistCache.withFlags(Flag.SKIP_CACHE_LOAD).get(key);
                 HashMap<String, ImmutablePair<String, String>> feedToTypeUpdate = blacklistedRecord.getSources();
                 if (ioCRecord.getFeed().getName() != null) {
                     feedToTypeUpdate.remove(ioCRecord.getFeed().getName());
