@@ -160,7 +160,7 @@ public class CustomlistProtostreamGenerator {
                 log.severe("CustomlistProtostreamGenerator: failed protobuffer serialization for customer id " + r.getKey());
                 e.printStackTrace();
             }
-            final String[] customListFileMD5TmpCmd = {"/bin/sh", "-c", "/usr/bin/md5sum -b " + customListFilePathTmp + r.getKey() + " | cut -d ' ' -f1 > " + customListFileMd5Tmp + r.getKey()};
+            final String[] customListFileMD5TmpCmd = {"/bin/sh", "-c", "/usr/bin/md5sum -b " + customListFilePathTmp + r.getKey() + " | cut -d ' ' -f1  | tr -d '\\n' > " + customListFileMd5Tmp + r.getKey()};
             try {
                 // TODO Timeout?
                 if (Runtime.getRuntime().exec(customListFileMD5TmpCmd).waitFor() != 0) {

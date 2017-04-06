@@ -86,7 +86,7 @@ public class WhitelistProtostreamGenerator {
     public static final String[] whiteListFileMD5TmpCmd = {
             "/bin/sh",
             "-c",
-            "/usr/bin/md5sum -b " + whiteListFilePathTmp + " | cut -d ' ' -f1 > " + whiteListFileMd5Tmp
+            "/usr/bin/md5sum -b " + whiteListFilePathTmp + " | cut -d ' ' -f1  | tr -d '\\n' > " + whiteListFileMd5Tmp
     };
 
     @PostConstruct
