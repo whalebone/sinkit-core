@@ -2,7 +2,6 @@ package biz.karms.sinkit.ejb.impl;
 
 import biz.karms.sinkit.ejb.CoreService;
 import biz.karms.sinkit.exception.ArchiveException;
-import org.infinispan.context.InvocationContext;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;

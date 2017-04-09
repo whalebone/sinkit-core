@@ -1,8 +1,7 @@
 package biz.karms.sinkit.ejb;
 
 import javax.ejb.Local;
-import javax.ejb.Remote;
-import java.util.*;
+import java.util.Set;
 
 /**
  * Created by tom on 11/27/15.

@@ -12,7 +12,6 @@ import biz.karms.sinkit.ejb.cache.pojo.marshallers.ImmutablePairMarshaller;
 import biz.karms.sinkit.ejb.cache.pojo.marshallers.RuleMarshaller;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheManager;
-import org.infinispan.client.hotrod.impl.RemoteCacheImpl;
 import org.infinispan.client.hotrod.marshall.ProtoStreamMarshaller;
 import org.infinispan.commons.api.BasicCache;
 import org.infinispan.commons.api.BasicCacheContainer;

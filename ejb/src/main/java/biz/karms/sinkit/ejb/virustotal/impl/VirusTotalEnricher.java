@@ -13,7 +13,6 @@ import com.kanishka.virustotal.exception.InvalidArguentsException;
 import com.kanishka.virustotal.exception.QuotaExceededException;
 import com.kanishka.virustotal.exception.UnauthorizedAccessException;
 import org.apache.commons.lang3.StringUtils;
-import org.infinispan.context.InvocationContext;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;

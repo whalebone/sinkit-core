@@ -156,7 +156,7 @@ public class WebApiEJB implements WebApi {
         try {
             final RemoteCache<String, Rule> ruleCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
             log.log(Level.SEVERE, "getAllRules: This is a very expensive operation.");
-            return Lists.newArrayList(ruleCache.values());
+            return Lists.newArrayList(ruleCache.getBulk());
         } catch (Exception e) {
             log.log(Level.SEVERE, "getRules client address troubles", e);
             // TODO: Proper Error codes.
@@ -180,6 +180,7 @@ public class WebApiEJB implements WebApi {
             Query query = qf.from(Rule.class)
                     .having("customerId").eq(customerId)
                     .toBuilder().build();
+            // TODO: Use CloseableIterator
             Iterator iterator = query.list().iterator();
             while (iterator.hasNext()) {
                 ruleCache.remove(((Rule) iterator.next()).getStartAddress());

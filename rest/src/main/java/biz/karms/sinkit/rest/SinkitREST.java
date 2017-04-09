@@ -4,7 +4,6 @@ import biz.karms.sinkit.exception.IoCValidationException;
 import com.google.gson.JsonSyntaxException;
 
 import javax.enterprise.context.RequestScoped;
-import javax.enterprise.context.SessionScoped;
 import javax.inject.Inject;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.FormParam;

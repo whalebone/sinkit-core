@@ -30,6 +30,8 @@ import javax.ejb.Timer;
 import javax.ejb.TimerConfig;
 import javax.ejb.TimerService;
 import javax.inject.Inject;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -37,7 +39,6 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static biz.karms.sinkit.ejb.protostream.WhitelistProtostreamGenerator.SINKIT_CACHE_PROTOBUF;
@@ -152,26 +153,32 @@ public class CustomlistProtostreamGenerator {
         ctx.registerMarshaller(new CoreCacheMarshaller());
 
         customerIdDomainData.entrySet().forEach(r -> {
-            final Path whiteListFilePathTmpP = Paths.get(customListFilePathTmp + r.getKey());
-            final Path whiteListFilePathP = Paths.get(customListFilePath + r.getKey());
+            final Path customListFilePathTmpP = Paths.get(customListFilePathTmp + r.getKey());
+            final Path customListFilePathP = Paths.get(customListFilePath + r.getKey());
             try {
-                Files.newByteChannel(whiteListFilePathTmpP, options, attr).write(ProtobufUtil.toByteBuffer(ctx, r.getValue()));
+                Files.newByteChannel(customListFilePathTmpP, options, attr).write(ProtobufUtil.toByteBuffer(ctx, r.getValue()));
             } catch (IOException e) {
                 log.severe("CustomlistProtostreamGenerator: failed protobuffer serialization for customer id " + r.getKey());
                 e.printStackTrace();
             }
-            final String[] customListFileMD5TmpCmd = {"/bin/sh", "-c", "/usr/bin/md5sum -b " + customListFilePathTmp + r.getKey() + " | cut -d ' ' -f1 > " + customListFileMd5Tmp + r.getKey()};
+            FileInputStream fis = null;
             try {
-                // TODO Timeout?
-                if (Runtime.getRuntime().exec(customListFileMD5TmpCmd).waitFor() != 0) {
-                    log.severe("CustomlistProtostreamGenerator: md5sum of " + customListFilePathTmp + r.getKey() + " failed with command: " + ArrayUtils.toString(customListFileMD5TmpCmd));
-                }
+                fis = new FileInputStream(new File(customListFilePathTmp + r.getKey()));
+                Files.write(Paths.get(customListFileMd5Tmp + r.getKey()), DigestUtils.md5Hex(fis).getBytes());
                 // There is a race condition when we swap files while REST API is reading them...
-                Files.move(whiteListFilePathTmpP, whiteListFilePathP, REPLACE_EXISTING);
+                Files.move(customListFilePathTmpP, customListFilePathP, REPLACE_EXISTING);
                 Files.move(Paths.get(customListFileMd5Tmp + r.getKey()), Paths.get(customListFileMd5 + r.getKey()), REPLACE_EXISTING);
-            } catch (IOException | InterruptedException e) {
+            } catch (IOException e) {
                 log.severe("CustomlistProtostreamGenerator: failed protofile manipulation for customer id " + r.getKey());
                 e.printStackTrace();
+            } finally {
+                if (fis != null) {
+                    try {
+                        fis.close();
+                    } catch (IOException e) {
+                        log.severe("CustomlistProtostreamGenerator: Failed to close MD5 file stream.");
+                    }
+                }
             }
         });
 

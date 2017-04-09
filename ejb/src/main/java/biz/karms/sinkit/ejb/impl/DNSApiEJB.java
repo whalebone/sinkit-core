@@ -14,6 +14,7 @@ import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ejb.dto.Sinkhole;
 import biz.karms.sinkit.ejb.elastic.logstash.LogstashClient;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
+import biz.karms.sinkit.ejb.util.IPorFQDNValidator;
 import biz.karms.sinkit.ejb.util.IoCIdentificationUtils;
 import biz.karms.sinkit.eventlog.EventDNSRequest;
 import biz.karms.sinkit.eventlog.EventLogAction;
@@ -36,7 +37,6 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.validator.routines.DomainValidator;
 import org.infinispan.client.hotrod.Flag;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheManager;
@@ -52,7 +52,6 @@ import javax.ejb.TransactionAttribute;
 import javax.ejb.TransactionAttributeType;
 import javax.inject.Inject;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
@@ -196,10 +195,10 @@ public class DNSApiEJB implements DNSApi {
         }
     }
 
-    private List<CustomList> customListsLookup(final Integer customerId, final boolean isFQDN, final String fqdnOrIp) {
+    private List<CustomList> customListsLookup(final Integer customerId, final IPorFQDNValidator.DECISION isFQDN, final String fqdnOrIp) {
         final QueryFactory qf = Search.getQueryFactory(cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_custom_lists.toString()));
         Query query;
-        if (isFQDN) {
+        if (isFQDN == IPorFQDNValidator.DECISION.FQDN) {
 
             final String keyInCache = DigestUtils.md5Hex(customerId + fqdnOrIp);
             log.log(Level.FINE, "keyInCache: " + keyInCache + ", from: " + (customerId + fqdnOrIp));
@@ -220,7 +219,7 @@ public class DNSApiEJB implements DNSApi {
                 }
                 return null;
             }
-        } else {
+        } else if (isFQDN == IPorFQDNValidator.DECISION.IP) {
             final String clientIPAddressPaddedBigInt;
             try {
                 clientIPAddressPaddedBigInt = CIDRUtils.getStartEndAddresses(fqdnOrIp).getLeft();
@@ -250,10 +249,13 @@ public class DNSApiEJB implements DNSApi {
                 }
                 return null;
             }
+        } else {
+            log.log(Level.SEVERE, "Unexpected data, should have been IPorFQDNValidator.DECISION.IP or IPorFQDNValidator.DECISION.FQDN");
+            return null;
         }
     }
 
-    private CustomList retrieveOneCustomList(final Integer customerId, final boolean isFQDN, final String fqdnOrIp) {
+    private CustomList retrieveOneCustomList(final Integer customerId, final IPorFQDNValidator.DECISION isFQDN, final String fqdnOrIp) {
         //TODO logic about B|W lists
         //TODO logic about *something.foo.com being less important then bar.something.foo.com
         //TODO This is just a stupid dummy/mock
@@ -265,13 +267,23 @@ public class DNSApiEJB implements DNSApi {
      * Sinkhole, to be called by DNS client.
      *
      * @param clientIPAddress        - DNS server IP
-     * @param fqdnOrIp               - FQDN DNS is trying to resolve or resolved IP (v6 or v4)
+     * @param fqdnOrIpRaw            - FQDN DNS is trying to resolve or resolved IP (v6 or v4)
      * @param fqdn                   - FQDN original DNS query
      * @param customerIdFromResolver - customerId, if resolver knows it
      * @return null if there is an error and/or there is no reason to sinkhole or Sinkhole instance on positive hit
      */
     @Override
-    public Sinkhole getSinkHole(final String clientIPAddress, final String fqdnOrIp, final String fqdn, final Integer customerIdFromResolver) {
+    public Sinkhole getSinkHole(final String clientIPAddress, final String fqdnOrIpRaw, final String fqdn, final Integer customerIdFromResolver) {
+
+        // To determine whether key is a FQDN or an IP address
+        final ImmutablePair<IPorFQDNValidator.DECISION, String> fqdnOrIpProcessed = IPorFQDNValidator.decide(fqdnOrIpRaw);
+        final IPorFQDNValidator.DECISION isFQDN = fqdnOrIpProcessed.getLeft();
+        final String fqdnOrIp = fqdnOrIpProcessed.getRight();
+
+        if (isFQDN == IPorFQDNValidator.DECISION.GARBAGE) {
+            //TODO we might have to revisit this. @See IPorFQDNValidator
+            return null;
+        }
 
         // USed for benchmarking
         long start;
@@ -316,9 +328,6 @@ public class DNSApiEJB implements DNSApi {
             return null;
         }
 
-        // To determine whether key is a FQDN or an IP address
-        final boolean isFQDN = DomainValidator.getInstance().isValid(fqdnOrIp);
-
         // Next we fetch one and only one or none CustomList for a given fqdnOrIp
         start = System.currentTimeMillis();
         final CustomList customList = retrieveOneCustomList(customerId, isFQDN, fqdnOrIp);
@@ -352,7 +361,7 @@ public class DNSApiEJB implements DNSApi {
         log.log(Level.FINE, "blacklistCache.get took: " + (System.currentTimeMillis() - start) + " ms.");
 
         Set<ThreatType> gsbResults = null;
-        if (isFQDN) {
+        if (isFQDN == IPorFQDNValidator.DECISION.FQDN) {
             // Let's search GSB cache
             log.log(Level.FINE, "getSinkHole: getting GSB key " + fqdnOrIp);
             start = System.currentTimeMillis();
@@ -431,7 +440,7 @@ public class DNSApiEJB implements DNSApi {
             try {
                 log.log(Level.FINE, "getSinkHole: Calling coreService.logDNSEvent(EventLogAction.BLOCK,...");
                 if (DNS_REQUEST_LOGGING_ENABLED) {
-                    logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, feedTypeMap, archiveService, log);
+                    logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, feedTypeMap, archiveService, log);
                 }
                 log.log(Level.FINE, "getSinkHole: coreService.logDNSEvent returned.");
             } catch (ArchiveException e) {
@@ -443,7 +452,7 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.FINE, "getSinkHole: Log.");
             try {
                 if (DNS_REQUEST_LOGGING_ENABLED) {
-                    logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, feedTypeMap, archiveService, log);
+                    logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, feedTypeMap, archiveService, log);
                 }
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging AUDIT failed: ", e);
@@ -455,7 +464,7 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.FINE, "getSinkHole: Log internally.");
             try {
                 if (DNS_REQUEST_LOGGING_ENABLED) {
-                    logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN) ? fqdnOrIp : null, (isFQDN) ? null : fqdnOrIp, feedTypeMap, archiveService, log);
+                    logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, feedTypeMap, archiveService, log);
                 }
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging INTERNAL failed: ", e);
@@ -520,7 +529,7 @@ public class DNSApiEJB implements DNSApi {
         logRecord.setClient(clientUid);
         logRecord.setLogged(Calendar.getInstance().getTime());
 
-        final List<IoCRecord> matchedIoCsList = new ArrayList<>();
+        final Set<IoCRecord> matchedIoCsList = new HashSet<>();
         log.log(Level.FINE, "Iterating matchedIoCs...");
         // { feed : [ type1 : iocId1, type2 : iocId2]}
         for (Map.Entry<String, Set<ImmutablePair<String, String>>> matchedIoC : matchedIoCs.entrySet()) {

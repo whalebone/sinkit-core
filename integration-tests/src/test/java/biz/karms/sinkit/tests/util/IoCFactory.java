@@ -1,7 +1,17 @@
 package biz.karms.sinkit.tests.util;
 
 import biz.karms.sinkit.ejb.impl.ArchiveServiceEJB;
-import biz.karms.sinkit.ioc.*;
+import biz.karms.sinkit.ioc.IoCClassification;
+import biz.karms.sinkit.ioc.IoCDescription;
+import biz.karms.sinkit.ioc.IoCFeed;
+import biz.karms.sinkit.ioc.IoCGeolocation;
+import biz.karms.sinkit.ioc.IoCProtocol;
+import biz.karms.sinkit.ioc.IoCRecord;
+import biz.karms.sinkit.ioc.IoCSeen;
+import biz.karms.sinkit.ioc.IoCSource;
+import biz.karms.sinkit.ioc.IoCSourceId;
+import biz.karms.sinkit.ioc.IoCSourceIdType;
+import biz.karms.sinkit.ioc.IoCTime;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;

@@ -20,6 +20,9 @@ import java.util.logging.Logger;
 
 import static biz.karms.sinkit.ejb.protostream.CustomlistProtostreamGenerator.SINKIT_CUSTOMLIST_PROTOSTREAM_GENERATOR_D_H_M_S;
 import static biz.karms.sinkit.ejb.protostream.CustomlistProtostreamGenerator.customListFileMd5;
+import static biz.karms.sinkit.ejb.protostream.IocProtostreamGenerator.SINKIT_IOC_PROTOSTREAM_GENERATOR_D_H_M_S;
+import static biz.karms.sinkit.ejb.protostream.IocProtostreamGenerator.iocListFileMd5;
+import static biz.karms.sinkit.ejb.protostream.IocProtostreamGenerator.iocListFilePath;
 import static biz.karms.sinkit.ejb.protostream.WhitelistProtostreamGenerator.SINKIT_WHITELIST_PROTOSTREAM_GENERATOR_D_H_M_S;
 import static biz.karms.sinkit.ejb.protostream.WhitelistProtostreamGenerator.whiteListFileMd5;
 import static biz.karms.sinkit.ejb.protostream.WhitelistProtostreamGenerator.whiteListFilePath;
@@ -119,4 +122,40 @@ public class ProtostreamREST implements Serializable {
         }
     }
 
+    /**
+     * @returns huge byte array Protocol Buffer with custom list records
+     */
+    @GET
+    @Path("/protostream/ioclist")
+    @Produces({"application/x-protobuf"})
+    public Response getProtostreamIOCList(@HeaderParam(CLIENT_ID_HEADER_PARAM) Integer clientId) {
+        if (SINKIT_IOC_PROTOSTREAM_GENERATOR_D_H_M_S == null) {
+            return Response.status(Response.Status.NOT_FOUND).header(X_ERROR, "This is a wrong node. Protostream generator is not started.").build();
+        }
+        if (clientId == null || clientId < 0) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).header(X_ERROR, CLIENT_ID_HEADER_PARAM + " seems to be invalid or missing").build();
+        }
+        final File iocListBinary = new File(iocListFilePath + clientId);
+        final File customlistBinaryMD5 = new File(iocListFileMd5 + clientId);
+        if (iocListBinary.exists() && customlistBinaryMD5.exists()) {
+            InputStream is;
+            String md5sum;
+            try {
+                is = new FileInputStream(iocListBinary);
+                md5sum = new String(Files.readAllBytes(customlistBinaryMD5.toPath()), StandardCharsets.UTF_8);
+            } catch (FileNotFoundException e) {
+                log.log(Level.SEVERE, iocListFilePath + clientId + " not found.");
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).header(X_ERROR, iocListFilePath + clientId + " not found.").build();
+            } catch (IOException e) {
+                log.log(Level.SEVERE, iocListFileMd5 + clientId + " not found.");
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).header(X_ERROR, iocListFileMd5 + clientId + " not found.").build();
+            }
+            return Response.ok().entity(is)
+                    .header(X_FILE_LENGTH, String.valueOf(iocListBinary.length()))
+                    .header(X_FILE_MD5, md5sum)
+                    .build();
+        } else {
+            return Response.status(TRY_LATER).header(X_ERROR, "Try later, please.").build();
+        }
+    }
 }
