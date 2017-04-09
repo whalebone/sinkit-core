@@ -8,7 +8,6 @@ import biz.karms.sinkit.ejb.util.WhitelistUtils;
 import biz.karms.sinkit.ioc.IoCRecord;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.infinispan.Cache;
 import org.infinispan.client.hotrod.Flag;
 import org.infinispan.client.hotrod.RemoteCache;
 

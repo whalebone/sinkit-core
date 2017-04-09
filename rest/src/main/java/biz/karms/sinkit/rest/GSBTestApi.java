@@ -3,7 +3,6 @@ package biz.karms.sinkit.rest;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.enterprise.context.RequestScoped;
-import javax.enterprise.context.SessionScoped;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;

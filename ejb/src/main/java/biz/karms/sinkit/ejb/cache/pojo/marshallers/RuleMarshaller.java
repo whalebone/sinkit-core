@@ -5,8 +5,8 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.infinispan.protostream.MessageMarshaller;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -32,7 +32,7 @@ public class RuleMarshaller implements MessageMarshaller<Rule> {
         final String cidrAddress = reader.readString("cidrAddress");
         final int name = reader.readInt("customerId");
         final HashMap<String, String> sources = new HashMap<>();
-        reader.readCollection("sources", new ArrayList<>(), ImmutablePair.class).forEach(p -> sources.put((String) p.getLeft(), (String) p.getRight()));
+        reader.readCollection("sources", new HashSet<>(), ImmutablePair.class).forEach(p -> sources.put((String) p.getLeft(), (String) p.getRight()));
         final Rule rule = new Rule();
         rule.setStartAddress(startAddress);
         rule.setEndAddress(endAddress);

@@ -4,8 +4,8 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.infinispan.protostream.MessageMarshaller;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,7 +29,7 @@ public class CoreCacheMarshaller implements MessageMarshaller<HashMap> {
     @Override
     public HashMap readFrom(ProtoStreamReader reader) throws IOException {
         final HashMap<String, Boolean> sources = new HashMap<>();
-        reader.readCollection("record", new ArrayList<>(), ImmutablePair.class).forEach(p -> sources.put((String) p.getLeft(), (Boolean) p.getRight()));
+        reader.readCollection("record", new HashSet<>(), ImmutablePair.class).forEach(p -> sources.put((String) p.getLeft(), (Boolean) p.getRight()));
         return sources;
     }
 

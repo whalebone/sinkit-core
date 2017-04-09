@@ -21,7 +21,6 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import javax.ejb.EJB;
 import javax.enterprise.context.RequestScoped;
-import javax.enterprise.context.SessionScoped;
 import javax.inject.Inject;
 import java.io.Serializable;
 import java.util.HashMap;

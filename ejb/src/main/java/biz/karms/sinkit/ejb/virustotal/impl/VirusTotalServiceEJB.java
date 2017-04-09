@@ -9,7 +9,6 @@ import com.kanishka.virustotal.exception.QuotaExceededException;
 import com.kanishka.virustotal.exception.UnauthorizedAccessException;
 import com.kanishka.virustotalv2.VirustotalPublicV2;
 
-import javax.ejb.Singleton;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
 import java.io.IOException;

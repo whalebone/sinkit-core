@@ -13,10 +13,11 @@ import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.importer.ZipImporter;
 import org.jboss.shrinkwrap.api.spec.EnterpriseArchive;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
-//import org.jboss.weld.exceptions.DeploymentException;
-//import org.jboss.weld.exceptions.IllegalArgumentException;
 
 import java.io.File;
+
+//import org.jboss.weld.exceptions.DeploymentException;
+//import org.jboss.weld.exceptions.IllegalArgumentException;
 
 /**
  * @author Michal Karm Babacek

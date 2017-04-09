@@ -5,6 +5,7 @@ import biz.karms.sinkit.ejb.cache.annotations.SinkitCacheName;
 import biz.karms.sinkit.ejb.cache.pojo.WhitelistedRecord;
 import biz.karms.sinkit.ejb.protostream.marshallers.CoreCacheMarshaller;
 import biz.karms.sinkit.ejb.protostream.marshallers.SinkitCacheEntryMarshaller;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.infinispan.client.hotrod.Flag;
@@ -26,6 +27,8 @@ import javax.ejb.Timer;
 import javax.ejb.TimerConfig;
 import javax.ejb.TimerService;
 import javax.inject.Inject;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.OpenOption;
@@ -81,14 +84,6 @@ public class WhitelistProtostreamGenerator {
     public static final String whiteListFileMd5 = System.getProperty("java.io.tmpdir") + "/whitelist.bin.md5";
     public static final String whiteListFileMd5Tmp = System.getProperty("java.io.tmpdir") + "/whitelist.bin.md5.tmp";
 
-
-    // TODO: I didn't want to read the file again in JVM to compute MD5 sum, but this probably just adds too much hair.
-    public static final String[] whiteListFileMD5TmpCmd = {
-            "/bin/sh",
-            "-c",
-            "/usr/bin/md5sum -b " + whiteListFilePathTmp + " | cut -d ' ' -f1 > " + whiteListFileMd5Tmp
-    };
-
     @PostConstruct
     private void initialize() {
         if (SINKIT_WHITELIST_PROTOSTREAM_GENERATOR_D_H_M_S != null) {
@@ -130,13 +125,25 @@ public class WhitelistProtostreamGenerator {
         Files.newByteChannel(whiteListFilePathTmpP, options, attr).write(ProtobufUtil.toByteBuffer(ctx, whitelist));
         log.info("WhitelistProtostreamGenerator: Serialization to " + whiteListFilePathTmp + " took: " + (System.currentTimeMillis() - start) + " ms");
         start = System.currentTimeMillis();
-        // TODO Timeout?
-        if (Runtime.getRuntime().exec(whiteListFileMD5TmpCmd).waitFor() != 0) {
-            log.severe("WhitelistProtostreamGenerator: md5sum of " + whiteListFilePathTmp + " failed with command: " + ArrayUtils.toString(whiteListFileMD5TmpCmd));
+        FileInputStream fis = null;
+        try {
+            fis = new FileInputStream(new File(whiteListFilePathTmp));
+            Files.write(Paths.get(whiteListFileMd5Tmp), DigestUtils.md5Hex(fis).getBytes());
+            // There is a race condition when we swap files while REST API is reading them...
+            Files.move(whiteListFilePathTmpP, whiteListFilePathP, REPLACE_EXISTING);
+            Files.move(Paths.get(whiteListFileMd5Tmp), Paths.get(whiteListFileMd5), REPLACE_EXISTING);
+        } catch (IOException e) {
+            log.severe("WhitelistProtostreamGenerator: failed protofile manipulation");
+            e.printStackTrace();
+        } finally {
+            if (fis != null) {
+                try {
+                    fis.close();
+                } catch (IOException e) {
+                    log.severe("WhitelistProtostreamGenerator: Failed to close MD5 file stream.");
+                }
+            }
         }
-        // There is a race condition when we swap files while REST API is reading them...
-        Files.move(whiteListFilePathTmpP, whiteListFilePathP, REPLACE_EXISTING);
-        Files.move(Paths.get(whiteListFileMd5Tmp), Paths.get(whiteListFileMd5), REPLACE_EXISTING);
         log.info("WhitelistProtostreamGenerator: MD5 sum and move took: " + (System.currentTimeMillis() - start) + " ms");
     }
 }
