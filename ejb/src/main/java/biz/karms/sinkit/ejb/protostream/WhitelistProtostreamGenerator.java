@@ -3,10 +3,10 @@ package biz.karms.sinkit.ejb.protostream;
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCache;
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCacheName;
 import biz.karms.sinkit.ejb.cache.pojo.WhitelistedRecord;
+import biz.karms.sinkit.ejb.protostream.marshallers.ActionMarshaller;
 import biz.karms.sinkit.ejb.protostream.marshallers.CoreCacheMarshaller;
 import biz.karms.sinkit.ejb.protostream.marshallers.SinkitCacheEntryMarshaller;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.infinispan.client.hotrod.Flag;
 import org.infinispan.client.hotrod.RemoteCache;
@@ -113,13 +113,15 @@ public class WhitelistProtostreamGenerator {
         long start = System.currentTimeMillis();
         // TODO: Well, this hurts...  We wil probably need to use retrieve(...) and operate in chunks.
         // https://github.com/infinispan/infinispan/pull/4975
-        final Map<String, Boolean> whitelist = whitelistCache.withFlags(Flag.SKIP_CACHE_LOAD).keySet().stream().collect(Collectors.toMap(Function.identity(), s -> Boolean.TRUE));
+        final Map<String, Action> whitelist = whitelistCache.withFlags(Flag.SKIP_CACHE_LOAD).keySet().stream().collect(Collectors.toMap(Function.identity(), s -> Action.WHITE));
         log.info("WhitelistProtostreamGenerator: Pulling whitelist data took: " + (System.currentTimeMillis() - start) + " ms");
         start = System.currentTimeMillis();
         final SerializationContext ctx = ProtobufUtil.newSerializationContext(new Configuration.Builder().build());
         ctx.registerProtoFiles(FileDescriptorSource.fromResources(SINKIT_CACHE_PROTOBUF));
         ctx.registerMarshaller(new SinkitCacheEntryMarshaller());
         ctx.registerMarshaller(new CoreCacheMarshaller());
+        ctx.registerMarshaller(new ActionMarshaller());
+
         final Path whiteListFilePathTmpP = Paths.get(whiteListFilePathTmp);
         final Path whiteListFilePathP = Paths.get(whiteListFilePath);
         Files.newByteChannel(whiteListFilePathTmpP, options, attr).write(ProtobufUtil.toByteBuffer(ctx, whitelist));

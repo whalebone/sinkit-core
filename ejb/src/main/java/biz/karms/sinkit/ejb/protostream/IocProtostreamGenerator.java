@@ -4,6 +4,7 @@ import biz.karms.sinkit.ejb.cache.annotations.SinkitCache;
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCacheName;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
+import biz.karms.sinkit.ejb.protostream.marshallers.ActionMarshaller;
 import biz.karms.sinkit.ejb.protostream.marshallers.CoreCacheMarshaller;
 import biz.karms.sinkit.ejb.protostream.marshallers.SinkitCacheEntryMarshaller;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -126,33 +127,53 @@ public class IocProtostreamGenerator {
         // TODO: Well, this hurts...  We wil probably need to use retrieve(...) and operate in chunks.
         // TODO: DistributedExecutorService, DistributedTaskBuilder and DistributedTask API ?
         // https://github.com/infinispan/infinispan/pull/4975
-        // final Map<String, Boolean> ioclist = ioclistCache.withFlags(Flag.SKIP_CACHE_LOAD).keySet().stream().collect(Collectors.toMap(Function.identity(), s -> Boolean.FALSE));
+        // final Map<String, Action> ioclist = ioclistCache.withFlags(Flag.SKIP_CACHE_LOAD).keySet().stream().collect(Collectors.toMap(Function.identity(), s -> Action.BLACK));
         final RemoteCache<String, Rule> rulesCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
         final QueryFactory qf = Search.getQueryFactory(rulesCache);
-        final Query query = qf.from(Rule.class).having("sources.mode").eq("S").toBuilder().build();
-        final List<Rule> results = query.list();
+        final Query querySink = qf.from(Rule.class).having("sources.mode").eq("S").toBuilder().build();
+        final List<Rule> resultsSink = querySink.list();
+        final Query queryLog = qf.from(Rule.class).having("sources.mode").eq("L").toBuilder().build();
+        final List<Rule> resultsLog = queryLog.list();
         // These are not numerous < hundreds
-        final Map<Integer, Set<String>> custIdFeedUids = new HashMap<>();
-        results.forEach(r -> {
-            if (custIdFeedUids.containsKey(r.getCustomerId())) {
-                custIdFeedUids.get(r.getCustomerId()).addAll(r.getSources().keySet());
+        final Map<Integer, Set<String>> custIdFeedUidsSink = new HashMap<>();
+        resultsSink.forEach(r -> {
+            if (custIdFeedUidsSink.containsKey(r.getCustomerId())) {
+                custIdFeedUidsSink.get(r.getCustomerId()).addAll(r.getSources().keySet());
             } else {
-                // Cannot re-use te same instance keySet returns. Adding not supported.
-                custIdFeedUids.put(r.getCustomerId(), new HashSet<>(r.getSources().keySet()));
+                custIdFeedUidsSink.put(r.getCustomerId(), new HashSet<>(r.getSources().keySet()));
             }
         });
-        log.info("IOCListProtostreamGenerator: Will process IoCs for " + custIdFeedUids.size() + " customer ids.");
+        log.info("IOCListProtostreamGenerator: Will process IoCs for " + custIdFeedUidsSink.size() + " customer Sink ids.");
+        final Map<Integer, Set<String>> custIdFeedUidsLog = new HashMap<>();
+        resultsLog.forEach(r -> {
+            if (custIdFeedUidsLog.containsKey(r.getCustomerId())) {
+                custIdFeedUidsLog.get(r.getCustomerId()).addAll(r.getSources().keySet());
+            } else {
+                custIdFeedUidsLog.put(r.getCustomerId(), new HashSet<>(r.getSources().keySet()));
+            }
+        });
+        log.info("IOCListProtostreamGenerator: Will process IoCs for " + custIdFeedUidsLog.size() + " customer Log ids.");
+
         // final List<String> feeduids = results.stream().map(Rule::getSources).collect(Collectors.toList()).stream().map(Map::keySet).flatMap(Set::stream).collect(Collectors.toList());
-        final Map<Integer, Map<String, Boolean>> preparedHashes = new HashMap<>();
+        final Map<Integer, Map<String, Action>> preparedHashes = new HashMap<>();
 
         // TODO: bulk? Super slow and inefficient?
         blacklistCache.withFlags(Flag.SKIP_CACHE_LOAD).keySet().forEach(key -> blacklistCache.withFlags(Flag.SKIP_CACHE_LOAD).get(key).getSources().keySet().forEach(feeduid -> {
-            custIdFeedUids.entrySet().stream().filter(e -> e.getValue().contains(feeduid)).forEach(found -> {
+            custIdFeedUidsLog.entrySet().stream().filter(e -> e.getValue().contains(feeduid)).forEach(found -> {
                 if (preparedHashes.containsKey(found.getKey())) {
-                    preparedHashes.get(found.getKey()).put(key, Boolean.FALSE);
+                    preparedHashes.get(found.getKey()).put(key, Action.LOG);
                 } else {
-                    final Map<String, Boolean> newHashes = new HashMap<>();
-                    newHashes.put(key, Boolean.FALSE);
+                    final Map<String, Action> newHashes = new HashMap<>();
+                    newHashes.put(key, Action.LOG);
+                    preparedHashes.put(found.getKey(), newHashes);
+                }
+            });
+            custIdFeedUidsSink.entrySet().stream().filter(e -> e.getValue().contains(feeduid)).forEach(found -> {
+                if (preparedHashes.containsKey(found.getKey())) {
+                    preparedHashes.get(found.getKey()).put(key, Action.BLACK);
+                } else {
+                    final Map<String, Action> newHashes = new HashMap<>();
+                    newHashes.put(key, Action.BLACK);
                     preparedHashes.put(found.getKey(), newHashes);
                 }
             });
@@ -167,10 +188,10 @@ public class IocProtostreamGenerator {
                 final Optional<Map.Entry<Integer, Set<String>>> found = custIdFeedUids.entrySet().stream().filter(e -> e.getValue().contains(feeduid)).findFirst();
                 if (found != null && found.isPresent()) {
                     if (preparedHashes.containsKey(found.get().getKey())) {
-                        preparedHashes.get(found.get().getKey()).put((String) ioc.getKey(), Boolean.FALSE);
+                        preparedHashes.get(found.get().getKey()).put((String) ioc.getKey(), Action.BLACK);
                     } else {
-                        final Map<String, Boolean> newHashes = new HashMap<>();
-                        newHashes.put((String) ioc.getKey(), Boolean.FALSE);
+                        final Map<String, Action> newHashes = new HashMap<>();
+                        newHashes.put((String) ioc.getKey(), Action.BLACK);
                         preparedHashes.put(found.get().getKey(), newHashes);
                     }
                 }
@@ -200,6 +221,7 @@ public class IocProtostreamGenerator {
         ctx.registerProtoFiles(FileDescriptorSource.fromResources(SINKIT_CACHE_PROTOBUF));
         ctx.registerMarshaller(new SinkitCacheEntryMarshaller());
         ctx.registerMarshaller(new CoreCacheMarshaller());
+        ctx.registerMarshaller(new ActionMarshaller());
 
         final AtomicInteger workCounter = new AtomicInteger(1);
         preparedHashes.entrySet().forEach(r -> {

@@ -1,5 +1,6 @@
 package biz.karms.sinkit.ejb.protostream.marshallers;
 
+import biz.karms.sinkit.ejb.protostream.Action;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.infinispan.protostream.MessageMarshaller;
 
@@ -28,6 +29,6 @@ public class SinkitCacheEntryMarshaller implements MessageMarshaller<ImmutablePa
     @Override
     public void writeTo(ProtoStreamWriter writer, ImmutablePair pair) throws IOException {
         writer.writeString("key", (String) pair.getLeft());
-        writer.writeBoolean("value", (Boolean) pair.getRight());
+        writer.writeObject("value", pair.getRight(), Action.class);
     }
 }

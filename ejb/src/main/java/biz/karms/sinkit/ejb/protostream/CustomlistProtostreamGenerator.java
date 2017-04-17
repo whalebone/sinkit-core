@@ -3,10 +3,10 @@ package biz.karms.sinkit.ejb.protostream;
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCache;
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCacheName;
 import biz.karms.sinkit.ejb.cache.pojo.CustomList;
+import biz.karms.sinkit.ejb.protostream.marshallers.ActionMarshaller;
 import biz.karms.sinkit.ejb.protostream.marshallers.CoreCacheMarshaller;
 import biz.karms.sinkit.ejb.protostream.marshallers.SinkitCacheEntryMarshaller;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.infinispan.client.hotrod.Flag;
 import org.infinispan.client.hotrod.RemoteCacheManager;
@@ -106,12 +106,15 @@ public class CustomlistProtostreamGenerator {
     public void scheduler(Timer timer) throws IOException, InterruptedException {
         log.info("CustomlistProtostreamGenerator: Info=" + timer.getInfo());
         long start = System.currentTimeMillis();
-        final Map<Integer, Map<String, Boolean>> customerIdDomainData = new HashMap<>();
+        final Map<Integer, Map<String, Action>> customerIdDomainData = new HashMap<>();
         final QueryFactory qf = Search.getQueryFactory(cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_custom_lists.toString()).withFlags(Flag.SKIP_CACHE_LOAD));
         final Query query = qf.from(CustomList.class)
+                // TODO: There are supposed to be only these three states, B, W, L, so this explicit search is redundant...?
                 .having("whiteBlackLog").eq("B")
                 .or()
                 .having("whiteBlackLog").eq("W")
+                .or()
+                .having("whiteBlackLog").eq("L")
                 .toBuilder().build();
         final List<CustomList> result = query.list();
         result.forEach(cl -> {
@@ -120,9 +123,11 @@ public class CustomlistProtostreamGenerator {
                     customerIdDomainData.put(cl.getCustomerId(), new HashMap<>());
                 }
                 if ("B".equals(cl.getWhiteBlackLog())) {
-                    customerIdDomainData.get(cl.getCustomerId()).put(DigestUtils.md5Hex(cl.getFqdn()), Boolean.FALSE);
+                    customerIdDomainData.get(cl.getCustomerId()).put(DigestUtils.md5Hex(cl.getFqdn()), Action.BLACK);
+                } else if ("L".equals(cl.getWhiteBlackLog())) {
+                    customerIdDomainData.get(cl.getCustomerId()).put(DigestUtils.md5Hex(cl.getFqdn()), Action.LOG);
                 } else {
-                    customerIdDomainData.get(cl.getCustomerId()).put(DigestUtils.md5Hex(cl.getFqdn()), Boolean.TRUE);
+                    customerIdDomainData.get(cl.getCustomerId()).put(DigestUtils.md5Hex(cl.getFqdn()), Action.WHITE);
                 }
             }
         });
@@ -135,9 +140,9 @@ public class CustomlistProtostreamGenerator {
                     customerIdDomainData.put(cl.getCustomerId(), new HashMap<>());
                 }
                 if ("B".equals(cl.getWhiteBlackLog())) {
-                    customerIdDomainData.get(cl.getCustomerId()).put(DigestUtils.md5Hex(cl.getFqdn()), Boolean.FALSE);
+                    customerIdDomainData.get(cl.getCustomerId()).put(DigestUtils.md5Hex(cl.getFqdn()), Action.BLACK);
                 } else if ("W".equals(cl.getWhiteBlackLog())) {
-                    customerIdDomainData.get(cl.getCustomerId()).put(DigestUtils.md5Hex(cl.getFqdn()), Boolean.TRUE);
+                    customerIdDomainData.get(cl.getCustomerId()).put(DigestUtils.md5Hex(cl.getFqdn()), Action.WHITE);
                 } else {
                     // We don't serialize L, i.e. "Log only"
                 }
@@ -151,6 +156,7 @@ public class CustomlistProtostreamGenerator {
         ctx.registerProtoFiles(FileDescriptorSource.fromResources(SINKIT_CACHE_PROTOBUF));
         ctx.registerMarshaller(new SinkitCacheEntryMarshaller());
         ctx.registerMarshaller(new CoreCacheMarshaller());
+        ctx.registerMarshaller(new ActionMarshaller());
 
         customerIdDomainData.entrySet().forEach(r -> {
             final Path customListFilePathTmpP = Paths.get(customListFilePathTmp + r.getKey());
