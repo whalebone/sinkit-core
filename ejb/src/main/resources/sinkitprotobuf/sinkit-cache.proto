@@ -1,9 +1,15 @@
 /* author Michal Karm Babacek */
 package sinkitprotobuf;
 
+enum Action {
+    BLACK = 0;
+    WHITE = 1;
+    LOG   = 2;
+}
+
 message Pair {
     optional string key = 1;
-    optional bool value = 2;
+    optional Action value = 2;
 }
 
 message CoreCache {
