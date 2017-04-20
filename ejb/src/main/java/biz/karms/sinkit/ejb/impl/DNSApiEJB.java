@@ -340,10 +340,17 @@ public class DNSApiEJB implements DNSApi {
             if ("W".equals(customList.getWhiteBlackLog())) {
                 //TODO: Distinguish this from an error state.
                 return null;
-                //Blacklisted
+            //Blacklisted
             } else if ("B".equals(customList.getWhiteBlackLog())) {
+                try {
+                    if (DNS_REQUEST_LOGGING_ENABLED) {
+                        logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, null, archiveService, log);
+                    }
+                } catch (ArchiveException e) {
+                    log.log(Level.SEVERE, "getSinkHole: Logging customer BLOCK failed: ", e);
+                }
                 return new Sinkhole(probablyIsIPv6 ? IPV6SINKHOLE : IPV4SINKHOLE);
-                // L for audit logging is not implemented on purpose. Ask Robert/Karm.
+            // L for audit logging is not implemented on purpose. Ask Robert/Karm.
             } else if ("L".equals(customList.getWhiteBlackLog())) {
                 // Do nothing
                 log.log(Level.SEVERE, "getSinkHole: getWhiteBlackLog returned L. It shouldn't be used. Something is wrong.");
@@ -529,33 +536,39 @@ public class DNSApiEJB implements DNSApi {
         logRecord.setClient(clientUid);
         logRecord.setLogged(Calendar.getInstance().getTime());
 
-        final Set<IoCRecord> matchedIoCsList = new HashSet<>();
-        log.log(Level.FINE, "Iterating matchedIoCs...");
-        // { feed : [ type1 : iocId1, type2 : iocId2]}
-        for (Map.Entry<String, Set<ImmutablePair<String, String>>> matchedIoC : matchedIoCs.entrySet()) {
-            // feedName = matchedIoC.getKey();
-            for (ImmutablePair<String, String> typeIoCID : matchedIoC.getValue()) {
-                // iocId = typeIoCID.getB();
-                // type = typeIoCID.getA();
-                //if (StringUtils.isNotBlank(typeIoCID.getB())) {
-                IoCRecord ioCRecord;
-                if (StringUtils.isBlank(typeIoCID.getRight()) && StringUtils.isNotBlank(reasonFqdn)) {
-                    // Nope, no IP, just FQDN for GSB
-                    ioCRecord = processNonExistingIoC(reasonFqdn, matchedIoC.getKey(), typeIoCID.getLeft(), archiveService, log);
-                } else {
-                    ioCRecord = processRegularIoCId(typeIoCID.getRight(), archiveService, log);
+        VirusTotalRequestStatus vtRequestStatus;
+        if (MapUtils.isNotEmpty(matchedIoCs)) {
+            final Set<IoCRecord> matchedIoCsList = new HashSet<>();
+            log.log(Level.FINE, "Iterating matchedIoCs...");
+            // { feed : [ type1 : iocId1, type2 : iocId2]}
+            for (Map.Entry<String, Set<ImmutablePair<String, String>>> matchedIoC : matchedIoCs.entrySet()) {
+                // feedName = matchedIoC.getKey();
+                for (ImmutablePair<String, String> typeIoCID : matchedIoC.getValue()) {
+                    // iocId = typeIoCID.getB();
+                    // type = typeIoCID.getA();
+                    //if (StringUtils.isNotBlank(typeIoCID.getB())) {
+                    IoCRecord ioCRecord;
+                    if (StringUtils.isBlank(typeIoCID.getRight()) && StringUtils.isNotBlank(reasonFqdn)) {
+                        // Nope, no IP, just FQDN for GSB
+                        ioCRecord = processNonExistingIoC(reasonFqdn, matchedIoC.getKey(), typeIoCID.getLeft(), archiveService, log);
+                    } else {
+                        ioCRecord = processRegularIoCId(typeIoCID.getRight(), archiveService, log);
+                    }
+                    if (ioCRecord != null) {
+                        matchedIoCsList.add(ioCRecord);
+                    }
+                    //}
                 }
-                if (ioCRecord != null) {
-                    matchedIoCsList.add(ioCRecord);
-                }
-                //}
             }
+            final IoCRecord[] matchedIoCsArray = matchedIoCsList.toArray(new IoCRecord[matchedIoCsList.size()]);
+            logRecord.setMatchedIocs(matchedIoCsArray);
+            vtRequestStatus = VirusTotalRequestStatus.WAITING;
+        } else {
+            vtRequestStatus = VirusTotalRequestStatus.NOT_NEEDED;
         }
-        final IoCRecord[] matchedIoCsArray = matchedIoCsList.toArray(new IoCRecord[matchedIoCsList.size()]);
-        logRecord.setMatchedIocs(matchedIoCsArray);
 
         final VirusTotalRequest vtReq = new VirusTotalRequest();
-        vtReq.setStatus(VirusTotalRequestStatus.WAITING);
+        vtReq.setStatus(vtRequestStatus);
         logRecord.setVirusTotalRequest(vtReq);
         if (USE_LOGSTASH) {
             archiveService.archiveEventLogRecordUsingLogstash(logRecord);
