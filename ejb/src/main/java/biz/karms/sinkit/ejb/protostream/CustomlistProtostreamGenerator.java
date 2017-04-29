@@ -85,6 +85,9 @@ public class CustomlistProtostreamGenerator {
 
     @PostConstruct
     private void initialize() {
+
+        new File(GENERATED_PROTOFILES_DIRECTORY).mkdirs();
+
         if (SINKIT_CUSTOMLIST_PROTOSTREAM_GENERATOR_D_H_M_S != null) {
             timerService.createCalendarTimer(new ScheduleExpression()
                             .dayOfWeek(SINKIT_CUSTOMLIST_PROTOSTREAM_GENERATOR_D_H_M_S[0])
