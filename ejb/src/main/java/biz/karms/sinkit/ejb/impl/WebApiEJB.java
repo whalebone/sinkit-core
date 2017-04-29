@@ -312,115 +312,117 @@ public class WebApiEJB implements WebApi {
             // TODO: Proper Error codes.
             return null;
         }
-        log.log(Level.FINE, "putCustomLists: customerId: " + customerId + ", customerCustomLists.length: " + customerCustomLists.length);
+        log.log(Level.INFO, "putCustomLists: customerId: " + customerId + ", customerCustomLists.length: " + customerCustomLists.length);
         int customListsElementCounter = 0;
         // TODO: If customerCustomLists is empty - should we clear/delete all customerId's lists? Ask Rattus.
         // Yes, we should, see:
-        // TODO: This is a very dangerous asumption: A single empty list causes not only the particuler CIDR, but ALL customer's custom lists to disappear.
-        if (customerCustomLists.length == 0 || customerCustomLists[0].getLists().isEmpty()) {
-            final QueryFactory qf = Search.getQueryFactory(customListsCache);
-            final Query query = qf.from(CustomList.class)
-                    .having("customerId").eq(customerId)
-                    .toBuilder().build();
-            final List<CustomList> result = query.list();
-            log.log(Level.FINE, "putCustomLists: customerId: " + customerId + " yielded " + result.size() + "results in search.");
-            result.forEach(r -> {
-                final String key = r.getClientCidrAddress() + ((r.getFqdn() != null) ? r.getFqdn() : r.getListCidrAddress());
-                log.log(Level.FINE, "putCustomLists: removing key " + key);
-                customListsCache.remove(key);
-            });
-        } else {
-            final DomainValidator domainValidator = DomainValidator.getInstance();
-            String dnsClientStartAddress;
-            String dnsClientEndAddress;
-            for (CustomerCustomListDTO customerCustomList : customerCustomLists) {
-                // Let's calculate DNS Client address
-                try {
-                    if (StringUtils.isEmpty(customerCustomList.getDnsClient())) {
-                        log.log(Level.SEVERE, "putCustomLists: DNS client CIDR was null: Lists: " + customerCustomList.getLists().toString());
-                        return "putCustomLists: DNS client CIDR was null: Lists: " + customerCustomList.getLists().toString();
-                    }
-                    final ImmutablePair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(customerCustomList.getDnsClient());
-                    dnsClientStartAddress = startEndAddresses.getLeft();
-                    dnsClientEndAddress = startEndAddresses.getRight();
-                    if (dnsClientStartAddress == null || dnsClientEndAddress == null) {
-                        log.log(Level.SEVERE, "putCustomLists: dnsClientStartAddress or dnsClientEndAddress were null. This cannot happen.");
+        // TODO: This is a very dangerous assumption: A single empty list causes not only the particular CIDR, but ALL customer's custom lists to disappear.
+        //if (customerCustomLists.length == 0 || customerCustomLists[0].getLists().isEmpty()) {
+        // We delete the whole setup before setting it up again. The biggest downside is that any any later error causes the setup to end up empty.
+        final QueryFactory qf = Search.getQueryFactory(customListsCache);
+        final Query query = qf.from(CustomList.class)
+                .having("customerId").eq(customerId)
+                .toBuilder().build();
+        final List<CustomList> result = query.list();
+        log.log(Level.FINE, "putCustomLists: customerId: " + customerId + " yielded " + result.size() + "results in search.");
+        result.forEach(r -> {
+            final String key = r.getClientCidrAddress() + ((r.getFqdn() != null) ? r.getFqdn() : r.getListCidrAddress());
+            log.log(Level.FINE, "putCustomLists: removing key " + key);
+            customListsCache.remove(key);
+        });
+        //} else {
+        final DomainValidator domainValidator = DomainValidator.getInstance();
+        String dnsClientStartAddress;
+        String dnsClientEndAddress;
+        for (CustomerCustomListDTO customerCustomList : customerCustomLists) {
+            // Let's calculate DNS Client address
+            try {
+                if (StringUtils.isEmpty(customerCustomList.getDnsClient())) {
+                    log.log(Level.SEVERE, "putCustomLists: DNS client CIDR was null: Lists: " + customerCustomList.getLists().toString());
+                    return "putCustomLists: DNS client CIDR was null: Lists: " + customerCustomList.getLists().toString();
+                }
+                final ImmutablePair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(customerCustomList.getDnsClient());
+                dnsClientStartAddress = startEndAddresses.getLeft();
+                dnsClientEndAddress = startEndAddresses.getRight();
+                if (dnsClientStartAddress == null || dnsClientEndAddress == null) {
+                    log.log(Level.SEVERE, "putCustomLists: dnsClientStartAddress or dnsClientEndAddress were null. This cannot happen.");
+                    // TODO: Proper Error codes.
+                    return null;
+                }
+            } catch (Exception e) {
+                // TODO: More robust approach would be break();, but it could violate consistency...
+                // Furthermore, with validation in Portal, this really shouldn't happen, hence return null;
+                log.log(Level.SEVERE, "putCustomLists: Invalid CIDR " + customerCustomList.getDnsClient(), e);
+                // TODO: Proper Error codes.
+                return null;
+            }
+
+            // Let's process list of Blacklisted / Whitelisted / Logged CIDRs and FQDNs.
+            for (String fqdnOrCIDR : customerCustomList.getLists().keySet()) {
+                // TODO: OMG, this should go to some CustomList factory.
+                final CustomList customList = new CustomList();
+                customList.setCustomerId(customerId);
+                customList.setClientCidrAddress(customerCustomList.getDnsClient());
+                customList.setClientStartAddress(dnsClientStartAddress);
+                customList.setClientEndAddress(dnsClientEndAddress);
+                final String blacklistWhitelistLog = customerCustomList.getLists().get(fqdnOrCIDR);
+                if (!(blacklistWhitelistLog != null && ("B".equals(blacklistWhitelistLog) || "W".equals(blacklistWhitelistLog) || "L".equals(blacklistWhitelistLog)))) {
+                    log.log(Level.SEVERE, "putCustomLists: Expected one of <B|W|L> but got: " + blacklistWhitelistLog + ". customListsElementCounter: " + customListsElementCounter);
+                    // TODO: Proper Error codes.
+                    return null;
+                }
+                customList.setWhiteBlackLog(blacklistWhitelistLog);
+                if (domainValidator.isValid(fqdnOrCIDR)) {
+                    //Let's assume it is a Domain name, not a CIDR formatted IP address or subnet
+                    customList.setFqdn(fqdnOrCIDR);
+                } else {
+                    // In this case, we have to calculate CIDR subnet start and end address
+                    try {
+                        final ImmutablePair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(fqdnOrCIDR);
+                        final String startAddress = startEndAddresses.getLeft();
+                        final String endAddress = startEndAddresses.getRight();
+                        if (startAddress == null || endAddress == null) {
+                            log.log(Level.SEVERE, "putCustomLists: endAddress or startAddress were null for CIDR " + fqdnOrCIDR + ". This cannot happen. customListsElementCounter: " + customListsElementCounter);
+                            // TODO: Proper Error codes.
+                            return null;
+                        }
+                        customList.setListCidrAddress(fqdnOrCIDR);
+                        customList.setListStartAddress(startAddress);
+                        customList.setListEndAddress(endAddress);
+                    } catch (Exception e) {
+                        // TODO: More robust approach would be break();, but it could violate consistency...
+                        // Furthermore, with validation in Portal, this really shouldn't happen, hence return null;
+                        log.log(Level.SEVERE, "putCustomLists: Invalid CIDR " + customerCustomList.getDnsClient() + ", customListsElementCounter: " + customListsElementCounter, e);
                         // TODO: Proper Error codes.
                         return null;
                     }
-                } catch (Exception e) {
-                    // TODO: More robust approach would be break();, but it could violate consistency...
-                    // Furthermore, with validation in Portal, this really shouldn't happen, hence return null;
-                    log.log(Level.SEVERE, "putCustomLists: Invalid CIDR " + customerCustomList.getDnsClient(), e);
+                }
+
+                //At this point, we have a valid CustomList instance, let's process it with the cache.
+                // Sanity check
+                if ((customList.getFqdn() != null && customList.getListCidrAddress() != null) || (customList.getFqdn() == null && customList.getListCidrAddress() == null)) {
+                    log.log(Level.SEVERE, "putCustomLists: Sanity violation, customList has exactly one of [FQDN,CIDR] set, not both, not none. customListsElementCounter: " + customListsElementCounter);
                     // TODO: Proper Error codes.
                     return null;
                 }
 
-                // Let's process list of Blacklisted / Whitelisted / Logged CIDRs and FQDNs.
-                for (String fqdnOrCIDR : customerCustomList.getLists().keySet()) {
-                    // TODO: OMG, this should go to some CustomList factory.
-                    final CustomList customList = new CustomList();
-                    customList.setCustomerId(customerId);
-                    customList.setClientCidrAddress(customerCustomList.getDnsClient());
-                    customList.setClientStartAddress(dnsClientStartAddress);
-                    customList.setClientEndAddress(dnsClientEndAddress);
-                    final String blacklistWhitelistLog = customerCustomList.getLists().get(fqdnOrCIDR);
-                    if (!(blacklistWhitelistLog != null && ("B".equals(blacklistWhitelistLog) || "W".equals(blacklistWhitelistLog) || "L".equals(blacklistWhitelistLog)))) {
-                        log.log(Level.SEVERE, "putCustomLists: Expected one of <B|W|L> but got: " + blacklistWhitelistLog + ". customListsElementCounter: " + customListsElementCounter);
-                        // TODO: Proper Error codes.
-                        return null;
-                    }
-                    customList.setWhiteBlackLog(blacklistWhitelistLog);
-                    if (domainValidator.isValid(fqdnOrCIDR)) {
-                        //Let's assume it is a Domain name, not a CIDR formatted IP address or subnet
-                        customList.setFqdn(fqdnOrCIDR);
-                    } else {
-                        // In this case, we have to calculate CIDR subnet start and end address
-                        try {
-                            final ImmutablePair<String, String> startEndAddresses = CIDRUtils.getStartEndAddresses(fqdnOrCIDR);
-                            final String startAddress = startEndAddresses.getLeft();
-                            final String endAddress = startEndAddresses.getRight();
-                            if (startAddress == null || endAddress == null) {
-                                log.log(Level.SEVERE, "putCustomLists: endAddress or startAddress were null for CIDR " + fqdnOrCIDR + ". This cannot happen. customListsElementCounter: " + customListsElementCounter);
-                                // TODO: Proper Error codes.
-                                return null;
-                            }
-                            customList.setListCidrAddress(fqdnOrCIDR);
-                            customList.setListStartAddress(startAddress);
-                            customList.setListEndAddress(endAddress);
-                        } catch (Exception e) {
-                            // TODO: More robust approach would be break();, but it could violate consistency...
-                            // Furthermore, with validation in Portal, this really shouldn't happen, hence return null;
-                            log.log(Level.SEVERE, "putCustomLists: Invalid CIDR " + customerCustomList.getDnsClient() + ", customListsElementCounter: " + customListsElementCounter, e);
-                            // TODO: Proper Error codes.
-                            return null;
-                        }
-                    }
+                // TODO: Talk to Rattus. ClientCidrAddresses cannot be arbitrary and must be thoroughly validated in Portal. Should we hash this?
+                final String key = customList.getClientCidrAddress() + ((customList.getFqdn() != null) ? customList.getFqdn() : customList.getListCidrAddress());
 
-                    //At this point, we have a valid CustomList instance, let's process it with the cache.
-                    // Sanity check
-                    if ((customList.getFqdn() != null && customList.getListCidrAddress() != null) || (customList.getFqdn() == null && customList.getListCidrAddress() == null)) {
-                        log.log(Level.SEVERE, "putCustomLists: Sanity violation, customList has exactly one of [FQDN,CIDR] set, not both, not none. customListsElementCounter: " + customListsElementCounter);
-                        // TODO: Proper Error codes.
-                        return null;
-                    }
-
-                    // TODO: Talk to Rattus. ClientCidrAddresses cannot be arbitrary and must be thoroughly validated in Portal. Should we hash this?
-                    final String key = customList.getClientCidrAddress() + ((customList.getFqdn() != null) ? customList.getFqdn() : customList.getListCidrAddress());
-
-                    try {
-                        log.log(Level.FINE, "pcustomListsCacheutCustomLists: Putting key [" + key + "]. customListsElementCounter: " + customListsElementCounter);
-                        if (customListsCache.replace(key, customList) == null) {
-                            customListsCache.put(key, customList);
-                        }
-                        customListsElementCounter++;
-                    } catch (Exception e) {
-                        log.log(Level.SEVERE, "putCustomLists: customListsElementCounter: " + customListsElementCounter, e);
-                        // TODO: Proper Error codes.
-                        return null;
-                    }
+                try {
+                    log.log(Level.FINE, "pcustomListsCacheutCustomLists: Putting key [" + key + "]. customListsElementCounter: " + customListsElementCounter);
+                    // TODO: This is redundant now...
+                    //if (customListsCache.replace(key, customList) == null) {
+                    customListsCache.put(key, customList);
+                    //}
+                    customListsElementCounter++;
+                } catch (Exception e) {
+                    log.log(Level.SEVERE, "putCustomLists: customListsElementCounter: " + customListsElementCounter, e);
+                    // TODO: Proper Error codes.
+                    return null;
                 }
             }
+            //}
         }
         return customListsElementCounter + " CUSTOM LISTS ELEMENTS PROCESSED, " + customListsCache.size() + " PRESENT";
     }

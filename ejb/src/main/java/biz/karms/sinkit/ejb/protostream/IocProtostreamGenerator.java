@@ -48,6 +48,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import static biz.karms.sinkit.ejb.protostream.CustomlistProtostreamGenerator.GENERATED_PROTOFILES_DIRECTORY;
 import static biz.karms.sinkit.ejb.protostream.WhitelistProtostreamGenerator.SINKIT_CACHE_PROTOBUF;
 import static biz.karms.sinkit.ejb.protostream.WhitelistProtostreamGenerator.attr;
 import static biz.karms.sinkit.ejb.protostream.WhitelistProtostreamGenerator.options;
@@ -85,18 +86,10 @@ public class IocProtostreamGenerator {
                     System.getenv("SINKIT_IOC_PROTOSTREAM_GENERATOR_D_H_M_S").split(" ").length == 4) ?
                     System.getenv("SINKIT_IOC_PROTOSTREAM_GENERATOR_D_H_M_S").split(" ") : null;
 
-    public static final String iocListFilePath = System.getProperty("java.io.tmpdir") + "/ioclist.bin";
-    public static final String iocListFilePathTmp = System.getProperty("java.io.tmpdir") + "/ioclist.bin.tmp";
-    public static final String iocListFileMd5 = System.getProperty("java.io.tmpdir") + "/ioclist.bin.md5";
-    public static final String iocListFileMd5Tmp = System.getProperty("java.io.tmpdir") + "/ioclist.bin.md5.tmp";
-
-
-    // TODO: I didn't want to read the file again in JVM to compute MD5 sum, but this probably just adds too much hair.
-    public static final String[] iocListFileMD5TmpCmd = {
-            "/bin/sh",
-            "-c",
-            "/usr/bin/md5sum -b " + iocListFilePathTmp + " | cut -d ' ' -f1 > " + iocListFileMd5Tmp
-    };
+    public static final String iocListFilePath = GENERATED_PROTOFILES_DIRECTORY + "/ioclist.bin";
+    public static final String iocListFilePathTmp = GENERATED_PROTOFILES_DIRECTORY + "/ioclist.bin.tmp";
+    public static final String iocListFileMd5 = GENERATED_PROTOFILES_DIRECTORY + "/ioclist.bin.md5";
+    public static final String iocListFileMd5Tmp = GENERATED_PROTOFILES_DIRECTORY + "/ioclist.bin.md5.tmp";
 
     @PostConstruct
     private void initialize() {
@@ -122,7 +115,7 @@ public class IocProtostreamGenerator {
     }
 
     @Timeout
-    public void scheduler(Timer timer) throws IOException, InterruptedException, FileNotFoundException {
+    public void scheduler(Timer timer) throws IOException, InterruptedException {
         log.info("IOCListProtostreamGenerator: Info=" + timer.getInfo());
         long start = System.currentTimeMillis();
         // TODO: Well, this hurts...  We wil probably need to use retrieve(...) and operate in chunks.

@@ -14,12 +14,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static biz.karms.sinkit.ejb.protostream.CustomlistProtostreamGenerator.GENERATED_PROTOFILES_DIRECTORY;
 import static biz.karms.sinkit.ejb.protostream.CustomlistProtostreamGenerator.SINKIT_CUSTOMLIST_PROTOSTREAM_GENERATOR_D_H_M_S;
 import static biz.karms.sinkit.ejb.protostream.CustomlistProtostreamGenerator.customListFileMd5;
+import static biz.karms.sinkit.ejb.protostream.CustomlistProtostreamGenerator.customListFilePath;
 import static biz.karms.sinkit.ejb.protostream.IocProtostreamGenerator.SINKIT_IOC_PROTOSTREAM_GENERATOR_D_H_M_S;
 import static biz.karms.sinkit.ejb.protostream.IocProtostreamGenerator.iocListFileMd5;
 import static biz.karms.sinkit.ejb.protostream.IocProtostreamGenerator.iocListFilePath;
@@ -42,9 +46,6 @@ public class ProtostreamREST implements Serializable {
 
     @Inject
     private Logger log;
-
-    public static final String iocFilePath = System.getProperty("java.io.tmpdir") + "/ioc.bin";
-    public static final String customListFilePath = System.getProperty("java.io.tmpdir") + "/customlist.bin";
 
     public static final int TRY_LATER = 466;
     public static final String X_ERROR = "X-error";
@@ -118,6 +119,19 @@ public class ProtostreamREST implements Serializable {
                     .header(X_FILE_MD5, md5sum)
                     .build();
         } else {
+            // If any other file is generated, it means the generator cycle already passed, but there are no data for this particular client ID
+            try (DirectoryStream<java.nio.file.Path> someFiles = Files.newDirectoryStream(Paths.get(GENERATED_PROTOFILES_DIRECTORY), "ioclist.bin*")) {
+                if (someFiles.iterator().hasNext()) {
+                    customListBinary.createNewFile();
+                    // The desired behaviour is to return an empty file
+                    return Response.ok().entity(new FileInputStream(customListBinary))
+                            .header(X_FILE_LENGTH, "0")
+                            .header(X_FILE_MD5, "")
+                            .build();
+                }
+            } catch (IOException e) {
+                return Response.status(TRY_LATER).header(X_ERROR, "Try later, please.").build();
+            }
             return Response.status(TRY_LATER).header(X_ERROR, "Try later, please.").build();
         }
     }
@@ -155,6 +169,19 @@ public class ProtostreamREST implements Serializable {
                     .header(X_FILE_MD5, md5sum)
                     .build();
         } else {
+            // If any other file is generated, it means the generator cycle already passed, but there are no data for this particular client ID
+            try (DirectoryStream<java.nio.file.Path> someFiles = Files.newDirectoryStream(Paths.get(GENERATED_PROTOFILES_DIRECTORY), "ioclist.bin*")) {
+                if (someFiles.iterator().hasNext()) {
+                    iocListBinary.createNewFile();
+                    // The desired behaviour is to return an empty file
+                    return Response.ok().entity(new FileInputStream(iocListBinary))
+                            .header(X_FILE_LENGTH, "0")
+                            .header(X_FILE_MD5, "")
+                            .build();
+                }
+            } catch (IOException e) {
+                return Response.status(TRY_LATER).header(X_ERROR, "Try later, please.").build();
+            }
             return Response.status(TRY_LATER).header(X_ERROR, "Try later, please.").build();
         }
     }
