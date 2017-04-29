@@ -340,7 +340,7 @@ public class DNSApiEJB implements DNSApi {
             if ("W".equals(customList.getWhiteBlackLog())) {
                 //TODO: Distinguish this from an error state.
                 return null;
-            //Blacklisted
+                //Blacklisted
             } else if ("B".equals(customList.getWhiteBlackLog())) {
                 try {
                     if (DNS_REQUEST_LOGGING_ENABLED) {
@@ -350,10 +350,15 @@ public class DNSApiEJB implements DNSApi {
                     log.log(Level.SEVERE, "getSinkHole: Logging customer BLOCK failed: ", e);
                 }
                 return new Sinkhole(probablyIsIPv6 ? IPV6SINKHOLE : IPV4SINKHOLE);
-            // L for audit logging is not implemented on purpose. Ask Robert/Karm.
+                // L for audit logging is not implemented on purpose. Ask Robert/Karm.
             } else if ("L".equals(customList.getWhiteBlackLog())) {
-                // Do nothing
-                log.log(Level.SEVERE, "getSinkHole: getWhiteBlackLog returned L. It shouldn't be used. Something is wrong.");
+                try {
+                    if (DNS_REQUEST_LOGGING_ENABLED) {
+                        logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, null, archiveService, log);
+                    }
+                } catch (ArchiveException e) {
+                    log.log(Level.SEVERE, "getSinkHole: Logging customer LOG failed: ", e);
+                }
             } else {
                 log.log(Level.SEVERE, "getSinkHole: getWhiteBlackLog must be one of B, W, L but was: " + customList.getWhiteBlackLog());
                 return null;
