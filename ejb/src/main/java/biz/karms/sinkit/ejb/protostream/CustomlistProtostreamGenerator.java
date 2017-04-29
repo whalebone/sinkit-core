@@ -64,6 +64,10 @@ public class CustomlistProtostreamGenerator {
     @Resource
     private TimerService timerService;
 
+    public static final String GENERATED_PROTOFILES_DIRECTORY =
+            (System.getenv().containsKey("SINKIT_GENERATED_PROTOFILES_DIRECTORY") && StringUtils.isNotEmpty(System.getenv("SINKIT_GENERATED_PROTOFILES_DIRECTORY")))
+                    ? System.getenv("SINKIT_GENERATED_PROTOFILES_DIRECTORY") : System.getProperty("java.io.tmpdir");
+
     /**
      * e.g. every 5 to 10 minutes:
      * "* * *\/5-10 0" (without \)
@@ -74,10 +78,10 @@ public class CustomlistProtostreamGenerator {
                     System.getenv("SINKIT_CUSTOMLIST_PROTOSTREAM_GENERATOR_D_H_M_S").split(" ").length == 4) ?
                     System.getenv("SINKIT_CUSTOMLIST_PROTOSTREAM_GENERATOR_D_H_M_S").split(" ") : null;
 
-    public static final String customListFilePath = System.getProperty("java.io.tmpdir") + "/customlist.bin";
-    public static final String customListFilePathTmp = System.getProperty("java.io.tmpdir") + "/customlist.bin.tmp";
-    public static final String customListFileMd5 = System.getProperty("java.io.tmpdir") + "/customlist.bin.md5";
-    public static final String customListFileMd5Tmp = System.getProperty("java.io.tmpdir") + "/customlist.bin.md5.tmp";
+    public static final String customListFilePath = GENERATED_PROTOFILES_DIRECTORY + "/customlist.bin";
+    public static final String customListFilePathTmp = GENERATED_PROTOFILES_DIRECTORY + "/customlist.bin.tmp";
+    public static final String customListFileMd5 = GENERATED_PROTOFILES_DIRECTORY + "/customlist.bin.md5";
+    public static final String customListFileMd5Tmp = GENERATED_PROTOFILES_DIRECTORY + "/customlist.bin.md5.tmp";
 
     @PostConstruct
     private void initialize() {

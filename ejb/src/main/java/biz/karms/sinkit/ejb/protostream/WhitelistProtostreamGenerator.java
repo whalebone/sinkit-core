@@ -44,6 +44,7 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static biz.karms.sinkit.ejb.protostream.CustomlistProtostreamGenerator.GENERATED_PROTOFILES_DIRECTORY;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.CREATE;
@@ -79,10 +80,10 @@ public class WhitelistProtostreamGenerator {
     public static final FileAttribute<Set<PosixFilePermission>> attr = PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-r-----"));
     public static final String SINKIT_CACHE_PROTOBUF = "/sinkitprotobuf/sinkit-cache.proto";
 
-    public static final String whiteListFilePath = System.getProperty("java.io.tmpdir") + "/whitelist.bin";
-    public static final String whiteListFilePathTmp = System.getProperty("java.io.tmpdir") + "/whitelist.bin.tmp";
-    public static final String whiteListFileMd5 = System.getProperty("java.io.tmpdir") + "/whitelist.bin.md5";
-    public static final String whiteListFileMd5Tmp = System.getProperty("java.io.tmpdir") + "/whitelist.bin.md5.tmp";
+    public static final String whiteListFilePath = GENERATED_PROTOFILES_DIRECTORY + "/whitelist.bin";
+    public static final String whiteListFilePathTmp = GENERATED_PROTOFILES_DIRECTORY + "/whitelist.bin.tmp";
+    public static final String whiteListFileMd5 = GENERATED_PROTOFILES_DIRECTORY + "/whitelist.bin.md5";
+    public static final String whiteListFileMd5Tmp = GENERATED_PROTOFILES_DIRECTORY + "/whitelist.bin.md5.tmp";
 
     @PostConstruct
     private void initialize() {
