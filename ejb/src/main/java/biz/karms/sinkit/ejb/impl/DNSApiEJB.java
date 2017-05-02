@@ -103,6 +103,16 @@ public class DNSApiEJB implements DNSApi {
     private static final String IPV6SINKHOLE = System.getenv("SINKIT_SINKHOLE_IPV6");
     private static final String IPV4SINKHOLE = System.getenv("SINKIT_SINKHOLE_IP");
     private static final String GSB_FEED_NAME = (System.getenv().containsKey("SINKIT_GSB_FEED_NAME")) ? System.getenv("SINKIT_GSB_FEED_NAME") : "google-safebrowsing-api";
+    private static final String CUSTOM_LIST_FEED_NAME = (System.getenv().containsKey("SINKIT_CUSTOM_LIST_FEED_NAME")) ? System.getenv("SINKIT_CUSTOM_LIST_FEED_NAME") : "custom-list";
+    private static final Map<String, Set<ImmutablePair<String, String>>> customListfeedTypeMap = new HashMap<String, Set<ImmutablePair<String, String>>>() {
+        {
+            put(CUSTOM_LIST_FEED_NAME, new HashSet<ImmutablePair<String, String>>() {
+                {
+                    add(new ImmutablePair<>(CUSTOM_LIST_FEED_NAME, null));
+                }
+            });
+        }
+    };
     private static final boolean USE_LOGSTASH = StringUtils.isNotBlank(System.getenv(LogstashClient.LOGSTASH_URL_ENV));
     private static final int ARCHIVE_FAILED_TRIALS = 10;
     private static final boolean DNS_REQUEST_LOGGING_ENABLED = Boolean.parseBoolean((System.getenv().containsKey("SINKIT_DNS_REQUEST_LOGGING_ENABLED")) ? System.getenv("SINKIT_DNS_REQUEST_LOGGING_ENABLED") : "true");
@@ -285,7 +295,7 @@ public class DNSApiEJB implements DNSApi {
             return null;
         }
 
-        // USed for benchmarking
+        // Used for benchmarking
         long start;
 
         final List<Rule> rules;
@@ -344,7 +354,7 @@ public class DNSApiEJB implements DNSApi {
             } else if ("B".equals(customList.getWhiteBlackLog())) {
                 try {
                     if (DNS_REQUEST_LOGGING_ENABLED) {
-                        logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, null, archiveService, log);
+                        logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, customListfeedTypeMap, archiveService, log);
                     }
                 } catch (ArchiveException e) {
                     log.log(Level.SEVERE, "getSinkHole: Logging customer BLOCK failed: ", e);
@@ -354,7 +364,7 @@ public class DNSApiEJB implements DNSApi {
             } else if ("L".equals(customList.getWhiteBlackLog())) {
                 try {
                     if (DNS_REQUEST_LOGGING_ENABLED) {
-                        logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, null, archiveService, log);
+                        logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, customListfeedTypeMap, archiveService, log);
                     }
                 } catch (ArchiveException e) {
                     log.log(Level.SEVERE, "getSinkHole: Logging customer LOG failed: ", e);
