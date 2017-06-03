@@ -5,12 +5,13 @@ import biz.karms.sinkit.ejb.cache.annotations.SinkitCache;
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCacheName;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.CustomList;
+import biz.karms.sinkit.ejb.cache.pojo.GSBRecord;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
+import biz.karms.sinkit.ejb.cache.pojo.WhitelistedRecord;
 import biz.karms.sinkit.ejb.dto.AllDNSSettingDTO;
 import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
 import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
-import com.google.common.collect.Lists;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
@@ -55,6 +56,14 @@ public class WebApiEJB implements WebApi {
     @SinkitCache(SinkitCacheName.cache_manager_indexable)
     private RemoteCacheManager cacheManagerForIndexableCaches;
 
+    @Inject
+    @SinkitCache(SinkitCacheName.infinispan_whitelist)
+    private RemoteCache<String, WhitelistedRecord> whitelistCache;
+
+    @Inject
+    @SinkitCache(SinkitCacheName.infinispan_gsb)
+    private RemoteCache<String, GSBRecord> gsbCache;
+
     // Testing/playground purposes
     @Override
     public String sayHello(final String queryString) {
@@ -68,9 +77,13 @@ public class WebApiEJB implements WebApi {
     }
 
     @Override
-    public Map<String, String> getStats() {
-        final Map<String, String> info = new HashMap<>();
-        info.put("Stats", "Not implemented");
+    public Map<String, Map<String, String>> getStats() {
+        final Map<String, Map<String, String>> info = new HashMap<>();
+        info.put("Rules", cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString()).stats().getStatsMap());
+        info.put("CustomLists", cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_custom_lists.toString()).stats().getStatsMap());
+        info.put("Whitelist", whitelistCache.stats().getStatsMap());
+        info.put("GSB", gsbCache.stats().getStatsMap());
+        info.put("Blacklist", blacklistCache.stats().getStatsMap());
         return info;
     }
 
@@ -156,7 +169,11 @@ public class WebApiEJB implements WebApi {
         try {
             final RemoteCache<String, Rule> ruleCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_rules.toString());
             log.log(Level.SEVERE, "getAllRules: This is a very expensive operation.");
-            return Lists.newArrayList(ruleCache.getBulk());
+            final QueryFactory qf = Search.getQueryFactory(ruleCache);
+            final Query query = qf.from(Rule.class).build();
+            // Hundreds of records...
+            List<Rule> results = query.list();
+            return results;
         } catch (Exception e) {
             log.log(Level.SEVERE, "getRules client address troubles", e);
             // TODO: Proper Error codes.

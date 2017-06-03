@@ -27,6 +27,9 @@ import static biz.karms.sinkit.ejb.protostream.CustomlistProtostreamGenerator.cu
 import static biz.karms.sinkit.ejb.protostream.IocProtostreamGenerator.SINKIT_IOC_PROTOSTREAM_GENERATOR_D_H_M_S;
 import static biz.karms.sinkit.ejb.protostream.IocProtostreamGenerator.iocListFileMd5;
 import static biz.karms.sinkit.ejb.protostream.IocProtostreamGenerator.iocListFilePath;
+import static biz.karms.sinkit.ejb.protostream.WhiteWithoutCustomProtostreamGenerator.SINKIT_WHITE_WITHOUT_CUSTOM_PROTOSTREAM_GENERATOR_D_H_M_S;
+import static biz.karms.sinkit.ejb.protostream.WhiteWithoutCustomProtostreamGenerator.whiteWithoutCustomFileMd5;
+import static biz.karms.sinkit.ejb.protostream.WhiteWithoutCustomProtostreamGenerator.whiteWithoutCustomFilePath;
 import static biz.karms.sinkit.ejb.protostream.WhitelistProtostreamGenerator.SINKIT_WHITELIST_PROTOSTREAM_GENERATOR_D_H_M_S;
 import static biz.karms.sinkit.ejb.protostream.WhitelistProtostreamGenerator.whiteListFileMd5;
 import static biz.karms.sinkit.ejb.protostream.WhitelistProtostreamGenerator.whiteListFilePath;
@@ -51,6 +54,41 @@ public class ProtostreamREST implements Serializable {
     public static final String X_ERROR = "X-error";
     public static final String X_FILE_LENGTH = "X-file-length";
     public static final String X_FILE_MD5 = "X-file-md5";
+
+    /**
+     * @returns huge byte array Protocol Buffer with Whitelist records without those
+     * fqdn that at least one user has set for Logging or Blocking
+     */
+    @GET
+    @Path("/protostream/whitewithoutcustom")
+    @Produces({"application/x-protobuf"})
+    public Response getProtostreamWhiteWithoutCustom() {
+        if (SINKIT_WHITE_WITHOUT_CUSTOM_PROTOSTREAM_GENERATOR_D_H_M_S == null) {
+            return Response.status(Response.Status.NOT_FOUND).header(X_ERROR, "This is a wrong node. Protostream generator is not started.").build();
+        }
+        final File whiteWithoutCustomBinary = new File(whiteWithoutCustomFilePath);
+        final File whiteWithoutCustomBinaryMD5 = new File(whiteWithoutCustomFileMd5);
+        if (whiteWithoutCustomBinary.exists() && whiteWithoutCustomBinaryMD5.exists()) {
+            InputStream is;
+            String md5sum;
+            try {
+                is = new FileInputStream(whiteWithoutCustomBinary);
+                md5sum = new String(Files.readAllBytes(whiteWithoutCustomBinaryMD5.toPath()), StandardCharsets.UTF_8);
+            } catch (FileNotFoundException e) {
+                log.log(Level.SEVERE, whiteWithoutCustomFilePath + " not found.");
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).header(X_ERROR, whiteWithoutCustomFilePath + " not found.").build();
+            } catch (IOException e) {
+                log.log(Level.SEVERE, whiteWithoutCustomFileMd5 + " not found.");
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).header(X_ERROR, whiteWithoutCustomFileMd5 + " not found.").build();
+            }
+            return Response.ok().entity(is)
+                    .header(X_FILE_LENGTH, String.valueOf(whiteWithoutCustomBinary.length()))
+                    .header(X_FILE_MD5, md5sum)
+                    .build();
+        } else {
+            return Response.status(TRY_LATER).header(X_ERROR, "Try later, please.").build();
+        }
+    }
 
     /**
      * @returns huge byte array Protocol Buffer with Whitelist records
