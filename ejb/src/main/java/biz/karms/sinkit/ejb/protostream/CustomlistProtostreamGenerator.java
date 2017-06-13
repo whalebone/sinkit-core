@@ -160,6 +160,7 @@ public class CustomlistProtostreamGenerator {
         ctx.registerMarshaller(new ActionMarshaller());
 
         customerIdDomainData.entrySet().forEach(r -> {
+            log.info("CustomlistProtostreamGenerator: Serializing customer ID: " + r.getKey()+ " and its " + r.getValue().size() + " records.");
             final Path customListFilePathTmpP = Paths.get(customListFilePathTmp + r.getKey());
             final Path customListFilePathP = Paths.get(customListFilePath + r.getKey());
             try {
