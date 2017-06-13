@@ -32,12 +32,14 @@ import java.lang.management.MemoryUsage;
 import java.lang.management.OperatingSystemMXBean;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 /**
  * @author Michal Karm Babacek
@@ -342,11 +344,17 @@ public class WebApiEJB implements WebApi {
                 .toBuilder().build();
         final List<CustomList> result = query.list();
         log.log(Level.FINE, "putCustomLists: customerId: " + customerId + " yielded " + result.size() + "results in search.");
-        result.forEach(r -> {
+
+        // TODO cleanup, unnecessarily clumsy
+        final Set<String> toBeAdded = new HashSet<>();
+        Stream.of(customerCustomLists).forEach(x -> toBeAdded.addAll(x.getLists().keySet()));
+        // The point is to remove from cache what is not in the updated set
+        result.stream().filter(x -> !toBeAdded.contains(((x.getFqdn() != null) ? x.getFqdn() : x.getListCidrAddress()))).forEach(r -> {
             final String key = r.getClientCidrAddress() + ((r.getFqdn() != null) ? r.getFqdn() : r.getListCidrAddress());
-            log.log(Level.FINE, "putCustomLists: removing key " + key);
+            log.log(Level.INFO, "putCustomLists: removing key " + key);
             customListsCache.remove(key);
         });
+
         //} else {
         final DomainValidator domainValidator = DomainValidator.getInstance();
         String dnsClientStartAddress;
@@ -427,7 +435,7 @@ public class WebApiEJB implements WebApi {
                 final String key = customList.getClientCidrAddress() + ((customList.getFqdn() != null) ? customList.getFqdn() : customList.getListCidrAddress());
 
                 try {
-                    log.log(Level.FINE, "pcustomListsCacheutCustomLists: Putting key [" + key + "]. customListsElementCounter: " + customListsElementCounter);
+                    log.log(Level.INFO, "pcustomListsCacheutCustomLists: Putting key [" + key + "]. customListsElementCounter: " + customListsElementCounter);
                     // TODO: This is redundant now...
                     //if (customListsCache.replace(key, customList) == null) {
                     customListsCache.put(key, customList);

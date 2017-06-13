@@ -28,6 +28,8 @@ public class ActionMarshaller implements EnumMarshaller<Action> {
                 return Action.WHITE;
             case 2:
                 return Action.LOG;
+            case 3:
+                return Action.CHECK;
         }
         return null;  // unknown value
     }
@@ -41,6 +43,8 @@ public class ActionMarshaller implements EnumMarshaller<Action> {
                 return 1;
             case LOG:
                 return 2;
+            case CHECK:
+                return 3;
             default:
                 throw new IllegalArgumentException("Unexpected Action value : " + action);
         }

@@ -55,11 +55,6 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
 
     @Override
     public WhitelistedRecord get(final String id) {
-//        if(iocRecord == null || iocRecord.getSource() == null || iocRecord.getSource().getId() == null ||
-//                StringUtils.isBlank(iocRecord.getSource().getId().getValue())) {
-//            log.log(Level.SEVERE, "add: Cannot search whitelist. Object ioc or ioc.source.id.value is null or blank");
-//            return null;
-//        }
         if (id == null) {
             log.log(Level.SEVERE, "get: Cannot search whitelist. Id is null.");
             return null;

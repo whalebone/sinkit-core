@@ -3,6 +3,7 @@ package biz.karms.sinkit.ejb.protostream;
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCache;
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCacheName;
 import biz.karms.sinkit.ejb.cache.pojo.CustomList;
+import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ejb.protostream.marshallers.ActionMarshaller;
 import biz.karms.sinkit.ejb.protostream.marshallers.CoreCacheMarshaller;
 import biz.karms.sinkit.ejb.protostream.marshallers.SinkitCacheEntryMarshaller;
@@ -114,15 +115,8 @@ public class CustomlistProtostreamGenerator {
         log.info("CustomlistProtostreamGenerator: Info=" + timer.getInfo());
         long start = System.currentTimeMillis();
         final Map<Integer, Map<String, Action>> customerIdDomainData = new HashMap<>();
-        final QueryFactory qf = Search.getQueryFactory(cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_custom_lists.toString()).withFlags(Flag.SKIP_CACHE_LOAD));
-        final Query query = qf.from(CustomList.class)
-                // TODO: There are supposed to be only these three states, B, W, L, so this explicit search is redundant...?
-                .having("whiteBlackLog").eq("B")
-                .or()
-                .having("whiteBlackLog").eq("W")
-                .or()
-                .having("whiteBlackLog").eq("L")
-                .toBuilder().build();
+        final QueryFactory qf = Search.getQueryFactory(cacheManagerForIndexableCaches.getCache(SinkitCacheName.infinispan_custom_lists.toString()));
+        final Query query = qf.from(CustomList.class).build();
         final List<CustomList> result = query.list();
         result.forEach(cl -> {
             if (StringUtils.isNotEmpty(cl.getFqdn())) {
