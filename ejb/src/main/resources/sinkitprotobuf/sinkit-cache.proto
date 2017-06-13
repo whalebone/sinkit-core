@@ -2,9 +2,10 @@
 package sinkitprotobuf;
 
 enum Action {
-    BLACK = 0;
-    WHITE = 1;
-    LOG   = 2;
+    BLACK   = 0;
+    WHITE   = 1;
+    LOG     = 2;
+    CHECK   = 3;
 }
 
 message Pair {

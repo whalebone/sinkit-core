@@ -52,6 +52,7 @@ import javax.ejb.TransactionAttribute;
 import javax.ejb.TransactionAttributeType;
 import javax.inject.Inject;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
@@ -354,17 +355,18 @@ public class DNSApiEJB implements DNSApi {
             } else if ("B".equals(customList.getWhiteBlackLog())) {
                 try {
                     if (DNS_REQUEST_LOGGING_ENABLED) {
-                        logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, customListfeedTypeMap, archiveService, log);
+                        logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null,
+                                (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, customListfeedTypeMap, archiveService, log);
                     }
                 } catch (ArchiveException e) {
                     log.log(Level.SEVERE, "getSinkHole: Logging customer BLOCK failed: ", e);
                 }
                 return new Sinkhole(probablyIsIPv6 ? IPV6SINKHOLE : IPV4SINKHOLE);
-                // L for audit logging is not implemented on purpose. Ask Robert/Karm.
             } else if ("L".equals(customList.getWhiteBlackLog())) {
                 try {
                     if (DNS_REQUEST_LOGGING_ENABLED) {
-                        logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, customListfeedTypeMap, archiveService, log);
+                        logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null,
+                                (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, customListfeedTypeMap, archiveService, log);
                     }
                 } catch (ArchiveException e) {
                     log.log(Level.SEVERE, "getSinkHole: Logging customer LOG failed: ", e);
@@ -585,6 +587,9 @@ public class DNSApiEJB implements DNSApi {
         final VirusTotalRequest vtReq = new VirusTotalRequest();
         vtReq.setStatus(vtRequestStatus);
         logRecord.setVirusTotalRequest(vtReq);
+
+        Arrays.stream(logRecord.getMatchedIocs()).filter(x -> CUSTOM_LIST_FEED_NAME.equals(x.getFeed().getName())).forEach(x -> x.setUniqueRef(null));
+
         if (USE_LOGSTASH) {
             archiveService.archiveEventLogRecordUsingLogstash(logRecord);
         } else {
@@ -671,11 +676,6 @@ public class DNSApiEJB implements DNSApi {
             IoCRecord retrievedIoC = archiveService.getIoCRecordById(ioc.getDocumentId());
 
             for (int i = 0; retrievedIoC == null && i < ARCHIVE_FAILED_TRIALS; i++) {
-                try {
-                    Thread.sleep(200);
-                } catch (InterruptedException e) {
-                    log.log(Level.SEVERE, "Waiting for Archived IoC was interrupted.", e);
-                }
                 retrievedIoC = archiveService.getIoCRecordById(ioc.getDocumentId());
             }
 
