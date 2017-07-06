@@ -12,6 +12,7 @@ import biz.karms.sinkit.ejb.cache.pojo.marshallers.ImmutablePairMarshaller;
 import biz.karms.sinkit.ejb.cache.pojo.marshallers.RuleMarshaller;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheManager;
+import org.infinispan.client.hotrod.exceptions.TransportException;
 import org.infinispan.client.hotrod.marshall.ProtoStreamMarshaller;
 import org.infinispan.commons.api.BasicCache;
 import org.infinispan.commons.api.BasicCacheContainer;
@@ -59,6 +60,7 @@ public class MyCacheManagerProvider implements Serializable {
     private static final int SINKIT_HOTROD_PORT = Integer.parseInt(System.getenv("SINKIT_HOTROD_PORT"));
     private static final String RULE_PROTOBUF_DEFINITION_RESOURCE = "/sinkitprotobuf/rule.proto";
     private static final String CUSTOM_LIST_PROTOBUF_DEFINITION_RESOURCE = "/sinkitprotobuf/customlist.proto";
+    private static final long SINKIT_HOTROD_CONN_TIMEOUT_S = (System.getenv().containsKey("SINKIT_HOTROD_CONN_TIMEOUT_S")) ? Integer.parseInt(System.getenv("SINKIT_HOTROD_CONN_TIMEOUT_S")) : 300;
 
     @Inject
     private Logger log;
@@ -67,15 +69,17 @@ public class MyCacheManagerProvider implements Serializable {
     private RemoteCacheManager cacheManagerForIndexableCaches;
     private RemoteCacheManager cacheManager;
 
-    public void init(@Observes @Initialized(ApplicationScoped.class) Object init) throws IOException {
+    public void init(@Observes @Initialized(ApplicationScoped.class) Object init) throws IOException, InterruptedException {
 
         log.log(Level.INFO, "Constructing caches...");
 
         if (localCacheManager == null) {
             final GlobalConfiguration glob = new GlobalConfigurationBuilder()
                     .nonClusteredDefault()
+                    .globalJmxStatistics().allowDuplicateDomains(true)
                     .build();
             final Configuration loc = new ConfigurationBuilder()
+                    .jmxStatistics().disable()
                     .clustering().cacheMode(CacheMode.LOCAL)
                     .locking().isolationLevel(IsolationLevel.READ_UNCOMMITTED)
                     .eviction().strategy(EvictionStrategy.LRU)
@@ -110,22 +114,40 @@ public class MyCacheManagerProvider implements Serializable {
         ctx.registerProtoFiles(FileDescriptorSource.fromResources(CUSTOM_LIST_PROTOBUF_DEFINITION_RESOURCE));
         ctx.registerMarshaller(new CustomListMarshaller());
 
-        final RemoteCache<String, String> metadataCache = cacheManagerForIndexableCaches.getCache(ProtobufMetadataManagerConstants.PROTOBUF_METADATA_CACHE_NAME);
-        metadataCache.put(RULE_PROTOBUF_DEFINITION_RESOURCE, readResource(RULE_PROTOBUF_DEFINITION_RESOURCE));
-        metadataCache.put(CUSTOM_LIST_PROTOBUF_DEFINITION_RESOURCE, readResource(CUSTOM_LIST_PROTOBUF_DEFINITION_RESOURCE));
-        final String errors = metadataCache.get(ProtobufMetadataManagerConstants.ERRORS_KEY_SUFFIX);
-        if (errors != null) {
-            throw new IllegalStateException("Protobuffer files, either Rule or CustomLists contained errors:\n" + errors);
+        long timestamp = System.currentTimeMillis();
+        while (!setupMetadataCache() && System.currentTimeMillis() - timestamp < SINKIT_HOTROD_CONN_TIMEOUT_S) {
+            log.log(Level.INFO, "XXX");
+
+            Thread.sleep(1000L);
+            log.log(Level.INFO, "Waiting for the Hot Rod server on " + SINKIT_HOTROD_HOST + ":" + SINKIT_HOTROD_PORT + " to come up until " + (System.currentTimeMillis() - timestamp) + " < " + SINKIT_HOTROD_CONN_TIMEOUT_S);
         }
 
         log.log(Level.INFO, "Managers started.");
+    }
+
+    private boolean setupMetadataCache() throws IOException {
+        log.log(Level.INFO, "setupMetadataCache");
+
+        try {
+            final RemoteCache<String, String> metadataCache = cacheManagerForIndexableCaches.getCache(ProtobufMetadataManagerConstants.PROTOBUF_METADATA_CACHE_NAME);
+            metadataCache.put(RULE_PROTOBUF_DEFINITION_RESOURCE, readResource(RULE_PROTOBUF_DEFINITION_RESOURCE));
+            metadataCache.put(CUSTOM_LIST_PROTOBUF_DEFINITION_RESOURCE, readResource(CUSTOM_LIST_PROTOBUF_DEFINITION_RESOURCE));
+            final String errors = metadataCache.get(ProtobufMetadataManagerConstants.ERRORS_KEY_SUFFIX);
+            if (errors != null) {
+                log.log(Level.SEVERE, "Protobuffer files, either Rule or CustomLists contained errors:\n" + errors);
+                return false;
+            }
+        } catch (TransportException ex) {
+            return false;
+        }
+        return true;
     }
 
     @Produces
     @ApplicationScoped
     @SinkitCache(SinkitCacheName.cache_manager_indexable)
     public RemoteCacheManager getCacheManagerForIndexableCaches() {
-        if(cacheManagerForIndexableCaches == null) {
+        if (cacheManagerForIndexableCaches == null) {
             throw new IllegalArgumentException("cacheManagerForIndexableCaches must not be null, check init");
         }
         return cacheManagerForIndexableCaches;
