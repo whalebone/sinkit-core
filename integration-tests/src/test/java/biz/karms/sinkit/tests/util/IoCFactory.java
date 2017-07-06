@@ -75,7 +75,7 @@ public class IoCFactory {
     }
 
     /**
-     * Creates ioc record object as ti would be recieved from IntelMQ
+     * Creates ioc record object as ti would be received from IntelMQ
      */
     public static IoCRecord getIoCRecordAsRecieved(String feedName, String taxonomyType, String sourceId,
                                                    IoCSourceIdType sourcetype, Date observationTime, Date sourceTime)

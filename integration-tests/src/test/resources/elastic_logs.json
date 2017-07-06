@@ -3,7 +3,7 @@
   "template": "logs*",
   "settings": {
     "index.refresh_interval": "5s",
-    "index.number_of_shards": "1"
+    "index.number_of_shards": "6"
   },
   "mappings": {
     "match": {
@@ -47,6 +47,65 @@
             }
           }
         },
+        "geoip": {
+          "properties": {
+            "timezone": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "area_code": {
+              "type": "long"
+            },
+            "ip": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "latitude": {
+              "type": "double"
+            },
+            "continent_code": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "city_name": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "country_code2": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "country_name": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "dma_code": {
+              "type": "long"
+            },
+            "country_code3": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "location": {
+              "type": "double"
+            },
+            "region_name": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "real_region_name": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "postal_code": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "longitude": {
+              "type": "double"
+            }
+          }
+        },
         "logged": {
           "format": "yyyy-MM-dd'T'HH:mm:ssZ",
           "type": "date"
@@ -77,9 +136,13 @@
         }
       }
     },
-    "aliases": {}
+    "aliases": {
+
+    }
   },
   "aliases": {
-    "logs": {}
+    "logs": {
+
+    }
   }
 }

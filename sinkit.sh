@@ -102,6 +102,11 @@ sed -i "s/@ORACULUM_SERVER_VERIFY_CLIENT@/${SINKIT_VERIFY_CLIENT:-REQUIRED}/g" $
 sed -i "s/@ORACULUM_TRUST_STORE_PATH@/\/opt\/sinkit\/certs\/ca-cert.jks/g" ${WF_CONFIG}
 sed -i "s/@ORACULUM_TRUST_STORE_PASS@/${SINKIT_KEYSTORE_PASS}/g" ${WF_CONFIG}
 
+# Management console access
+if [[ "${SINKIT_MGMT_USER}X" != "X" ]] && [[ "${SINKIT_MGMT_PASS}X" != "X" ]]; then
+    /opt/sinkit/wildfly/bin/add-user.sh -m -u "${SINKIT_MGMT_USER}" -p "${SINKIT_MGMT_PASS}"
+fi
+
 /opt/sinkit/wildfly/bin/standalone.sh \
  -b ${MYIP} \
  -c standalone.xml \

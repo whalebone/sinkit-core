@@ -7,6 +7,7 @@ import biz.karms.sinkit.ejb.CoreService;
 import biz.karms.sinkit.ejb.impl.ArchiveServiceEJB;
 import biz.karms.sinkit.ioc.IoCRecord;
 import biz.karms.sinkit.ioc.IoCSourceIdType;
+import biz.karms.sinkit.tests.util.InfinispanManager;
 import biz.karms.sinkit.tests.util.IoCFactory;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.gargoylesoftware.htmlunit.HttpMethod;
@@ -52,10 +53,13 @@ public class ApiIntegrationTest extends Arquillian {
     @EJB
     CoreService coreService;
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 1)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 1)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void postAllDNSClientSettingsTest(@ArquillianResource URL context) throws Exception {
+
+        InfinispanManager.getInfinispanManager().getRuleRemoteCache().clear();
+
         WebClient webClient = new WebClient();
         WebRequest requestSettings = new WebRequest(new URL(context + "rest/rules/all"), HttpMethod.POST);
         requestSettings.setAdditionalHeader("Content-Type", "application/json");
@@ -93,7 +97,7 @@ public class ApiIntegrationTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "Expected " + expected + ", but got: " + responseBody);
     }
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 2)
+    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 2)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void putCustomListsTest(@ArquillianResource URL context) throws Exception {
@@ -120,14 +124,15 @@ public class ApiIntegrationTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "Expected: " + expected + ", but got: " + responseBody);
     }
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 3)
+    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 3)
     public void addIoCsTest() throws Exception {
         IoCRecord ioCRecord = IoCFactory.getIoCRecord("hosted", "blacklist", "myDocumentId", "feed2", "feed2", "seznam.cz", IoCSourceIdType.FQDN, "seznam.cz", null, "seznam.cz");
         assertTrue(blacklistCacheService.dropTheWholeCache(), "Dropping the whole cache failed.");
         assertTrue(blacklistCacheService.addToCache(ioCRecord), "Adding a new IoC to a presumably empty cache failed.");
     }
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 4)
+
+    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 4)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void getStatsTest(@ArquillianResource URL context) throws Exception {
@@ -143,7 +148,8 @@ public class ApiIntegrationTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "Expected: " + expected + ". got: " + responseBody);
     }
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 5)
+
+    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 5)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void getIoCsTest(@ArquillianResource URL context) throws Exception {
@@ -159,7 +165,8 @@ public class ApiIntegrationTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "Expected " + expected + ", but got: " + responseBody);
     }
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 6)
+
+    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 6)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void getIoCTest(@ArquillianResource URL context) throws Exception {
@@ -177,7 +184,8 @@ public class ApiIntegrationTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "IoC should have contained " + expected + ", but got: " + responseBody);
     }
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 7)
+
+    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 7)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void getSinkHoleTest(@ArquillianResource URL context) throws Exception {
@@ -199,7 +207,8 @@ public class ApiIntegrationTest extends Arquillian {
      * @param context
      * @throws Exception
      */
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 8)
+
+    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 8)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void cleanElasticTest(@ArquillianResource URL context) throws Exception {
@@ -216,7 +225,8 @@ public class ApiIntegrationTest extends Arquillian {
         }
     }
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 9)
+
+    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 9)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void receiveIoCTest(@ArquillianResource URL context) throws Exception {
@@ -270,7 +280,8 @@ public class ApiIntegrationTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "Should have contained " + expected + ", but got: " + responseBody);
     }
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 10)
+
+    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 10)
     public void iocInElasticTest() throws Exception {
 
         String feed = "integrationTest";
@@ -293,7 +304,8 @@ public class ApiIntegrationTest extends Arquillian {
         assertNotNull(ioc.getTime().getObservation(), "Expecting time.observation, but got null");
     }
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 11)
+
+    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 11)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void iocInCacheTest(@ArquillianResource URL context) throws Exception {
@@ -311,7 +323,8 @@ public class ApiIntegrationTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "IoC should have contained " + expected + ", but got: " + responseBody);
     }
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 20)
+
+    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 20)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void endToEndTest(@ArquillianResource URL context) throws Exception {
@@ -394,7 +407,7 @@ public class ApiIntegrationTest extends Arquillian {
         assertEquals(logRecord.get("client").getAsString(), "666", "Expected LogRecord.client: 666, but got: " + logRecord.get("client").getAsString());
         assertEquals(logRecord.get("request").getAsJsonObject().get("ip").getAsString(), "94.0.0.1", "Expected LogRecord.request.ip: 94.0.0.1, but got: " + logRecord.get("request").getAsJsonObject().get("ip").getAsString());
         assertNull(logRecord.get("request").getAsJsonObject().get("raw")/*, "Expected  LogRecord.request.raw to be null, but got: " + logRecord.get("request").getAsJsonObject().get("raw").getAsString()*/);
-        assertEquals(logRecord.get("reason").getAsJsonObject().get("fqdn").getAsString(), "evil-domain-that-is-to-be-listed.cz","Expected LogRecord.reason.fqdn: evil-domain-that-is-to-be-listed.cz, but got: " + logRecord.get("reason").getAsJsonObject().get("fqdn").getAsString());
+        assertEquals(logRecord.get("reason").getAsJsonObject().get("fqdn").getAsString(), "evil-domain-that-is-to-be-listed.cz", "Expected LogRecord.reason.fqdn: evil-domain-that-is-to-be-listed.cz, but got: " + logRecord.get("reason").getAsJsonObject().get("fqdn").getAsString());
         assertNull(logRecord.get("reason").getAsJsonObject().get("ip")/*, "Expected LogRecord.reason.ip to be null, but got: " + logRecord.get("reason").getAsJsonObject().get("ip").getAsString()*/);
         assertNotNull(logRecord.get("logged").getAsString(), "Expected LogRecord.logged not to be null, but got null");
         assertEquals(logRecord.get("virus_total_request").getAsJsonObject().get("status").getAsString(), "waiting", "Expected LogRecord.virus_total_request.status: waiting, but got: " + logRecord.get("virus_total_request").getAsJsonObject().get("status").getAsString());

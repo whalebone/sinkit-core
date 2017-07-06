@@ -10,7 +10,6 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
-    <groupId>biz.karms.sinkit</groupId>
     <artifactId>integration-tests</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
@@ -110,16 +109,6 @@
         <finalName>${project.artifactId}</finalName>
         <plugins>
             <plugin>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>unpack</id>
-                        <phase/>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${version.compiler.plugin}</version>
                 <configuration>
@@ -127,7 +116,6 @@
                     <target>${maven.compiler.target}</target>
                 </configuration>
             </plugin>
-
             <plugin>
                 <artifactId>maven-dependency-plugin</artifactId>
                 <executions>
@@ -152,6 +140,15 @@
                     </execution>
                 </executions>
             </plugin>
+           <plugin>
+                <groupId>org.jboss.arquillian.maven</groupId>
+                <artifactId>arquillian-maven-plugin</artifactId>
+                <version>${version.arquillian_maven}</version>
+                <configuration>
+                    <targetDir>../ear/target</targetDir>
+                    <filename>sinkit-ear.ear</filename>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
     <profiles>
@@ -162,7 +159,7 @@
                 Arquillian tests that execute in the specified container -->
             <id>default</id>
             <activation>
-                <activeByDefault>true</activeByDefault>
+                <activeByDefault>false</activeByDefault>
             </activation>
             <build>
                 <plugins>
@@ -199,6 +196,9 @@
                 in a remote WildFly instance -->
             <!-- Run with: mvn clean test -Parq-wildfly-remote -->
             <id>arq-wildfly-remote</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
             <dependencies>
                 <dependency>
                     <groupId>org.wildfly.arquillian</groupId>
