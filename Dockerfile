@@ -1,4 +1,4 @@
-FROM fedora:24
+FROM fedora:25
 MAINTAINER Michal Karm Babacek <karm@email.cz
 LABEL description="Codename Feed: Sinkit Core POC"
 
@@ -11,7 +11,6 @@ RUN useradd -s /sbin/nologin sinkit
 RUN mkdir -p /opt/sinkit && chown sinkit /opt/sinkit && chgrp sinkit /opt/sinkit && chmod ug+rwxs /opt/sinkit
 
 WORKDIR /opt/sinkit
-USER sinkit
 
 EXPOSE 8080/tcp
 EXPOSE 8443/tcp
@@ -39,10 +38,10 @@ RUN echo 'JAVA_OPTS="\
  -XX:+HeapDumpOnOutOfMemoryError \
  -XX:HeapDumpPath=/opt/sinkit \
 "' >> /opt/sinkit/wildfly/bin/standalone.conf
-RUN mkdir -p /opt/sinkit/wildfly/standalone/log/
-RUN mkdir -p /opt/sinkit/certs
+RUN mkdir -p /opt/sinkit/wildfly/standalone/log/ && mkdir -p /opt/sinkit/certs && mkdir -p /opt/sinkit/protobuf && \
+    chown sinkit /opt/sinkit/ -R && chgrp sinkit /opt/sinkit/ -R && chmod g+s /opt/sinkit/ -R
 ADD sinkit.sh /opt/sinkit/
-CMD ["/opt/sinkit/sinkit.sh"]
-
+USER sinkit
 # Deployment
 ADD ear/target/sinkit-ear.ear /opt/sinkit/wildfly-${WILDFLY_VERSION}/standalone/deployments/
+CMD ["/opt/sinkit/sinkit.sh"]
