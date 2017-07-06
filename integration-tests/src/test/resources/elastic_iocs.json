@@ -3,7 +3,7 @@
   "template": "iocs*",
   "settings": {
     "index.refresh_interval": "5s",
-    "index.number_of_shards": "1"
+    "index.number_of_shards": "6"
   },
   "mappings": {
     "intelmq": {
@@ -76,10 +76,6 @@
               "index": "not_analyzed",
               "type": "string"
             },
-            "reverse_domain_name": {
-              "index": "not_analyzed",
-              "type": "string"
-            },
             "id": {
               "type": "object",
               "properties": {
@@ -94,6 +90,10 @@
               }
             },
             "asn": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "reverse_dns": {
               "index": "not_analyzed",
               "type": "string"
             },
@@ -167,9 +167,13 @@
         }
       }
     },
-    "aliases": {}
+    "aliases": {
+
+    }
   },
   "aliases": {
-    "iocs": {}
+    "iocs": {
+
+    }
   }
 }

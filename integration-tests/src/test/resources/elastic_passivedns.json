@@ -1,0 +1,119 @@
+{
+  "order": 0,
+  "template": "passivedns-*",
+  "settings": {
+    "index.refresh_interval": "5s",
+    "index.number_of_shards": "6"
+  },
+  "mappings": {
+    "logs": {
+      "numeric_detection": true,
+      "dynamic_templates": [
+        {
+          "string_fields": {
+            "mapping": {
+              "index": "not_analyzed",
+              "omit_norms": true,
+              "type": "string"
+            },
+            "match_mapping_type": "string",
+            "match": "*"
+          }
+        }
+      ],
+      "date_detection": true,
+      "properties": {
+        "geoip": {
+          "properties": {
+            "latitude": {
+              "type": "double"
+            },
+            "coordinates": {
+              "type": "geo_point"
+            },
+            "country_code2": {
+              "index": "not_analyzed",
+              "type": "string"
+            },
+            "longitude": {
+              "type": "double"
+            }
+          }
+        },
+        "domain_l1": {
+          "index": "not_analyzed",
+          "type": "string"
+        },
+        "domain_l2": {
+          "index": "not_analyzed",
+          "type": "string"
+        },
+        "query": {
+          "index": "not_analyzed",
+          "type": "string"
+        },
+        "length": {
+          "properties": {
+            "answer": {
+              "type": "double"
+            },
+            "domain_l1": {
+              "type": "double"
+            },
+            "domain_l2": {
+              "type": "double"
+            },
+            "query": {
+              "type": "double"
+            }
+          }
+        },
+        "client_locality": {
+          "index": "not_analyzed",
+          "type": "string"
+        },
+        "query_type": {
+          "index": "not_analyzed",
+          "type": "string"
+        },
+        "ttl": {
+          "type": "long"
+        },
+        "client_id": {
+          "type": "long"
+        },
+        "answer": {
+          "index": "not_analyzed",
+          "type": "string"
+        },
+        "answer_ip": {
+          "index": "not_analyzed",
+          "type": "string"
+        },
+        "asn": {
+          "properties": {
+            "number": {
+              "index": "not_analyzed",
+              "type": "string"
+            }
+          }
+        },
+        "dga": {
+          "properties": {
+            "probability": {
+              "type": "double"
+            },
+            "class": {
+              "type": "double"
+            }
+          }
+        }
+      }
+    }
+  },
+  "aliases": {
+    "passivedns": {
+
+    }
+  }
+}
