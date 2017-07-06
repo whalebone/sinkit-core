@@ -1,3 +1,7 @@
+# Testing
+
+    mvn clean install -Parq-wildfly-remote -Dsinkit_management_address=192.168.122.156 -Dsinkit_management_port=9990 -Dsinkit_username=karm -Dsinkit_password="I almost left it here" -Dhotrod_host=192.168.122.156 -Dhotrod_port=11322
+
 # sinkit-core
 Integration tests: [![Circle CI](https://circleci.com/gh/intfeed/sinkit-core.svg?style=svg)](https://circleci.com/gh/intfeed/sinkit-core)
 A prototype of a toy project featuring Infinispan dist cache.

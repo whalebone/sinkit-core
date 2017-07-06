@@ -32,7 +32,7 @@ public class GSBTest extends Arquillian {
     @EJB
     private GSBService gsbService;
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 200)
+    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 200)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void clearGSBCacheTest(@ArquillianResource URL context) throws Exception {
@@ -48,7 +48,7 @@ public class GSBTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "Should have contained " + expected + ", but got: " + responseBody);
     }
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 201)
+    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 201)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void putHashPrefixTest(@ArquillianResource URL context) throws Exception {
@@ -64,7 +64,7 @@ public class GSBTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "Should have contained " + expected + ", but got: " + responseBody);
     }
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 202)
+    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 202)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void getStatsTest(@ArquillianResource URL context) throws Exception {
@@ -80,7 +80,7 @@ public class GSBTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "Should have contained " + expected + ", but got: " + responseBody);
     }
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 203)
+    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 203)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void removeHashPrefixTest(@ArquillianResource URL context) throws Exception {
@@ -111,8 +111,7 @@ public class GSBTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "Should have contained " + expected + ", but got: " + responseBody);
     }
 
-
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 204)
+    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 204)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void lookupTest(@ArquillianResource URL context) throws Exception {
@@ -138,7 +137,7 @@ public class GSBTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "Should have contained " + expected + ", but got: " + responseBody);
     }
 
-    @Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 204)
+    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 204)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void lookupVariantTest(@ArquillianResource URL context) throws Exception {
@@ -164,7 +163,7 @@ public class GSBTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "Should have contained " + expected + ", but got: " + responseBody);
     }
 
-    //@Test(dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 205)
+    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 205)
     //@OperateOnDeployment("ear")
     //@RunAsClient
     public void clearGSBCacheTest2(@ArquillianResource URL context) throws Exception {
