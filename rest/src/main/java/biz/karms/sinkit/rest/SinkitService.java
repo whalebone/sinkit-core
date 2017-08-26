@@ -125,7 +125,7 @@ public class SinkitService implements Serializable {
         return new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().toJson(response);
     }
 
-    String getWhitelistedRecord(String id) {
+    String getWhitelistedRecord(final String id) {
         if (id == null) {
             return new GsonBuilder().create().toJson(ERR_MSG);
         }
@@ -133,7 +133,7 @@ public class SinkitService implements Serializable {
         return new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().toJson(white);
     }
 
-    String removeWhitelistedRecord(String id) {
+    String removeWhitelistedRecord(final String id) {
         if (id == null) {
             return new GsonBuilder().create().toJson(ERR_MSG);
         }
@@ -260,15 +260,15 @@ public class SinkitService implements Serializable {
         return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapi.getAllRules());
     }
 
-    public String deleteRulesByCustomer(Integer customerId) {
+    public String deleteRulesByCustomer(final Integer customerId) {
         return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(webapi.deleteRulesByCustomer(customerId));
     }
 
-    public boolean putGSBHashPrefix(String hashPrefix) {
+    public boolean putGSBHashPrefix(final String hashPrefix) {
         return gsbService.putHashPrefix(hashPrefix);
     }
 
-    public boolean removeGSBHashPrefix(String hashPrefix) {
+    public boolean removeGSBHashPrefix(final String hashPrefix) {
         return gsbService.removeHashPrefix(hashPrefix);
     }
 
@@ -278,7 +278,7 @@ public class SinkitService implements Serializable {
         return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(stats);
     }
 
-    public String gsbLookup(String url) {
+    public String gsbLookup(final String url) {
         return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create().toJson(gsbService.lookup(url));
     }
 

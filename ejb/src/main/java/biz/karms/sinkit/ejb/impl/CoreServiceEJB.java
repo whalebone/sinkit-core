@@ -234,7 +234,7 @@ public class CoreServiceEJB implements CoreService {
     }
 
     @Override
-    public WhitelistedRecord getWhitelistedRecord(String id) {
+    public WhitelistedRecord getWhitelistedRecord(final String id) {
         if (id == null) {
             log.log(Level.SEVERE, "getWhitelistedRecord: cannot search whitelist, id is null");
             return null;
@@ -243,12 +243,12 @@ public class CoreServiceEJB implements CoreService {
     }
 
     @Override
-    public boolean removeWhitelistedRecord(String id) {
+    public boolean removeWhitelistedRecord(final String id) {
         if (id == null) {
             log.log(Level.SEVERE, "removeWhitelistedRecord: cannot remove whitelist entry, id is null");
             return false;
         }
-        return false;
+        return whitelistCacheService.remove(id);
     }
 
     @Override
@@ -257,7 +257,7 @@ public class CoreServiceEJB implements CoreService {
     }
 
     @Override
-    public void setWhitelistValidSeconds(long whitelistValidSeconds) {
+    public void setWhitelistValidSeconds(final long whitelistValidSeconds) {
         this.whitelistValidSeconds = whitelistValidSeconds;
     }
 }

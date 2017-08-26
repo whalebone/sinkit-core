@@ -132,7 +132,7 @@ public class SinkitREST implements Serializable {
     @Produces({"application/json;charset=UTF-8"})
     //@Consumes({"application/json;charset=UTF-8"})
     public String removeWhitelistedRecord(@PathParam("key") String key) {
-        return sinkitService.getWhitelistedRecord(key);
+        return sinkitService.removeWhitelistedRecord(key);
     }
 
     @POST
