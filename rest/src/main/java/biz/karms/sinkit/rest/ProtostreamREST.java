@@ -24,7 +24,7 @@ import static biz.karms.sinkit.ejb.protostream.CustomlistProtostreamGenerator.GE
 import static biz.karms.sinkit.ejb.protostream.CustomlistProtostreamGenerator.SINKIT_CUSTOMLIST_PROTOSTREAM_GENERATOR_D_H_M_S;
 import static biz.karms.sinkit.ejb.protostream.CustomlistProtostreamGenerator.customListFileMd5;
 import static biz.karms.sinkit.ejb.protostream.CustomlistProtostreamGenerator.customListFilePath;
-import static biz.karms.sinkit.ejb.protostream.IoCWithCustomProtostreamGenerator.SINKIT_IOC_WITH_CUSTOM_PROTOSTREAM_GENERATOR_D_H_M_S;
+import static biz.karms.sinkit.ejb.protostream.IoCWithCustomProtostreamGenerator.SINKIT_ALL_IOC_PROTOSTREAM_GENERATOR_D_H_M_S;
 import static biz.karms.sinkit.ejb.protostream.IoCWithCustomProtostreamGenerator.iocWithCustomFileMd5;
 import static biz.karms.sinkit.ejb.protostream.IoCWithCustomProtostreamGenerator.iocWithCustomFilePath;
 import static biz.karms.sinkit.ejb.protostream.IocProtostreamGenerator.SINKIT_IOC_PROTOSTREAM_GENERATOR_D_H_M_S;
@@ -63,7 +63,7 @@ public class ProtostreamREST implements Serializable {
     @Path("/protostream/iocwithcustom")
     @Produces({"application/x-protobuf"})
     public Response getProtostreamIoCWithCustom() {
-        if (SINKIT_IOC_WITH_CUSTOM_PROTOSTREAM_GENERATOR_D_H_M_S == null) {
+        if (SINKIT_ALL_IOC_PROTOSTREAM_GENERATOR_D_H_M_S == null) {
             return Response.status(Response.Status.NOT_FOUND).header(X_ERROR, "This is a wrong node. Protostream generator is not started.").build();
         }
         final File iocWithCustomBinary = new File(iocWithCustomFilePath);
