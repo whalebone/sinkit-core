@@ -23,7 +23,7 @@ public class SinkitCacheEntryMarshaller implements MessageMarshaller<ImmutablePa
 
     @Override
     public ImmutablePair readFrom(ProtoStreamReader reader) throws IOException {
-        return new ImmutablePair<>(reader.readString("key"), reader.readBoolean("value"));
+        return new ImmutablePair<>(reader.readString("key"), reader.readObject("value", Action.class));
     }
 
     @Override
