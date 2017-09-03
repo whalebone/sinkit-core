@@ -150,27 +150,32 @@ public class IocProtostreamGenerator {
         // final List<String> feeduids = results.stream().map(Rule::getSources).collect(Collectors.toList()).stream().map(Map::keySet).flatMap(Set::stream).collect(Collectors.toList());
         final Map<Integer, Map<String, Action>> preparedHashes = new HashMap<>();
 
-        // TODO: bulk? Super slow and inefficient?
-        blacklistCache.withFlags(Flag.SKIP_CACHE_LOAD).keySet().forEach(key -> blacklistCache.withFlags(Flag.SKIP_CACHE_LOAD).get(key).getSources().keySet().forEach(feeduid -> {
-            custIdFeedUidsLog.entrySet().stream().filter(e -> e.getValue().contains(feeduid)).forEach(found -> {
-                if (preparedHashes.containsKey(found.getKey())) {
-                    preparedHashes.get(found.getKey()).put(key, Action.LOG);
-                } else {
-                    final Map<String, Action> newHashes = new HashMap<>();
-                    newHashes.put(key, Action.LOG);
-                    preparedHashes.put(found.getKey(), newHashes);
-                }
-            });
-            custIdFeedUidsSink.entrySet().stream().filter(e -> e.getValue().contains(feeduid)).forEach(found -> {
-                if (preparedHashes.containsKey(found.getKey())) {
-                    preparedHashes.get(found.getKey()).put(key, Action.BLACK);
-                } else {
-                    final Map<String, Action> newHashes = new HashMap<>();
-                    newHashes.put(key, Action.BLACK);
-                    preparedHashes.put(found.getKey(), newHashes);
-                }
-            });
-        }));
+        // TODO: bulk? Super slow and inefficient :-/
+        blacklistCache.withFlags(Flag.SKIP_CACHE_LOAD).keySet().forEach(key -> {
+            final BlacklistedRecord b = blacklistCache.withFlags(Flag.SKIP_CACHE_LOAD).get(key);
+            if (!b.isPresentOnWhiteList()) {
+                b.getSources().keySet().forEach(feeduid -> {
+                    custIdFeedUidsLog.entrySet().stream().filter(e -> e.getValue().contains(feeduid)).forEach(found -> {
+                        if (preparedHashes.containsKey(found.getKey())) {
+                            preparedHashes.get(found.getKey()).put(key, Action.LOG);
+                        } else {
+                            final Map<String, Action> newHashes = new HashMap<>();
+                            newHashes.put(key, Action.LOG);
+                            preparedHashes.put(found.getKey(), newHashes);
+                        }
+                    });
+                    custIdFeedUidsSink.entrySet().stream().filter(e -> e.getValue().contains(feeduid)).forEach(found -> {
+                        if (preparedHashes.containsKey(found.getKey())) {
+                            preparedHashes.get(found.getKey()).put(key, Action.BLACK);
+                        } else {
+                            final Map<String, Action> newHashes = new HashMap<>();
+                            newHashes.put(key, Action.BLACK);
+                            preparedHashes.put(found.getKey(), newHashes);
+                        }
+                    });
+                });
+            }
+        });
 
         // TODO: 8000 is a magic number. We should profile that.
         /* Keeps getting: https://gist.github.com/Karm/2bc7bee4f71027ebea993dbf38efef7b

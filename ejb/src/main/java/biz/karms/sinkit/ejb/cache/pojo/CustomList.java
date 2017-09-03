@@ -1,5 +1,7 @@
 package biz.karms.sinkit.ejb.cache.pojo;
 
+import com.google.gson.Gson;
+
 import java.io.Serializable;
 
 /**
@@ -156,16 +158,6 @@ public class CustomList implements Serializable {
 
     @Override
     public String toString() {
-        return "CustomList{" +
-                "clientStartAddress='" + clientStartAddress + '\'' +
-                ", clientEndAddress='" + clientEndAddress + '\'' +
-                ", clientCidrAddress='" + clientCidrAddress + '\'' +
-                ", customerId=" + customerId +
-                ", fqdn='" + fqdn + '\'' +
-                ", listStartAddress='" + listStartAddress + '\'' +
-                ", listEndAddress='" + listEndAddress + '\'' +
-                ", listCidrAddress='" + listCidrAddress + '\'' +
-                ", whiteBlackLog='" + whiteBlackLog + '\'' +
-                '}';
+        return new Gson().toJson(this);
     }
 }

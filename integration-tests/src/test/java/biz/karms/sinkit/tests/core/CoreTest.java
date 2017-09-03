@@ -214,6 +214,7 @@ public class CoreTest extends Arquillian {
                 "seznam.cz",
                 "10.1.1.3",
                 ids,
+                null, //TODO
                 LOGGER);
         // The async task follows Fire and Forget. TODO: dnsEventLogTestAssert must wait
     }

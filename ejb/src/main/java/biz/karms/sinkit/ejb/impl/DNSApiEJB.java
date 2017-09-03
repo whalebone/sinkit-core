@@ -2,7 +2,6 @@ package biz.karms.sinkit.ejb.impl;
 
 import biz.karms.sinkit.ejb.CoreService;
 import biz.karms.sinkit.ejb.DNSApi;
-import biz.karms.sinkit.ejb.GSBService;
 import biz.karms.sinkit.ejb.ThreatType;
 import biz.karms.sinkit.ejb.WebApi;
 import biz.karms.sinkit.ejb.cache.annotations.SinkitCache;
@@ -15,6 +14,7 @@ import biz.karms.sinkit.ejb.util.CIDRUtils;
 import biz.karms.sinkit.ejb.util.IPorFQDNValidator;
 import biz.karms.sinkit.eventlog.EventLogAction;
 import biz.karms.sinkit.exception.ArchiveException;
+import com.google.gson.Gson;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -33,11 +33,14 @@ import javax.ejb.TransactionAttribute;
 import javax.ejb.TransactionAttributeType;
 import javax.inject.Inject;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -57,9 +60,6 @@ public class DNSApiEJB implements DNSApi {
 
     @EJB
     private WebApi webApi;
-
-    @EJB //TODO: https://github.com/whalebone/sinkit-core/issues/81
-    private GSBService gsbService;
 
     @EJB
     private DNSApiLoggingEJB dnsApiLoggingEJB;
@@ -82,7 +82,6 @@ public class DNSApiEJB implements DNSApi {
 
     private static final String IPV6SINKHOLE = System.getenv("SINKIT_SINKHOLE_IPV6");
     private static final String IPV4SINKHOLE = System.getenv("SINKIT_SINKHOLE_IP");
-    private static final String GSB_FEED_NAME = (System.getenv().containsKey("SINKIT_GSB_FEED_NAME")) ? System.getenv("SINKIT_GSB_FEED_NAME") : "google-safebrowsing-api";
     public static final String CUSTOM_LIST_FEED_NAME = (System.getenv().containsKey("SINKIT_CUSTOM_LIST_FEED_NAME")) ? System.getenv("SINKIT_CUSTOM_LIST_FEED_NAME") : "custom-list";
     private static final Map<String, Set<ImmutablePair<String, String>>> customListfeedTypeMap = new HashMap<String, Set<ImmutablePair<String, String>>>() {
         {
@@ -333,7 +332,7 @@ public class DNSApiEJB implements DNSApi {
                 try {
                     if (DNS_REQUEST_LOGGING_ENABLED) {
                         dnsApiLoggingEJB.logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null,
-                                (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, customListfeedTypeMap, log);
+                                (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, customListfeedTypeMap, null, log);
                     }
                 } catch (ArchiveException e) {
                     log.log(Level.SEVERE, "getSinkHole: Logging customer BLOCK failed: ", e);
@@ -343,7 +342,7 @@ public class DNSApiEJB implements DNSApi {
                 try {
                     if (DNS_REQUEST_LOGGING_ENABLED) {
                         dnsApiLoggingEJB.logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null,
-                                (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, customListfeedTypeMap, log);
+                                (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, customListfeedTypeMap, null, log);
                     }
                 } catch (ArchiveException e) {
                     log.log(Level.SEVERE, "getSinkHole: Logging customer LOG failed: ", e);
@@ -356,135 +355,178 @@ public class DNSApiEJB implements DNSApi {
 
         // Now it's the time to search IoC cache
         // Lookup BlacklistedRecord from IoC cache (gives feeds)
-        log.log(Level.FINE, "getSinkHole: getting IoC key " + fqdnOrIp);
-        start = System.currentTimeMillis();
-        final BlacklistedRecord blacklistedRecord = blacklistCache.withFlags(Flag.SKIP_CACHE_LOAD).get(DigestUtils.md5Hex(fqdnOrIp));
-        log.log(Level.FINE, "blacklistCache.get took: " + (System.currentTimeMillis() - start) + " ms.");
 
-        Set<ThreatType> gsbResults = null;
-        if (isFQDN == IPorFQDNValidator.DECISION.FQDN) {
-            // Let's search GSB cache
-            log.log(Level.FINE, "getSinkHole: getting GSB key " + fqdnOrIp);
-            start = System.currentTimeMillis();
-            gsbResults = gsbService.lookup(fqdnOrIp);
-            log.log(Level.FINE, "gsbService.lookup took: " + (System.currentTimeMillis() - start) + " ms.");
-        }
-
-        if (blacklistedRecord == null && CollectionUtils.isEmpty(gsbResults)) {
-            log.log(Level.FINE, "No hit. The requested fqdnOrIp: " + fqdnOrIp + " is clean.");
-            return null;
-        }
-
-        // Feed UID : [{Type1, IoCID1}, {Type2, IoCID2}, ...]
-        final Map<String, Set<ImmutablePair<String, String>>> feedTypeMap = new HashMap<>();
-
-        if (blacklistedRecord != null && MapUtils.isNotEmpty(blacklistedRecord.getSources())) {
-            // Once blacklisted source issue is fixed replace this for-loop for feedTypeMap.putAll(blacklistedRecord.getSources());
-            Set<ImmutablePair<String, String>> blacklistedRecordSource;
-            for (Map.Entry<String, ImmutablePair<String, String>> typeIoCImmutablePair : blacklistedRecord.getSources().entrySet()) {
-                blacklistedRecordSource = new HashSet<>();
-                blacklistedRecordSource.add(typeIoCImmutablePair.getValue());
-                feedTypeMap.put(typeIoCImmutablePair.getKey(), blacklistedRecordSource);
-            }
-        }
-
-        if (CollectionUtils.isNotEmpty(gsbResults)) {
-            log.log(Level.FINE, "getSinkHole: gsbResults contains records: " + gsbResults.size());
-            // GSB_IOC_DOES_NOT_EXIST - the IoC doesn't exist at this time. It will be created at Logging time.
-            Set<ImmutablePair<String, String>> gsbTypes = new HashSet<>(gsbResults.size());
-            for (ThreatType gsbThreatType : gsbResults) {
-                gsbTypes.add(new ImmutablePair<>(gsbThreatType.getName(), null));
-            }
-            feedTypeMap.put(GSB_FEED_NAME, gsbTypes);
+        final List<String> toBeChecked;
+        if (isFQDN == IPorFQDNValidator.DECISION.IP) {
+            toBeChecked = Collections.singletonList(fqdnOrIp);
         } else {
-            log.log(Level.FINE, "getSinkHole: gsbResults contains no record");
+            toBeChecked = explodeDomain(fqdnOrIp);
         }
 
-        //If there is no feed, we simply don't sinkhole anything. It is weird though.
-        if (MapUtils.isEmpty(feedTypeMap)) {
-            log.log(Level.WARNING, "getSinkHole: IoC without feed settings.");
-            return null;
-        }
+        for (String subdomainOrIp : toBeChecked) {
 
-        // Feed UID, Mode <L|S|D>. In the end, we operate on a one selected Feed:mode ImmutablePair only.
-        String mode = null;
-        //TODO: Nested cycles, could we do better here?
-        for (Rule rule : rules) {
-            log.log(Level.FINE, "FEED_DECISION: Processing rule " + rule);
-            for (String uuid : rule.getSources().keySet()) {
-                Set<ImmutablePair<String, String>> typeDocIds = feedTypeMap.get(uuid);
-                if (typeDocIds == null) {
-                    continue;
+            log.log(Level.FINE, "getSinkHole: getting IoC key " + subdomainOrIp + " from original request " + fqdnOrIp);
+            start = System.currentTimeMillis();
+            final BlacklistedRecord blacklistedRecord = blacklistCache.withFlags(Flag.SKIP_CACHE_LOAD).get(DigestUtils.md5Hex(subdomainOrIp));
+            log.log(Level.FINE, "blacklistCache.get took: " + (System.currentTimeMillis() - start) + " ms.");
+
+            if (blacklistedRecord == null) {
+                log.log(Level.FINE, "No hit. The requested fqdnOrIp: " + subdomainOrIp + " is clean.");
+                return null;
+            }
+
+            // Feed UID : [{Type1, IoCID1}, {Type2, IoCID2}, ...]
+            final Map<String, Set<ImmutablePair<String, String>>> feedTypeMap = new HashMap<>();
+
+            if (MapUtils.isNotEmpty(blacklistedRecord.getSources())) {
+                // Once blacklisted source issue is fixed replace this for-loop for feedTypeMap.putAll(blacklistedRecord.getSources());
+                Set<ImmutablePair<String, String>> blacklistedRecordSource;
+                for (Map.Entry<String, ImmutablePair<String, String>> typeIoCImmutablePair : blacklistedRecord.getSources().entrySet()) {
+                    blacklistedRecordSource = new HashSet<>();
+                    blacklistedRecordSource.add(typeIoCImmutablePair.getValue());
+                    feedTypeMap.put(typeIoCImmutablePair.getKey(), blacklistedRecordSource);
                 }
-                log.log(Level.FINE, "FEED_DECISION: Processing uuid " + uuid);
-                // feed uuid : [{type , docID}, {type2, docID2}, ...] so "getA()" means get type
-                for (ImmutablePair<String, String> typeDocId : typeDocIds) {
-                    if (typeDocId != null && ThreatType.parseName(typeDocId.getLeft()) != null) {
-                        String tmpMode = rule.getSources().get(uuid);
-                        if (mode == null || ("L".equals(tmpMode) && !"S".equals(mode)) || "S".equals(tmpMode)) {
-                            //S >= L >= D >= null, i.e. if a feed is Disabled, we don't switch to Sinkhole.
-                            log.log(Level.FINE, "FEED_DECISION: mode " + tmpMode + " DOES TAKE priority over mode " + mode);
-                            mode = tmpMode;
+            }
+
+            //If there is no feed, we simply don't sinkhole anything. It is weird though.
+            if (MapUtils.isEmpty(feedTypeMap)) {
+                log.log(Level.WARNING, "getSinkHole: IoC without feed settings.");
+                return null;
+            }
+
+            // Feed UID, Mode <L|S|D>. In the end, we operate on a one selected Feed:mode ImmutablePair only.
+            String mode = null;
+            //TODO: Nested cycles, could we do better here?
+            for (Rule rule : rules) {
+                log.log(Level.FINE, "FEED_DECISION: Processing rule " + rule);
+                for (String uuid : rule.getSources().keySet()) {
+                    Set<ImmutablePair<String, String>> typeDocIds = feedTypeMap.get(uuid);
+                    if (typeDocIds == null) {
+                        continue;
+                    }
+                    log.log(Level.FINE, "FEED_DECISION: Processing uuid " + uuid);
+                    // feed uuid : [{type , docID}, {type2, docID2}, ...] so "getA()" means get type
+                    for (ImmutablePair<String, String> typeDocId : typeDocIds) {
+                        if (typeDocId != null && ThreatType.parseName(typeDocId.getLeft()) != null) {
+                            String tmpMode = rule.getSources().get(uuid);
+                            if (mode == null || ("L".equals(tmpMode) && !"S".equals(mode)) || "S".equals(tmpMode)) {
+                                //S >= L >= D >= null, i.e. if a feed is Disabled, we don't switch to Sinkhole.
+                                log.log(Level.FINE, "FEED_DECISION: mode " + tmpMode + " DOES TAKE priority over mode " + mode);
+                                mode = tmpMode;
+                            } else {
+                                log.log(Level.FINE, "FEED_DECISION: mode " + tmpMode + " DOES NOT take priority over mode " + mode);
+                            }
                         } else {
-                            log.log(Level.FINE, "FEED_DECISION: mode " + tmpMode + " DOES NOT take priority over mode " + mode);
+                            log.log(Level.FINE, "getSinkHole: BlacklistedRecord " + subdomainOrIp + " from original request " + fqdnOrIp + " for feed " + uuid + " does not have Type nor DocID.");
                         }
-                    } else {
-                        log.log(Level.FINE, "getSinkHole: BlacklistedRecord/GSB Rcord " + fqdnOrIp + " for feed " + uuid + " does not have Type nor DocID.");
+                    }
+                    log.log(Level.FINE, "FEED_DECISION: Final decision for uuid " + uuid + " is: " + mode);
+                }
+                log.log(Level.FINE, "FEED_DECISION: Final decision for rule " + rule + " is: " + mode);
+            }
+            log.log(Level.FINE, "FEED_DECISION: Final decision overall is: " + mode);
+
+            final Map.Entry<String, HashMap<String, Integer>> theMostAccurateFeed;
+            if (blacklistedRecord.getAccuracy() != null) {
+                // The sum of all accuracies of all feeds. We don't want that.
+                // final Integer accuracy = blacklistedRecord.getAccuracy().values().stream().flatMap(x -> x.values().stream()).mapToInt(Integer::intValue).sum();
+                // Compute maximum from each feed, not overall...
+                final Optional<Map.Entry<String, HashMap<String, Integer>>> fdcmp = blacklistedRecord.getAccuracy().entrySet().stream()
+                        .max(Comparator.comparingInt(s -> s.getValue().values().stream().mapToInt(Integer::intValue).sum()));
+                if (fdcmp.isPresent()) {
+                    theMostAccurateFeed = fdcmp.get();
+                } else {
+                    theMostAccurateFeed = null;
+                }
+
+                // Whitelisted?
+                if (blacklistedRecord.isPresentOnWhiteList()) {
+                    // This is very fishy. We should perhaps add a new state to @see EventLogAction enum...
+                    mode = "D";
+                }
+            } else {
+                // We don't work with accuracy at all.
+                theMostAccurateFeed = null;
+            }
+
+            // Let's decide on feed mode:
+            if (mode == null) {
+                //TODO: Distinguish this from an error state.
+                log.log(Level.FINE, "getSinkHole: No match, no feed settings, we don't sinkhole.");
+                return null;
+            } else if ("S".equals(mode)) {
+                log.log(Level.INFO, "getSinkHole: Sinkhole. The most accurate feed: " + new Gson().toJson(theMostAccurateFeed));
+                try {
+                    log.log(Level.FINE, "getSinkHole: Calling coreService.logDNSEvent(EventLogAction.BLOCK,...");
+                    if (DNS_REQUEST_LOGGING_ENABLED) {
+                        dnsApiLoggingEJB.logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null,
+                                (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? subdomainOrIp : null,
+                                (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : subdomainOrIp,
+                                feedTypeMap, theMostAccurateFeed, log);
+                    }
+                    log.log(Level.FINE, "getSinkHole: coreService.logDNSEvent returned.");
+                } catch (ArchiveException e) {
+                    log.log(Level.SEVERE, "getSinkHole: Logging BLOCK failed: ", e);
+                }
+                return new Sinkhole(probablyIsIPv6 ? IPV6SINKHOLE : IPV4SINKHOLE);
+            } else if ("L".equals(mode)) {
+                //Log it for customer
+                log.log(Level.INFO, "getSinkHole: Audit. The most accurate feed: " + new Gson().toJson(theMostAccurateFeed));
+                try {
+                    if (DNS_REQUEST_LOGGING_ENABLED) {
+                        dnsApiLoggingEJB.logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null,
+                                (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? subdomainOrIp : null,
+                                (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : subdomainOrIp,
+                                feedTypeMap, theMostAccurateFeed, log);
+                    }
+                } catch (ArchiveException e) {
+                    log.log(Level.SEVERE, "getSinkHole: Logging AUDIT failed: ", e);
+                }
+                //TODO: Distinguish this from an error state.
+                return null;
+            } else if ("D".equals(mode)) {
+                //Log it for us
+                log.log(Level.INFO, "getSinkHole: Log internally. The most accurate feed: " + new Gson().toJson(theMostAccurateFeed));
+                try {
+                    if (DNS_REQUEST_LOGGING_ENABLED) {
+                        dnsApiLoggingEJB.logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, fqdn, null,
+                                (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? subdomainOrIp : null,
+                                (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : subdomainOrIp,
+                                feedTypeMap, theMostAccurateFeed, log);
+                    }
+                } catch (ArchiveException e) {
+                    log.log(Level.SEVERE, "getSinkHole: Logging INTERNAL failed: ", e);
+                }
+                // TODO: Distinguish this from an error state.
+                return null;
+            } else {
+                log.log(Level.SEVERE, "getSinkHole: Feed mode must be one of L,S,D, null but was: " + mode);
+                return null;
+            }
+        }
+        return null;
+    }
+
+    // TODO: Too complicated, OMG
+    private static List<String> explodeDomain(final String fqdn) {
+        final String[] subs = fqdn.split("\\.");
+        final List<String> result = new ArrayList<>(subs.length);
+        if (subs.length > 2) {
+            final StringBuilder sb = new StringBuilder(fqdn.length());
+            for (int i = subs.length - 2; i >= 0; i--) {
+                sb.setLength(fqdn.length());
+                for (int j = i; j < subs.length - 1; j++) {
+                    sb.append(subs[j]);
+                    if (j + 1 <= subs.length - 1 || j == i) {
+                        sb.append(".");
                     }
                 }
-                log.log(Level.FINE, "FEED_DECISION: Final decision for uuid " + uuid + " is: " + mode);
+                sb.append(subs[subs.length - 1]);
+                result.add(sb.toString());
+                sb.setLength(0);
             }
-            log.log(Level.FINE, "FEED_DECISION: Final decision for rule " + rule + " is: " + mode);
+            return result;
         }
-        log.log(Level.FINE, "FEED_DECISION: Final decision overall is: " + mode);
-
-
-        log.log(Level.FINE, "getSinkHole: Feed mode decision:");
-        // Let's decide on feed mode:
-        if (mode == null) {
-            //TODO: Distinguish this from an error state.
-            log.log(Level.FINE, "getSinkHole: No match, no feed settings, we don't sinkhole.");
-            return null;
-        } else if ("S".equals(mode)) {
-            log.log(Level.FINE, "getSinkHole: Sinkhole.");
-            try {
-                log.log(Level.FINE, "getSinkHole: Calling coreService.logDNSEvent(EventLogAction.BLOCK,...");
-                if (DNS_REQUEST_LOGGING_ENABLED) {
-                    dnsApiLoggingEJB.logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, feedTypeMap, log);
-                }
-                log.log(Level.FINE, "getSinkHole: coreService.logDNSEvent returned.");
-            } catch (ArchiveException e) {
-                log.log(Level.SEVERE, "getSinkHole: Logging BLOCK failed: ", e);
-            }
-            return new Sinkhole(probablyIsIPv6 ? IPV6SINKHOLE : IPV4SINKHOLE);
-        } else if ("L".equals(mode)) {
-            //Log it for customer
-            log.log(Level.FINE, "getSinkHole: Log.");
-            try {
-                if (DNS_REQUEST_LOGGING_ENABLED) {
-                    dnsApiLoggingEJB.logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, feedTypeMap, log);
-                }
-            } catch (ArchiveException e) {
-                log.log(Level.SEVERE, "getSinkHole: Logging AUDIT failed: ", e);
-            }
-            //TODO: Distinguish this from an error state.
-            return null;
-        } else if ("D".equals(mode)) {
-            //Log it for us
-            log.log(Level.FINE, "getSinkHole: Log internally.");
-            try {
-                if (DNS_REQUEST_LOGGING_ENABLED) {
-                    dnsApiLoggingEJB.logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, feedTypeMap, log);
-                }
-            } catch (ArchiveException e) {
-                log.log(Level.SEVERE, "getSinkHole: Logging INTERNAL failed: ", e);
-            }
-            // TODO: Distinguish this from an error state.
-            return null;
-        } else {
-            log.log(Level.SEVERE, "getSinkHole: Feed mode must be one of L,S,D, null but was: " + mode);
-            return null;
-        }
-
+        return Collections.singletonList(fqdn);
     }
 }

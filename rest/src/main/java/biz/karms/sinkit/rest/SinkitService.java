@@ -15,6 +15,7 @@ import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCValidationException;
 import biz.karms.sinkit.ioc.IoCRecord;
 import com.google.gson.FieldNamingPolicy;
+import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -55,7 +56,7 @@ public class SinkitService implements Serializable {
     private ArchiveService archiveService;
 
     @Inject
-    private Logger log;
+    private transient Logger log;
 
     String createHelloMessage(final String name) {
         return new GsonBuilder().create().toJson(webapi.sayHello(name));
@@ -114,9 +115,9 @@ public class SinkitService implements Serializable {
     }
 
     String processIoCRecord(final String jsonIoCRecord) throws IoCValidationException, ArchiveException {
-        IoCRecord ioc = new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().fromJson(jsonIoCRecord, IoCRecord.class);
-        ioc = coreService.processIoCRecord(ioc);
-        return new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().toJson(ioc);
+        log.log(Level.FINE, "jsonIoCRecord: " + jsonIoCRecord);
+        final IoCRecord ioc = new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().fromJson(jsonIoCRecord, IoCRecord.class);
+        return new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().toJson(coreService.processIoCRecord(ioc));
     }
 
     String processWhitelistIoCRecord(final String jsonIoCRecord) throws IoCValidationException, ArchiveException {
@@ -248,6 +249,7 @@ public class SinkitService implements Serializable {
                 logRec.getReason().getFqdn(),
                 logRec.getReason().getIp(),
                 ids,
+                null,
                 log);
     }
 

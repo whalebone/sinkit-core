@@ -48,7 +48,7 @@ public class ProtostreamREST implements Serializable {
     SinkitService sinkitService;
 
     @Inject
-    private Logger log;
+    private transient Logger log;
 
     public static final int TRY_LATER = 466;
     public static final String X_ERROR = "X-error";
@@ -160,6 +160,7 @@ public class ProtostreamREST implements Serializable {
             // If any other file is generated, it means the generator cycle already passed, but there are no data for this particular client ID
             try (DirectoryStream<java.nio.file.Path> someFiles = Files.newDirectoryStream(Paths.get(GENERATED_PROTOFILES_DIRECTORY), "ioclist.bin*")) {
                 if (someFiles.iterator().hasNext()) {
+                    // We return anyway, no matter if the call succeeded.
                     customListBinary.createNewFile();
                     // The desired behaviour is to return an empty file
                     return Response.ok().entity(new FileInputStream(customListBinary))
@@ -210,6 +211,7 @@ public class ProtostreamREST implements Serializable {
             // If any other file is generated, it means the generator cycle already passed, but there are no data for this particular client ID
             try (DirectoryStream<java.nio.file.Path> someFiles = Files.newDirectoryStream(Paths.get(GENERATED_PROTOFILES_DIRECTORY), "ioclist.bin*")) {
                 if (someFiles.iterator().hasNext()) {
+                    // We return anyway, no matter if the call succeeded.
                     iocListBinary.createNewFile();
                     // The desired behaviour is to return an empty file
                     return Response.ok().entity(new FileInputStream(iocListBinary))

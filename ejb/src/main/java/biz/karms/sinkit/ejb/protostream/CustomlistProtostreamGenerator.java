@@ -87,6 +87,7 @@ public class CustomlistProtostreamGenerator {
     @PostConstruct
     private void initialize() {
 
+        // Don't care about the result.
         new File(GENERATED_PROTOFILES_DIRECTORY).mkdirs();
 
         if (SINKIT_CUSTOMLIST_PROTOSTREAM_GENERATOR_D_H_M_S != null) {

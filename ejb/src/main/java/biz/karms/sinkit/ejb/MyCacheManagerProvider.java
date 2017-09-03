@@ -50,9 +50,8 @@ import java.util.logging.Logger;
  * @author Michal Karm Babacek
  */
 @ApplicationScoped
-public class MyCacheManagerProvider implements Serializable {
+public class MyCacheManagerProvider {
 
-    private static final long serialVersionUID = 45123839143257496L;
     private static final long SINKIT_LOCAL_CACHE_SIZE = (System.getenv().containsKey("SINKIT_LOCAL_CACHE_SIZE")) ? Integer.parseInt(System.getenv("SINKIT_LOCAL_CACHE_SIZE")) : 10000;
     private static final long SINKIT_LOCAL_CACHE_LIFESPAN_MS = (System.getenv().containsKey("SINKIT_LOCAL_CACHE_LIFESPAN_MS")) ? Integer.parseInt(System.getenv("SINKIT_LOCAL_CACHE_LIFESPAN_MS")) : 180000;
     // This call fails if the property is undefined
@@ -229,6 +228,7 @@ public class MyCacheManagerProvider implements Serializable {
             while ((len = r.read(buf)) != -1) {
                 w.write(buf, 0, len);
             }
+            is.close();
             return w.toString();
         }
     }

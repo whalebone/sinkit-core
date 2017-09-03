@@ -32,6 +32,7 @@ import javax.ejb.TransactionAttributeType;
 import javax.inject.Inject;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -81,10 +82,13 @@ public class DNSApiLoggingEJB {
             final String reasonFqdn,
             final String reasonIp,
             final Map<String, Set<ImmutablePair<String, String>>> matchedIoCs,
+            final Map.Entry<String, HashMap<String, Integer>> theMostAccurateFeed,
             final Logger log
     ) throws ArchiveException {
         log.log(Level.FINE, "Logging DNS event. clientUid: " + clientUid + ", requestIp: " + requestIp + ", requestFqdn: " + requestFqdn + ", requestType: " + requestType + ", reasonFqdn: " + reasonFqdn + ", reasonIp: " + reasonIp);
         final EventLogRecord logRecord = new EventLogRecord();
+
+        logRecord.setAccuracy(theMostAccurateFeed);
 
         final EventDNSRequest request = new EventDNSRequest();
         request.setIp(requestIp);
