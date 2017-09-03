@@ -1,5 +1,7 @@
 package biz.karms.sinkit.ejb.cache.pojo;
 
+import com.google.gson.Gson;
+
 import java.io.Serializable;
 import java.util.HashMap;
 
@@ -90,12 +92,6 @@ public class Rule implements Serializable {
 
     @Override
     public String toString() {
-        return "Rule{" +
-                "startAddress='" + startAddress + '\'' +
-                ", endAddress='" + endAddress + '\'' +
-                ", cidrAddress='" + cidrAddress + '\'' +
-                ", customerId=" + customerId +
-                ", sources=" + sources +
-                '}';
+        return new Gson().toJson(this);
     }
 }

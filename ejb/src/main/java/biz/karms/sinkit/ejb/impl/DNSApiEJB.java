@@ -32,6 +32,7 @@ import biz.karms.sinkit.ioc.IoCSource;
 import biz.karms.sinkit.ioc.IoCSourceId;
 import biz.karms.sinkit.ioc.IoCTime;
 import biz.karms.sinkit.ioc.util.IoCSourceIdBuilder;
+import com.google.gson.Gson;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -55,10 +56,12 @@ import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -356,7 +359,7 @@ public class DNSApiEJB implements DNSApi {
                 try {
                     if (DNS_REQUEST_LOGGING_ENABLED) {
                         logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null,
-                                (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, customListfeedTypeMap, archiveService, log);
+                                (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, customListfeedTypeMap, null, archiveService, log);
                     }
                 } catch (ArchiveException e) {
                     log.log(Level.SEVERE, "getSinkHole: Logging customer BLOCK failed: ", e);
@@ -366,7 +369,7 @@ public class DNSApiEJB implements DNSApi {
                 try {
                     if (DNS_REQUEST_LOGGING_ENABLED) {
                         logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null,
-                                (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, customListfeedTypeMap, archiveService, log);
+                                (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, customListfeedTypeMap, null, archiveService, log);
                     }
                 } catch (ArchiveException e) {
                     log.log(Level.SEVERE, "getSinkHole: Logging customer LOG failed: ", e);
@@ -453,18 +456,36 @@ public class DNSApiEJB implements DNSApi {
             }
         }
 
-        log.log(Level.FINE, "getSinkHole: Feed mode decision:");
+        final Map.Entry<String, HashMap<String, Integer>> theMostAccurateFeed;
+        if (blacklistedRecord != null) {
+            // The sum of all accuracies of all feeds. We don't want that.
+            // final Integer accuracy = blacklistedRecord.getAccuracy().values().stream().flatMap(x -> x.values().stream()).mapToInt(Integer::intValue).sum();
+            // Compute maximum from each feed, not overall...
+            final Optional<Map.Entry<String, HashMap<String, Integer>>> fdcmp = blacklistedRecord.getAccuracy().entrySet().stream()
+                    .max(Comparator.comparingInt(s -> s.getValue().values().stream().mapToInt(Integer::intValue).sum()));
+            if (fdcmp.isPresent()) {
+                theMostAccurateFeed = fdcmp.get();
+            } else {
+                theMostAccurateFeed = null;
+            }
+        } else {
+            // We don't work with accuracy at all.
+            theMostAccurateFeed = null;
+        }
+
         // Let's decide on feed mode:
         if (mode == null) {
             //TODO: Distinguish this from an error state.
             log.log(Level.FINE, "getSinkHole: No match, no feed settings, we don't sinkhole.");
             return null;
         } else if ("S".equals(mode)) {
-            log.log(Level.FINE, "getSinkHole: Sinkhole.");
+            log.log(Level.INFO, "getSinkHole: Sinkhole. The most accurate feed: " + new Gson().toJson(theMostAccurateFeed));
             try {
                 log.log(Level.FINE, "getSinkHole: Calling coreService.logDNSEvent(EventLogAction.BLOCK,...");
                 if (DNS_REQUEST_LOGGING_ENABLED) {
-                    logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, feedTypeMap, archiveService, log);
+                    logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null,
+                            (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null,
+                            (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, feedTypeMap, theMostAccurateFeed, archiveService, log);
                 }
                 log.log(Level.FINE, "getSinkHole: coreService.logDNSEvent returned.");
             } catch (ArchiveException e) {
@@ -473,10 +494,12 @@ public class DNSApiEJB implements DNSApi {
             return new Sinkhole(probablyIsIPv6 ? IPV6SINKHOLE : IPV4SINKHOLE);
         } else if ("L".equals(mode)) {
             //Log it for customer
-            log.log(Level.FINE, "getSinkHole: Log.");
+            log.log(Level.INFO, "getSinkHole: Audit. The most accurate feed: " + new Gson().toJson(theMostAccurateFeed));
             try {
                 if (DNS_REQUEST_LOGGING_ENABLED) {
-                    logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, feedTypeMap, archiveService, log);
+                    logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null,
+                            (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null,
+                            (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, feedTypeMap, theMostAccurateFeed, archiveService, log);
                 }
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging AUDIT failed: ", e);
@@ -485,10 +508,12 @@ public class DNSApiEJB implements DNSApi {
             return null;
         } else if ("D".equals(mode)) {
             //Log it for us
-            log.log(Level.FINE, "getSinkHole: Log internally.");
+            log.log(Level.INFO, "getSinkHole: Log internally. The most accurate feed: " + new Gson().toJson(theMostAccurateFeed));
             try {
                 if (DNS_REQUEST_LOGGING_ENABLED) {
-                    logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, feedTypeMap, archiveService, log);
+                    logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, fqdn, null,
+                            (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null,
+                            (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, feedTypeMap, theMostAccurateFeed, archiveService, log);
                 }
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging INTERNAL failed: ", e);
@@ -532,11 +557,14 @@ public class DNSApiEJB implements DNSApi {
             final String reasonFqdn,
             final String reasonIp,
             final Map<String, Set<ImmutablePair<String, String>>> matchedIoCs,
+            final Map.Entry<String, HashMap<String, Integer>> theMostAccurateFeed,
             final ArchiveService archiveService,
             final Logger log
     ) throws ArchiveException {
         log.log(Level.FINE, "Logging DNS event. clientUid: " + clientUid + ", requestIp: " + requestIp + ", requestFqdn: " + requestFqdn + ", requestType: " + requestType + ", reasonFqdn: " + reasonFqdn + ", reasonIp: " + reasonIp);
         final EventLogRecord logRecord = new EventLogRecord();
+
+        logRecord.setAccuracy(theMostAccurateFeed);
 
         final EventDNSRequest request = new EventDNSRequest();
         request.setIp(requestIp);

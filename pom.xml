@@ -5,7 +5,7 @@
 
     <groupId>biz.karms.sinkit</groupId>
     <artifactId>sinkit</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>2.0.0-SNAPSHOT</version>
     <name>SinkIt Root pom</name>
     <description>SinkIt Root pom</description>
     <packaging>pom</packaging>
@@ -57,7 +57,7 @@
 
         <!-- Testing -->
         <arquillian.bom.version>1.1.11.Final</arquillian.bom.version>
-        <arquillian.container.managed.version>2.1.0.Alpha3</arquillian.container.managed.version>
+        <arquillian.container.managed.version>2.1.0.Final</arquillian.container.managed.version>
         <version.arquillian_maven>1.0.0.Alpha2</version.arquillian_maven>
         <!-- 1.0.0.Final for remote brings up https://issues.jboss.org/browse/JBTM-2414 :-( with WildFly 9.0.1 -->
         <!-- Not tested with 10.0.0.CR2 :-( -->
@@ -86,6 +86,9 @@
         <com.google.code.gson.version>2.6.2</com.google.code.gson.version>
         <commons.validator.version>1.5.0</commons.validator.version>
         <commons.codec.version>1.10</commons.codec.version>
+
+        <!-- Docker -->
+        <docker.plugin.version>0.22.1</docker.plugin.version>
     </properties>
 
     <dependencyManagement>

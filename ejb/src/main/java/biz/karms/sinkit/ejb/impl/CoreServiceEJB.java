@@ -15,6 +15,7 @@ import biz.karms.sinkit.ioc.IoCSeen;
 import biz.karms.sinkit.ioc.IoCSourceId;
 import biz.karms.sinkit.ioc.IoCSourceIdType;
 import biz.karms.sinkit.ioc.util.IoCSourceIdBuilder;
+import com.google.gson.Gson;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -90,6 +91,8 @@ public class CoreServiceEJB implements CoreService {
 
     @Override
     public IoCRecord processIoCRecord(final IoCRecord ioc) throws ArchiveException, IoCValidationException {
+        log.log(Level.FINE, "PROCESSING IOC: " + new Gson().toJson(ioc));
+
         // validate ioc
         IoCValidator.validateIoCRecord(ioc, iocActiveHours);
 

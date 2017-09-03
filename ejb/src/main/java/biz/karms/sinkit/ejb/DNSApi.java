@@ -6,6 +6,7 @@ import biz.karms.sinkit.exception.ArchiveException;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import javax.ejb.Local;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -25,8 +26,10 @@ public interface DNSApi {
             String requestType,
             String reasonFqdn,
             String reasonIp,
-            // {feed: [type1: iocId1, type2: iocId2, ...]}
+            // {feeduid: [type1: iocId1, type2: iocId2, ...]}
             Map<String, Set<ImmutablePair<String, String>>> matchedIoCs,
+            // {feeduid: {accuracyField: number, ...}}
+            Map.Entry<String, HashMap<String, Integer>> theMostAccurateFeed,
             ArchiveService archiveService,
             Logger logger
     ) throws ArchiveException;

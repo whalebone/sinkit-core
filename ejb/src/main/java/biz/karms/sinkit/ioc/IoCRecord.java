@@ -1,9 +1,11 @@
 package biz.karms.sinkit.ioc;
 
 import biz.karms.sinkit.ejb.elastic.Indexable;
+import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 
-import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author Tomas Kozel
@@ -12,7 +14,7 @@ public class IoCRecord implements Indexable {
 
     public static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
 
-    private static final long serialVersionUID = -595246622767555283L;
+    private static final long serialVersionUID = -4129116350560247954L;
 
     //@JestId
     @SerializedName("document_id")
@@ -30,11 +32,12 @@ public class IoCRecord implements Indexable {
     private Boolean active;
     @SerializedName("whitelist_name")
     private String whitelistName;
-
     @SerializedName("virus_total_reports")
     private IoCVirusTotalReport[] virusTotalReports;
+    private HashMap<String, Integer> accuracy;
 
-    public IoCRecord() {}
+    public IoCRecord() {
+    }
 
     public String getDocumentId() {
         return documentId;
@@ -140,22 +143,16 @@ public class IoCRecord implements Indexable {
         this.virusTotalReports = virusTotalReports;
     }
 
+    public HashMap<String, Integer> getAccuracy() {
+        return accuracy;
+    }
+
+    public void setAccuracy(HashMap<String, Integer> accuracy) {
+        this.accuracy = accuracy;
+    }
+
     @Override
     public String toString() {
-        return "IoCRecord{" +
-                "documentId='" + documentId + '\'' +
-                ", uniqueRef='" + uniqueRef + '\'' +
-                ", feed=" + feed +
-                ", description=" + description +
-                ", classification=" + classification +
-                ", protocol=" + protocol +
-                ", raw='" + raw + '\'' +
-                ", source=" + source +
-                ", time=" + time +
-                ", seen=" + seen +
-                ", active=" + active +
-                ", whitelistName='" + whitelistName + '\'' +
-                ", virusTotalReports=" + Arrays.toString(virusTotalReports) +
-                '}';
+        return new Gson().toJson(this);
     }
 }

@@ -2,10 +2,12 @@ package biz.karms.sinkit.eventlog;
 
 import biz.karms.sinkit.ejb.elastic.Indexable;
 import biz.karms.sinkit.ioc.IoCRecord;
+import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 
-import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author Tomas Kozel
@@ -22,10 +24,9 @@ public class EventLogRecord implements Indexable {
     private EventDNSRequest request;
     private EventReason reason;
     private Date logged;
-
+    private Map.Entry<String, HashMap<String, Integer>> accuracy;
     @SerializedName("virus_total_request")
     private VirusTotalRequest virusTotalRequest;
-
     @SerializedName("matched_iocs")
     private IoCRecord[] matchedIocs;
 
@@ -95,17 +96,16 @@ public class EventLogRecord implements Indexable {
         this.matchedIocs = matchedIocs;
     }
 
+    public Map.Entry<String, HashMap<String, Integer>> getAccuracy() {
+        return accuracy;
+    }
+
+    public void setAccuracy(Map.Entry<String, HashMap<String, Integer>> accuracy) {
+        this.accuracy = accuracy;
+    }
+
     @Override
     public String toString() {
-        return "EventLogRecord{" +
-                "documentId='" + documentId + '\'' +
-                ", action=" + action +
-                ", client='" + client + '\'' +
-                ", request=" + request +
-                ", reason=" + reason +
-                ", logged=" + logged +
-                ", virusTotalRequest=" + virusTotalRequest +
-                ", matchedIocs=" + Arrays.toString(matchedIocs) +
-                '}';
+        return new Gson().toJson(this);
     }
 }

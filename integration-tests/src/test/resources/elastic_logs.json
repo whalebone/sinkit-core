@@ -126,6 +126,10 @@
             }
           }
         },
+        "accuracy": {
+          "index": "not_analyzed",
+          "type": "object"
+        },
         "action": {
           "index": "not_analyzed",
           "type": "string"
