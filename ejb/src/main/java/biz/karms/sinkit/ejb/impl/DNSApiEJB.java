@@ -1,6 +1,5 @@
 package biz.karms.sinkit.ejb.impl;
 
-import biz.karms.sinkit.ejb.ArchiveService;
 import biz.karms.sinkit.ejb.CoreService;
 import biz.karms.sinkit.ejb.DNSApi;
 import biz.karms.sinkit.ejb.GSBService;
@@ -12,30 +11,13 @@ import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.CustomList;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ejb.dto.Sinkhole;
-import biz.karms.sinkit.ejb.elastic.logstash.LogstashClient;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
 import biz.karms.sinkit.ejb.util.IPorFQDNValidator;
-import biz.karms.sinkit.ejb.util.IoCIdentificationUtils;
-import biz.karms.sinkit.eventlog.EventDNSRequest;
 import biz.karms.sinkit.eventlog.EventLogAction;
-import biz.karms.sinkit.eventlog.EventLogRecord;
-import biz.karms.sinkit.eventlog.EventReason;
-import biz.karms.sinkit.eventlog.VirusTotalRequest;
-import biz.karms.sinkit.eventlog.VirusTotalRequestStatus;
 import biz.karms.sinkit.exception.ArchiveException;
-import biz.karms.sinkit.exception.IoCSourceIdException;
-import biz.karms.sinkit.ioc.IoCClassification;
-import biz.karms.sinkit.ioc.IoCFeed;
-import biz.karms.sinkit.ioc.IoCRecord;
-import biz.karms.sinkit.ioc.IoCSeen;
-import biz.karms.sinkit.ioc.IoCSource;
-import biz.karms.sinkit.ioc.IoCSourceId;
-import biz.karms.sinkit.ioc.IoCTime;
-import biz.karms.sinkit.ioc.util.IoCSourceIdBuilder;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.infinispan.client.hotrod.Flag;
 import org.infinispan.client.hotrod.RemoteCache;
@@ -45,15 +27,12 @@ import org.infinispan.commons.api.BasicCache;
 import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
 
-import javax.ejb.Asynchronous;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.ejb.TransactionAttribute;
 import javax.ejb.TransactionAttributeType;
 import javax.inject.Inject;
 import java.net.UnknownHostException;
-import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -79,11 +58,11 @@ public class DNSApiEJB implements DNSApi {
     @EJB
     private WebApi webApi;
 
-    @EJB
-    private ArchiveService archiveService;
-
     @EJB //TODO: https://github.com/whalebone/sinkit-core/issues/81
     private GSBService gsbService;
+
+    @EJB
+    private DNSApiLoggingEJB dnsApiLoggingEJB;
 
     @Inject
     @SinkitCache(SinkitCacheName.infinispan_blacklist)
@@ -104,7 +83,7 @@ public class DNSApiEJB implements DNSApi {
     private static final String IPV6SINKHOLE = System.getenv("SINKIT_SINKHOLE_IPV6");
     private static final String IPV4SINKHOLE = System.getenv("SINKIT_SINKHOLE_IP");
     private static final String GSB_FEED_NAME = (System.getenv().containsKey("SINKIT_GSB_FEED_NAME")) ? System.getenv("SINKIT_GSB_FEED_NAME") : "google-safebrowsing-api";
-    private static final String CUSTOM_LIST_FEED_NAME = (System.getenv().containsKey("SINKIT_CUSTOM_LIST_FEED_NAME")) ? System.getenv("SINKIT_CUSTOM_LIST_FEED_NAME") : "custom-list";
+    public static final String CUSTOM_LIST_FEED_NAME = (System.getenv().containsKey("SINKIT_CUSTOM_LIST_FEED_NAME")) ? System.getenv("SINKIT_CUSTOM_LIST_FEED_NAME") : "custom-list";
     private static final Map<String, Set<ImmutablePair<String, String>>> customListfeedTypeMap = new HashMap<String, Set<ImmutablePair<String, String>>>() {
         {
             put(CUSTOM_LIST_FEED_NAME, new HashSet<ImmutablePair<String, String>>() {
@@ -114,8 +93,6 @@ public class DNSApiEJB implements DNSApi {
             });
         }
     };
-    private static final boolean USE_LOGSTASH = StringUtils.isNotBlank(System.getenv(LogstashClient.LOGSTASH_URL_ENV));
-    private static final int ARCHIVE_FAILED_TRIALS = 10;
     private static final boolean DNS_REQUEST_LOGGING_ENABLED = Boolean.parseBoolean((System.getenv().containsKey("SINKIT_DNS_REQUEST_LOGGING_ENABLED")) ? System.getenv("SINKIT_DNS_REQUEST_LOGGING_ENABLED") : "true");
 
     /**
@@ -355,8 +332,8 @@ public class DNSApiEJB implements DNSApi {
             } else if ("B".equals(customList.getWhiteBlackLog())) {
                 try {
                     if (DNS_REQUEST_LOGGING_ENABLED) {
-                        logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null,
-                                (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, customListfeedTypeMap, archiveService, log);
+                        dnsApiLoggingEJB.logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null,
+                                (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, customListfeedTypeMap, log);
                     }
                 } catch (ArchiveException e) {
                     log.log(Level.SEVERE, "getSinkHole: Logging customer BLOCK failed: ", e);
@@ -365,8 +342,8 @@ public class DNSApiEJB implements DNSApi {
             } else if ("L".equals(customList.getWhiteBlackLog())) {
                 try {
                     if (DNS_REQUEST_LOGGING_ENABLED) {
-                        logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null,
-                                (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, customListfeedTypeMap, archiveService, log);
+                        dnsApiLoggingEJB.logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null,
+                                (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, customListfeedTypeMap, log);
                     }
                 } catch (ArchiveException e) {
                     log.log(Level.SEVERE, "getSinkHole: Logging customer LOG failed: ", e);
@@ -433,25 +410,34 @@ public class DNSApiEJB implements DNSApi {
         String mode = null;
         //TODO: Nested cycles, could we do better here?
         for (Rule rule : rules) {
+            log.log(Level.FINE, "FEED_DECISION: Processing rule " + rule);
             for (String uuid : rule.getSources().keySet()) {
                 Set<ImmutablePair<String, String>> typeDocIds = feedTypeMap.get(uuid);
                 if (typeDocIds == null) {
                     continue;
                 }
+                log.log(Level.FINE, "FEED_DECISION: Processing uuid " + uuid);
                 // feed uuid : [{type , docID}, {type2, docID2}, ...] so "getA()" means get type
                 for (ImmutablePair<String, String> typeDocId : typeDocIds) {
                     if (typeDocId != null && ThreatType.parseName(typeDocId.getLeft()) != null) {
                         String tmpMode = rule.getSources().get(uuid);
-                        if (mode == null || ("S".equals(tmpMode) && !"D".equals(mode)) || "D".equals(tmpMode)) {
-                            //D >= S >= L >= null, i.e. if a feed is Disabled, we don't switch to Sinkhole.
+                        if (mode == null || ("L".equals(tmpMode) && !"S".equals(mode)) || "S".equals(tmpMode)) {
+                            //S >= L >= D >= null, i.e. if a feed is Disabled, we don't switch to Sinkhole.
+                            log.log(Level.FINE, "FEED_DECISION: mode " + tmpMode + " DOES TAKE priority over mode " + mode);
                             mode = tmpMode;
+                        } else {
+                            log.log(Level.FINE, "FEED_DECISION: mode " + tmpMode + " DOES NOT take priority over mode " + mode);
                         }
                     } else {
                         log.log(Level.FINE, "getSinkHole: BlacklistedRecord/GSB Rcord " + fqdnOrIp + " for feed " + uuid + " does not have Type nor DocID.");
                     }
                 }
+                log.log(Level.FINE, "FEED_DECISION: Final decision for uuid " + uuid + " is: " + mode);
             }
+            log.log(Level.FINE, "FEED_DECISION: Final decision for rule " + rule + " is: " + mode);
         }
+        log.log(Level.FINE, "FEED_DECISION: Final decision overall is: " + mode);
+
 
         log.log(Level.FINE, "getSinkHole: Feed mode decision:");
         // Let's decide on feed mode:
@@ -464,7 +450,7 @@ public class DNSApiEJB implements DNSApi {
             try {
                 log.log(Level.FINE, "getSinkHole: Calling coreService.logDNSEvent(EventLogAction.BLOCK,...");
                 if (DNS_REQUEST_LOGGING_ENABLED) {
-                    logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, feedTypeMap, archiveService, log);
+                    dnsApiLoggingEJB.logDNSEvent(EventLogAction.BLOCK, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, feedTypeMap, log);
                 }
                 log.log(Level.FINE, "getSinkHole: coreService.logDNSEvent returned.");
             } catch (ArchiveException e) {
@@ -476,7 +462,7 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.FINE, "getSinkHole: Log.");
             try {
                 if (DNS_REQUEST_LOGGING_ENABLED) {
-                    logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, feedTypeMap, archiveService, log);
+                    dnsApiLoggingEJB.logDNSEvent(EventLogAction.AUDIT, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, feedTypeMap, log);
                 }
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging AUDIT failed: ", e);
@@ -488,7 +474,7 @@ public class DNSApiEJB implements DNSApi {
             log.log(Level.FINE, "getSinkHole: Log internally.");
             try {
                 if (DNS_REQUEST_LOGGING_ENABLED) {
-                    logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, feedTypeMap, archiveService, log);
+                    dnsApiLoggingEJB.logDNSEvent(EventLogAction.INTERNAL, String.valueOf(customerId), clientIPAddress, fqdn, null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? fqdnOrIp : null, (isFQDN == IPorFQDNValidator.DECISION.FQDN) ? null : fqdnOrIp, feedTypeMap, log);
                 }
             } catch (ArchiveException e) {
                 log.log(Level.SEVERE, "getSinkHole: Logging INTERNAL failed: ", e);
@@ -500,220 +486,5 @@ public class DNSApiEJB implements DNSApi {
             return null;
         }
 
-    }
-
-    /*private static Set<String> unwrapDocumentIds(Collection<ImmutablePair<String, String>> ImmutablePairs) {
-        return ImmutablePairs.stream().map(ImmutablePair::getRight).collect(Collectors.toCollection(HashSet::new));
-    }*/
-
-    /**
-     * Fire and Forget pattern
-     * <p>
-     * This is called only when there is a match for an IoC, it is not called
-     * on each request.
-     *
-     * @param action      BLOCK|AUDIT|INTERNAL
-     * @param clientUid   Client's UID
-     * @param requestIp   Client's IP address
-     * @param requestFqdn TFDN client wanted to have resolved by DNS
-     * @param requestType DNS request type
-     * @param reasonFqdn  IOC hit
-     * @param reasonIp    IOC hit
-     * @param matchedIoCs IoCs with the same feed listed
-     * @throws ArchiveException When things go south.
-     */
-    @Asynchronous
-    public void logDNSEvent(
-            final EventLogAction action,
-            final String clientUid,
-            final String requestIp,
-            final String requestFqdn,
-            final String requestType,
-            final String reasonFqdn,
-            final String reasonIp,
-            final Map<String, Set<ImmutablePair<String, String>>> matchedIoCs,
-            final ArchiveService archiveService,
-            final Logger log
-    ) throws ArchiveException {
-        log.log(Level.FINE, "Logging DNS event. clientUid: " + clientUid + ", requestIp: " + requestIp + ", requestFqdn: " + requestFqdn + ", requestType: " + requestType + ", reasonFqdn: " + reasonFqdn + ", reasonIp: " + reasonIp);
-        final EventLogRecord logRecord = new EventLogRecord();
-
-        final EventDNSRequest request = new EventDNSRequest();
-        request.setIp(requestIp);
-        request.setFqdn(requestFqdn);
-        request.setType(requestType);
-        logRecord.setRequest(request);
-
-        final EventReason reason = new EventReason();
-        reason.setIp(reasonIp);
-        reason.setFqdn(reasonFqdn);
-        logRecord.setReason(reason);
-
-        logRecord.setAction(action);
-        logRecord.setClient(clientUid);
-        logRecord.setLogged(Calendar.getInstance().getTime());
-
-        VirusTotalRequestStatus vtRequestStatus;
-        if (MapUtils.isNotEmpty(matchedIoCs)) {
-            final Set<IoCRecord> matchedIoCsList = new HashSet<>();
-            log.log(Level.FINE, "Iterating matchedIoCs...");
-            // { feed : [ type1 : iocId1, type2 : iocId2]}
-            for (Map.Entry<String, Set<ImmutablePair<String, String>>> matchedIoC : matchedIoCs.entrySet()) {
-                // feedName = matchedIoC.getKey();
-                for (ImmutablePair<String, String> typeIoCID : matchedIoC.getValue()) {
-                    // iocId = typeIoCID.getB();
-                    // type = typeIoCID.getA();
-                    //if (StringUtils.isNotBlank(typeIoCID.getB())) {
-                    IoCRecord ioCRecord;
-                    if (StringUtils.isBlank(typeIoCID.getRight()) && StringUtils.isNotBlank(reasonFqdn)) {
-                        // Nope, no IP, just FQDN for GSB
-                        ioCRecord = processNonExistingIoC(reasonFqdn, matchedIoC.getKey(), typeIoCID.getLeft(), archiveService, log);
-                    } else {
-                        ioCRecord = processRegularIoCId(typeIoCID.getRight(), archiveService, log);
-                    }
-                    if (ioCRecord != null) {
-                        matchedIoCsList.add(ioCRecord);
-                    }
-                    //}
-                }
-            }
-            final IoCRecord[] matchedIoCsArray = matchedIoCsList.toArray(new IoCRecord[matchedIoCsList.size()]);
-            logRecord.setMatchedIocs(matchedIoCsArray);
-            vtRequestStatus = VirusTotalRequestStatus.WAITING;
-        } else {
-            vtRequestStatus = VirusTotalRequestStatus.NOT_NEEDED;
-        }
-
-        final VirusTotalRequest vtReq = new VirusTotalRequest();
-        vtReq.setStatus(vtRequestStatus);
-        logRecord.setVirusTotalRequest(vtReq);
-
-        Arrays.stream(logRecord.getMatchedIocs()).filter(x -> CUSTOM_LIST_FEED_NAME.equals(x.getFeed().getName())).forEach(x -> x.setUniqueRef(null));
-
-        if (USE_LOGSTASH) {
-            archiveService.archiveEventLogRecordUsingLogstash(logRecord);
-        } else {
-            archiveService.archiveEventLogRecord(logRecord);
-        }
-    }
-
-    private static IoCRecord processRegularIoCId(final String iocId, ArchiveService archiveService, Logger log) throws ArchiveException {
-        final IoCRecord ioc = archiveService.getIoCRecordById(iocId);
-        if (ioc == null) {
-            log.warning("Match IoC with id " + iocId + " was not found (deactivated??) -> skipping.");
-            return null;
-        }
-        ioc.setVirusTotalReports(null);
-        ioc.getSeen().setLast(null);
-        ioc.setRaw(null);
-        ioc.setActive(null);
-        //documentId will changed whe ioc is deactivated so it's useless to have it here. Ioc.uniqueRef will be used for referencing ioc
-        ioc.setDocumentId(null);
-        return ioc;
-    }
-
-    /**
-     * TODO: This implementation is a WIP.
-     * The commented out code deals with remote logging to remote Core - Core machines.
-     * For the time being, it is discarded due to cumbersomeness of the API with regard to DocumentID
-     * and the fact that we will start having the keys in our IoC cache.
-     * Furthermore, it might be a premature optimization.
-     */
-    private static IoCRecord processNonExistingIoC(final String matchedFQDN, String feedName, String type, ArchiveService archiveService, Logger log) {
-        //HttpURLConnection coreServerConnection = null;
-        //BufferedWriter jsonContentBuffer = null;
-        //final Gson gson = new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create();
-
-        final IoCRecord ioc = new IoCRecord();
-        final IoCFeed feed = new IoCFeed();
-        feed.setName(feedName);
-        ioc.setFeed(feed);
-        final IoCClassification classification = new IoCClassification();
-        classification.setType(type);
-        ioc.setClassification(classification);
-        final IoCSource source = new IoCSource();
-        source.setFQDN(matchedFQDN);
-        ioc.setSource(source);
-        final IoCTime time = new IoCTime();
-        time.setObservation(Calendar.getInstance().getTime());
-        time.setSource(time.getObservation());
-        ioc.setTime(time);
-        //final String serializedPayload = gson.toJson(ioc);
-
-        try {
-            /*
-            coreServerConnection = (HttpURLConnection) new URL("http://feedcore-lb:8080/sinkit/rest/blacklist/ioc/").openConnection();
-            coreServerConnection.setDoOutput(true);
-            coreServerConnection.setRequestMethod(HttpMethod.POST);
-
-            coreServerConnection.setRequestProperty("Content-Length", "" + Integer.toString(serializedPayload.getBytes().length));
-            coreServerConnection.setRequestProperty("Content-Type", "application/json");
-            coreServerConnection.setRequestProperty("X-sinkit-token", TOKEN);
-
-            jsonContentBuffer = new BufferedWriter(new OutputStreamWriter(coreServerConnection.getOutputStream()));
-            jsonContentBuffer.write(serializedPayload);
-            jsonContentBuffer.flush();
-
-            if (coreServerConnection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-                log.log(Level.SEVERE, "logGSBEventRemotely: Creting IoC for GSB log failed.");
-                return;
-            }
-            */
-
-            final IoCSourceId sid = IoCSourceIdBuilder.build(ioc);
-            ioc.getSource().setId(sid);
-            ioc.setActive(true);
-
-            final IoCSeen seen = new IoCSeen();
-            seen.setLast(time.getObservation());
-            seen.setFirst(time.getObservation());
-            ioc.setSeen(seen);
-            ioc.getTime().setReceivedByCore(time.getObservation());
-            ioc.setDocumentId(IoCIdentificationUtils.computeHashedId(ioc));
-
-            archiveService.archiveReceivedIoCRecord(ioc);
-
-            IoCRecord retrievedIoC = archiveService.getIoCRecordById(ioc.getDocumentId());
-
-            for (int i = 0; retrievedIoC == null && i < ARCHIVE_FAILED_TRIALS; i++) {
-                retrievedIoC = archiveService.getIoCRecordById(ioc.getDocumentId());
-            }
-
-            if (retrievedIoC == null) {
-                return null;
-            }
-
-            retrievedIoC.setVirusTotalReports(null);
-            retrievedIoC.getSeen().setLast(null);
-            retrievedIoC.setRaw(null);
-            retrievedIoC.setActive(null);
-            //documentId will changed whe ioc is deactivated so it's useless to have it here. Ioc.uniqueRef will be used for referencing ioc
-            retrievedIoC.setDocumentId(null);
-
-            return retrievedIoC;
-        /*} catch (ProtocolException e) {
-            log.log(Level.SEVERE, "logGSBEventRemotely: Request construction failed.", e);
-        } catch (MalformedURLException e) {
-            log.log(Level.SEVERE, "logGSBEventRemotely: URL co call Core servers is malformed.", e);
-        } catch (IOException e) {
-            log.log(Level.SEVERE, "logGSBEventRemotely: Failed to contact Core servers and log GSB event.", e);
-        */
-        } catch (IoCSourceIdException e) {
-            log.log(Level.SEVERE, "logGSBEventRemotely: IoC construction failed.", e);
-        } catch (ArchiveException e) {
-            log.log(Level.SEVERE, "logGSBEventRemotely: Archive communication failed.", e);
-        } /*finally {
-            if (jsonContentBuffer != null) {
-                try {
-                    jsonContentBuffer.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (coreServerConnection != null) {
-                coreServerConnection.disconnect();
-            }
-        }*/
-        return null;
     }
 }

@@ -3,6 +3,7 @@ package biz.karms.sinkit.tests.core;
 import biz.karms.sinkit.ejb.ArchiveService;
 import biz.karms.sinkit.ejb.CoreService;
 import biz.karms.sinkit.ejb.DNSApi;
+import biz.karms.sinkit.ejb.impl.DNSApiLoggingEJB;
 import biz.karms.sinkit.eventlog.EventLogAction;
 import biz.karms.sinkit.exception.TooOldIoCException;
 import biz.karms.sinkit.ioc.IoCRecord;
@@ -53,6 +54,9 @@ public class CoreTest extends Arquillian {
 
     @EJB
     DNSApi dnsApi;
+
+    @EJB
+    private DNSApiLoggingEJB dnsApiLoggingEJB;
 
     @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 12)
     public void deduplicationTest() throws Exception {
@@ -202,7 +206,7 @@ public class CoreTest extends Arquillian {
         typeIoCIds.add(new ImmutablePair<>("type2", iocId2));
         ids.put("feed1", typeIoCIds);
 
-        dnsApi.logDNSEvent(EventLogAction.BLOCK,
+        dnsApiLoggingEJB.logDNSEvent(EventLogAction.BLOCK,
                 "10.1.1.1",
                 "10.1.1.2",
                 "requestFqdn",
@@ -210,7 +214,6 @@ public class CoreTest extends Arquillian {
                 "seznam.cz",
                 "10.1.1.3",
                 ids,
-                archiveService,
                 LOGGER);
         // The async task follows Fire and Forget. TODO: dnsEventLogTestAssert must wait
     }
