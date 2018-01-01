@@ -63,9 +63,9 @@ public class ProtostreamREST implements Serializable {
     @Path("/protostream/iocwithcustom")
     @Produces({"application/x-protobuf"})
     public Response getProtostreamIoCWithCustom() {
-        if (SINKIT_ALL_IOC_PROTOSTREAM_GENERATOR_D_H_M_S == null) {
+        /*if (SINKIT_ALL_IOC_PROTOSTREAM_GENERATOR_D_H_M_S == null) {
             return Response.status(Response.Status.NOT_FOUND).header(X_ERROR, "This is a wrong node. Protostream generator is not started.").build();
-        }
+        }*/
         final File iocWithCustomBinary = new File(iocWithCustomFilePath);
         final File iocWithCustomBinaryMD5 = new File(iocWithCustomFileMd5);
         if (iocWithCustomBinary.exists() && iocWithCustomBinaryMD5.exists()) {
@@ -97,9 +97,9 @@ public class ProtostreamREST implements Serializable {
     @Path("/protostream/whitelist")
     @Produces({"application/x-protobuf"})
     public Response getProtostreamWhitelist() {
-        if (SINKIT_WHITELIST_PROTOSTREAM_GENERATOR_D_H_M_S == null) {
+        /*if (SINKIT_WHITELIST_PROTOSTREAM_GENERATOR_D_H_M_S == null) {
             return Response.status(Response.Status.NOT_FOUND).header(X_ERROR, "This is a wrong node. Protostream generator is not started.").build();
-        }
+        }*/
         final File whiteListBinary = new File(whiteListFilePath);
         final File whitelistBinaryMD5 = new File(whiteListFileMd5);
         if (whiteListBinary.exists() && whitelistBinaryMD5.exists()) {
@@ -131,9 +131,9 @@ public class ProtostreamREST implements Serializable {
     @Path("/protostream/customlist")
     @Produces({"application/x-protobuf"})
     public Response getProtostreamCustomList(@HeaderParam(CLIENT_ID_HEADER_PARAM) Integer clientId) {
-        if (SINKIT_CUSTOMLIST_PROTOSTREAM_GENERATOR_D_H_M_S == null) {
+        /*if (SINKIT_CUSTOMLIST_PROTOSTREAM_GENERATOR_D_H_M_S == null) {
             return Response.status(Response.Status.NOT_FOUND).header(X_ERROR, "This is a wrong node. Protostream generator is not started.").build();
-        }
+        }*/
         if (clientId == null || clientId < 0) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).header(X_ERROR, CLIENT_ID_HEADER_PARAM + " seems to be invalid or missing").build();
         }
@@ -182,9 +182,9 @@ public class ProtostreamREST implements Serializable {
     @Path("/protostream/ioclist")
     @Produces({"application/x-protobuf"})
     public Response getProtostreamIOCList(@HeaderParam(CLIENT_ID_HEADER_PARAM) Integer clientId) {
-        if (SINKIT_IOC_PROTOSTREAM_GENERATOR_D_H_M_S == null) {
+        /*if (SINKIT_IOC_PROTOSTREAM_GENERATOR_D_H_M_S == null) {
             return Response.status(Response.Status.NOT_FOUND).header(X_ERROR, "This is a wrong node. Protostream generator is not started.").build();
-        }
+        }*/
         if (clientId == null || clientId < 0) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).header(X_ERROR, CLIENT_ID_HEADER_PARAM + " seems to be invalid or missing").build();
         }
