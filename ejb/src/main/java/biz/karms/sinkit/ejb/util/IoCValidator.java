@@ -45,7 +45,7 @@ public class IoCValidator {
         }
 
         // raw attribute too long for Elasticsearch upsert?
-        if (ioc.getRaw().length() > MAX_BYTES_FOR_LUCENE) {
+        if (ioc.getRaw() != null && ioc.getRaw().length() > MAX_BYTES_FOR_LUCENE) {
             ioc.setRaw(ioc.getRaw().substring(0, MAX_BYTES_FOR_LUCENE - 1));
         }
 
