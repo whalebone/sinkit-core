@@ -3,6 +3,7 @@ package biz.karms.sinkit.ejb.impl;
 import biz.karms.sinkit.ejb.ArchiveService;
 import biz.karms.sinkit.ejb.elastic.logstash.LogstashClient;
 import biz.karms.sinkit.ejb.util.IoCIdentificationUtils;
+import biz.karms.sinkit.eventlog.Accuracy;
 import biz.karms.sinkit.eventlog.EventDNSRequest;
 import biz.karms.sinkit.eventlog.EventLogAction;
 import biz.karms.sinkit.eventlog.EventLogRecord;
@@ -88,7 +89,11 @@ public class DNSApiLoggingEJB {
         log.log(Level.FINE, "Logging DNS event. clientUid: " + clientUid + ", requestIp: " + requestIp + ", requestFqdn: " + requestFqdn + ", requestType: " + requestType + ", reasonFqdn: " + reasonFqdn + ", reasonIp: " + reasonIp);
         final EventLogRecord logRecord = new EventLogRecord();
 
-        logRecord.setAccuracy(theMostAccurateFeed);
+        // Problems with Map.Entry in Elastic [TODO]
+        final Map<String, Map<String, Integer>> accuracyFeed = new HashMap<>();
+        accuracyFeed.put(theMostAccurateFeed.getKey(),theMostAccurateFeed.getValue());
+        final int accuracy = theMostAccurateFeed.getValue().values().stream().mapToInt(Integer::intValue).sum();
+        logRecord.setAccuracy(new Accuracy(accuracy, accuracyFeed));
 
         final EventDNSRequest request = new EventDNSRequest();
         request.setIp(requestIp);

@@ -6,8 +6,6 @@ import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * @author Tomas Kozel
@@ -24,7 +22,7 @@ public class EventLogRecord implements Indexable {
     private EventDNSRequest request;
     private EventReason reason;
     private Date logged;
-    private Map.Entry<String, HashMap<String, Integer>> accuracy;
+    private Accuracy accuracy;
     @SerializedName("virus_total_request")
     private VirusTotalRequest virusTotalRequest;
     @SerializedName("matched_iocs")
@@ -96,11 +94,11 @@ public class EventLogRecord implements Indexable {
         this.matchedIocs = matchedIocs;
     }
 
-    public Map.Entry<String, HashMap<String, Integer>> getAccuracy() {
+    public Accuracy getAccuracy() {
         return accuracy;
     }
 
-    public void setAccuracy(Map.Entry<String, HashMap<String, Integer>> accuracy) {
+    public void setAccuracy(Accuracy accuracy) {
         this.accuracy = accuracy;
     }
 

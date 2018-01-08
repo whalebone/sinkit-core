@@ -52,10 +52,19 @@
           "index": "not_analyzed",
           "type": "string"
         },
-        "accuracy": {
-          "index": "not_analyzed",
-          "type": "object"
-        },
+         "accuracy": {
+           "properties": {
+             "accuracy": {
+               "index": "not_analyzed",
+               "type": "integer"
+             },
+             "the_most_accurate_feed": {
+               "index": "not_analyzed",
+               "type": "object"
+             }
+           }
+         },
+
         "description": {
           "type": "object",
           "properties": {
