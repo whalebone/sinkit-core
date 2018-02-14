@@ -107,6 +107,9 @@ if [[ "${SINKIT_MGMT_USER}X" != "X" ]] && [[ "${SINKIT_MGMT_PASS}X" != "X" ]]; t
     /opt/sinkit/wildfly/bin/add-user.sh -m -u "${SINKIT_MGMT_USER}" -p "${SINKIT_MGMT_PASS}"
 fi
 
+# NFS
+sudo /opt/sinkit/mount.sh
+
 /opt/sinkit/wildfly/bin/standalone.sh \
  -b ${MYIP} \
  -c standalone.xml \
