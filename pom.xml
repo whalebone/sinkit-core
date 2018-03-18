@@ -78,7 +78,7 @@
         <es.jna.version>4.1.0</es.jna.version>
 
         <!-- Virus Total -->
-        <com.kanishka.api.VirustotalPublicV2.0.version>1.1.GA-SNAPSHOT</com.kanishka.api.VirustotalPublicV2.0.version>
+        <com.kanishka.api.VirustotalPublicV2.0.version>1.1.rB-SNAPSHOT</com.kanishka.api.VirustotalPublicV2.0.version>
 
         <!-- Infinispan and business core deps-->
         <infinispan.core.version>8.2.6.Final</infinispan.core.version>
