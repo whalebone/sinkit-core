@@ -440,7 +440,7 @@ public class DNSApiEJB implements DNSApi {
                 }
 
                 // Whitelisted?
-                if (blacklistedRecord.isPresentOnWhiteList()) {
+                if (blacklistedRecord.getPresentOnWhiteList()) {
                     // This is very fishy. We should perhaps add a new state to @see EventLogAction enum...
                     mode = "D";
                 }

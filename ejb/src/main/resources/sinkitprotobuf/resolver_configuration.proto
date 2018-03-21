@@ -1,0 +1,34 @@
+package sinkitprotobuf;
+
+/* @Indexed */
+message ResolverConfiguration {
+    required int32 resolverId = 1;
+    required int32 clientId = 2;
+    repeated Policy policies = 3;
+}
+message Policy {
+    required int32 id = 1;
+    repeated string ipRanges = 2;
+    required Strategy strategy = 3;
+    repeated string accuracyFeeds = 4;
+    repeated string blacklistedFeeds = 5;
+    optional PolicyCustomList customlists = 6;
+}
+
+message Strategy {
+    required string strategyType = 1;
+    required StrategyParams strategyParams = 2;
+}
+
+message StrategyParams {
+    optional int32 audit = 1;
+    optional int32 block = 2;
+    repeated string types = 3;
+}
+
+message PolicyCustomList {
+    repeated string blackList = 1;
+    repeated string whiteList = 2;
+    repeated string auditList = 3;
+    repeated string dropList = 4;
+}

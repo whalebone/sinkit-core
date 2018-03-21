@@ -180,7 +180,7 @@ public class DNSApiLoggingEJB {
         classification.setType(type);
         ioc.setClassification(classification);
         final IoCSource source = new IoCSource();
-        source.setFQDN(matchedFQDN);
+        source.setFqdn(matchedFQDN);
         ioc.setSource(source);
         final IoCTime time = new IoCTime();
         time.setObservation(Calendar.getInstance().getTime());

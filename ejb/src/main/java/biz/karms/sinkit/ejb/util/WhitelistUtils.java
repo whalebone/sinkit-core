@@ -27,7 +27,7 @@ public class WhitelistUtils {
         final WhitelistedRecord white = new WhitelistedRecord();
         white.setRawId(iocRecord.getSource().getId().getValue());
         final Calendar expiresAt = Calendar.getInstance();
-        expiresAt.add(Calendar.SECOND, iocRecord.getSource().getTTL().intValue());
+        expiresAt.add(Calendar.SECOND, iocRecord.getSource().getTtl().intValue());
         white.setExpiresAt(expiresAt);
         white.setSourceName(iocRecord.getFeed().getName());
         white.setCompleted(completed);

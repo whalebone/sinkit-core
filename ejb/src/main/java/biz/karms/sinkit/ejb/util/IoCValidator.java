@@ -22,7 +22,7 @@ public class IoCValidator {
             throw new IoCValidationException("IoC record doesn't have mandatory field 'feed.name'");
         }
         if (ioc.getSource() == null || (
-                ioc.getSource().getFQDN() == null && ioc.getSource().getIp() == null)) {
+                ioc.getSource().getFqdn() == null && ioc.getSource().getIp() == null)) {
             throw new IoCValidationException("IoC can't have both IP and Domain set as null");
         }
         if (ioc.getClassification() == null || ioc.getClassification().getType() == null) {
@@ -60,7 +60,7 @@ public class IoCValidator {
             throw new IoCValidationException("IoC record doesn't have mandatory field 'feed.name'");
         }
         if (ioc.getSource() == null ||
-                ioc.getSource().getFQDN() == null && ioc.getSource().getIp() == null) {
+                ioc.getSource().getFqdn() == null && ioc.getSource().getIp() == null) {
             throw new IoCValidationException("IoC can't have both IP and FQDN set as null");
         }
         return ioc;

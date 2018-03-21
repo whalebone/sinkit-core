@@ -34,6 +34,17 @@
         <module>integration-tests</module>
     </modules>
 
+    <repositories>
+        <repository>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <id>bintray-karm-maven</id>
+            <name>bintray</name>
+            <url>https://dl.bintray.com/karm/toys</url>
+        </repository>
+    </repositories>
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- JBoss dependency versions -->
@@ -89,6 +100,14 @@
 
         <!-- Docker -->
         <docker.plugin.version>0.22.1</docker.plugin.version>
+
+        <!-- lombok -->
+        <lombok.version>1.16.20</lombok.version>
+
+        <!-- crc64 -->
+        <crc64.version>1.0.7</crc64.version>
+
+        <hamcrest.version>2.0.0.0</hamcrest.version>
     </properties>
 
     <dependencyManagement>

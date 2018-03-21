@@ -8,8 +8,31 @@ import biz.karms.sinkit.ejb.cache.pojo.GSBRecord;
 import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ejb.cache.pojo.WhitelistedRecord;
 import biz.karms.sinkit.ejb.cache.pojo.marshallers.CustomListMarshaller;
+import biz.karms.sinkit.ejb.cache.pojo.marshallers.EndUserConfigurationMessageMarshaller;
 import biz.karms.sinkit.ejb.cache.pojo.marshallers.ImmutablePairMarshaller;
+import biz.karms.sinkit.ejb.cache.pojo.marshallers.PolicyCustomListsMarshaller;
+import biz.karms.sinkit.ejb.cache.pojo.marshallers.PolicyMessageMarshaller;
+import biz.karms.sinkit.ejb.cache.pojo.marshallers.ResolverConfigurationMessageMarshaller;
 import biz.karms.sinkit.ejb.cache.pojo.marshallers.RuleMarshaller;
+import biz.karms.sinkit.ejb.cache.pojo.marshallers.StrategyMessageMarshaller;
+import biz.karms.sinkit.ejb.cache.pojo.marshallers.StrategyParamsMessageMarshaller;
+import biz.karms.sinkit.resolver.EndUserConfiguration;
+import biz.karms.sinkit.resolver.ResolverConfiguration;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.StringWriter;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.context.Destroyed;
+import javax.enterprise.context.Initialized;
+import javax.enterprise.event.Observes;
+import javax.enterprise.inject.Produces;
+import javax.inject.Inject;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.infinispan.client.hotrod.exceptions.TransportException;
@@ -29,23 +52,6 @@ import org.infinispan.protostream.SerializationContext;
 import org.infinispan.query.remote.client.ProtobufMetadataManagerConstants;
 import org.infinispan.util.concurrent.IsolationLevel;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.context.Destroyed;
-import javax.enterprise.context.Initialized;
-import javax.enterprise.event.Observes;
-import javax.enterprise.inject.Produces;
-import javax.inject.Inject;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.Serializable;
-import java.io.StringWriter;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 /**
  * @author Michal Karm Babacek
  */
@@ -60,6 +66,8 @@ public class MyCacheManagerProvider {
     private static final String RULE_PROTOBUF_DEFINITION_RESOURCE = "/sinkitprotobuf/rule.proto";
     private static final String CUSTOM_LIST_PROTOBUF_DEFINITION_RESOURCE = "/sinkitprotobuf/customlist.proto";
     private static final long SINKIT_HOTROD_CONN_TIMEOUT_S = (System.getenv().containsKey("SINKIT_HOTROD_CONN_TIMEOUT_S")) ? Integer.parseInt(System.getenv("SINKIT_HOTROD_CONN_TIMEOUT_S")) : 300;
+    private static final String RESOLVER_CONFIGURATION_PROTOBUF_DEFINITION_RESOURCE = "/sinkitprotobuf/resolver_configuration.proto";
+    private static final String END_USER_CONFIGURATION_PROTOBUF_DEFINITION_RESOURCE = "/sinkitprotobuf/end_user_configuration.proto";
 
     @Inject
     private Logger log;
@@ -112,6 +120,15 @@ public class MyCacheManagerProvider {
         ctx.registerMarshaller(new ImmutablePairMarshaller());
         ctx.registerProtoFiles(FileDescriptorSource.fromResources(CUSTOM_LIST_PROTOBUF_DEFINITION_RESOURCE));
         ctx.registerMarshaller(new CustomListMarshaller());
+        ctx.registerProtoFiles(FileDescriptorSource.fromResources(RESOLVER_CONFIGURATION_PROTOBUF_DEFINITION_RESOURCE));
+        ctx.registerMarshaller(new ResolverConfigurationMessageMarshaller());
+        ctx.registerMarshaller(new PolicyMessageMarshaller());
+        ctx.registerMarshaller(new StrategyMessageMarshaller());
+        ctx.registerMarshaller(new StrategyParamsMessageMarshaller());
+        ctx.registerMarshaller(new PolicyCustomListsMarshaller());
+        ctx.registerProtoFiles(FileDescriptorSource.fromResources(END_USER_CONFIGURATION_PROTOBUF_DEFINITION_RESOURCE));
+        ctx.registerMarshaller(new EndUserConfigurationMessageMarshaller());
+
 
         long timestamp = System.currentTimeMillis();
         while (!setupMetadataCache() && System.currentTimeMillis() - timestamp < SINKIT_HOTROD_CONN_TIMEOUT_S) {
@@ -131,9 +148,11 @@ public class MyCacheManagerProvider {
             final RemoteCache<String, String> metadataCache = cacheManagerForIndexableCaches.getCache(ProtobufMetadataManagerConstants.PROTOBUF_METADATA_CACHE_NAME);
             metadataCache.put(RULE_PROTOBUF_DEFINITION_RESOURCE, readResource(RULE_PROTOBUF_DEFINITION_RESOURCE));
             metadataCache.put(CUSTOM_LIST_PROTOBUF_DEFINITION_RESOURCE, readResource(CUSTOM_LIST_PROTOBUF_DEFINITION_RESOURCE));
+            metadataCache.put(RESOLVER_CONFIGURATION_PROTOBUF_DEFINITION_RESOURCE, readResource(RESOLVER_CONFIGURATION_PROTOBUF_DEFINITION_RESOURCE));
+            metadataCache.put(END_USER_CONFIGURATION_PROTOBUF_DEFINITION_RESOURCE, readResource(END_USER_CONFIGURATION_PROTOBUF_DEFINITION_RESOURCE));
             final String errors = metadataCache.get(ProtobufMetadataManagerConstants.ERRORS_KEY_SUFFIX);
             if (errors != null) {
-                log.log(Level.SEVERE, "Protobuffer files, either Rule or CustomLists contained errors:\n" + errors);
+                log.log(Level.SEVERE, "Protobuffer files, (Rule, CustomLists or ResolverConfiguration) contained errors:\n" + errors);
                 return false;
             }
         } catch (TransportException ex) {
@@ -206,6 +225,29 @@ public class MyCacheManagerProvider {
         log.log(Level.INFO, "getRuleLocalCache called.");
         return localCacheManager.getCache(SinkitCacheName.rules_local_cache.toString());
     }
+
+    @Produces
+    @ApplicationScoped
+    @SinkitCache(SinkitCacheName.resolver_configuration)
+    public RemoteCache<Integer, ResolverConfiguration> getResolverConfigurationCache() {
+        if (cacheManagerForIndexableCaches == null) {
+            throw new IllegalArgumentException("Manager must not be null.");
+        }
+        log.log(Level.INFO, "getResolverConfigurationCache called.");
+        return cacheManagerForIndexableCaches.getCache(SinkitCacheName.resolver_configuration.name());
+    }
+
+    @Produces
+    @ApplicationScoped
+    @SinkitCache(SinkitCacheName.end_user_configuration)
+    public RemoteCache<String, EndUserConfiguration> getEndUserConfigurationCache() {
+        if (localCacheManager == null) {
+            throw new IllegalArgumentException("Manager must not be null.");
+        }
+        log.log(Level.INFO, "getEndUserConfigurationCache called.");
+        return cacheManagerForIndexableCaches.getCache(SinkitCacheName.end_user_configuration.name());
+    }
+
 
     public void destroy(@Observes @Destroyed(ApplicationScoped.class) Object init) {
         if (localCacheManager != null) {

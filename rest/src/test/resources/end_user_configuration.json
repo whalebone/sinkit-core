@@ -1,0 +1,17 @@
+{
+  "client_id": 2,
+  "user_id": "someuser",
+  "identities": [
+    "device567",
+    "user123",
+    "9865xyz"
+  ],
+  "policy": 123,
+  "whitelist": [
+    "google.com",
+    "whalebone.io"
+  ],
+  "blacklist": [
+    "malware.com"
+  ]
+}
