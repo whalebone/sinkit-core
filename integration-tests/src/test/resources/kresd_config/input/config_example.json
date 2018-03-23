@@ -1,0 +1,96 @@
+{
+  "resolver_id": 12,
+  "policies": [
+    {
+      "ip_ranges": [
+      ],
+      "strategy": {
+        "type": "accuracy",
+        "params": {
+          "audit": 50,
+          "block": 80,
+          "types": [
+            "malware",
+            "blacklist",
+            "c&c",
+            "phishing"
+          ]
+        }
+      },
+      "accuracy_feeds": [
+        "phishtank",
+        "hybrid-analysis",
+        "non-existent-feed",
+        "urlquery"
+      ],
+      "blacklisted_feeds": [
+        "mfcr",
+        "mfsk",
+        "another-invalid-feed"
+      ],
+      "customlists": {
+        "block": [
+          "malware.com"
+        ],
+        "white": [
+          "whalebone.io",
+          "google.com",
+          "playmuseek.com"
+        ],
+        "audit": [
+        ]
+      }
+    },
+    {
+      "ip_ranges": [
+        "10.10.0.0/16",
+        "10.20.30.0/8",
+        "2001:0db8:85a3:1234:5678:8a2e:0370:0/8"
+      ],
+      "strategy": {
+        "type": "accuracy",
+        "params": {
+          "audit": 0,
+          "block": 30,
+          "types": [
+          ]
+        }
+      },
+      "accuracy_feeds": [
+      ],
+      "blacklisted_feeds": [
+      ],
+      "customlists": {
+        "block": [
+        ],
+        "white": [
+          "whalebone.io",
+          "clients3.google.com"
+        ],
+        "audit": [
+          "amoreshop.com.ua",
+          "claymorebg.com"
+        ]
+      }
+    },
+    {
+      "ip_ranges": [
+        "10.10.30.15/32",
+        "192.168.100.0/8"
+      ],
+      "strategy": {
+        "type": "blacklist"
+      },
+      "customlists": {
+        "block": [
+        ],
+        "white": [
+          "whalebone.io",
+          "google.com"
+        ],
+        "audit": [
+        ]
+      }
+    }
+  ]
+}
