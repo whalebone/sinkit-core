@@ -91,9 +91,11 @@ public class DNSApiLoggingEJB {
 
         // Problems with Map.Entry in Elastic [TODO]
         final Map<String, Map<String, Integer>> accuracyFeed = new HashMap<>();
-        accuracyFeed.put(theMostAccurateFeed.getKey(),theMostAccurateFeed.getValue());
-        final int accuracy = theMostAccurateFeed.getValue().values().stream().mapToInt(Integer::intValue).sum();
-        logRecord.setAccuracy(new Accuracy(accuracy, accuracyFeed));
+        if (theMostAccurateFeed != null) {
+            accuracyFeed.put(theMostAccurateFeed.getKey(), theMostAccurateFeed.getValue());
+            final int accuracy = theMostAccurateFeed.getValue().values().stream().mapToInt(Integer::intValue).sum();
+            logRecord.setAccuracy(new Accuracy(accuracy, accuracyFeed));
+        }
 
         final EventDNSRequest request = new EventDNSRequest();
         request.setIp(requestIp);
