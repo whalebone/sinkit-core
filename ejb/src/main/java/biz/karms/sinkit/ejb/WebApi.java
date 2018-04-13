@@ -5,6 +5,10 @@ import biz.karms.sinkit.ejb.dto.AllDNSSettingDTO;
 import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
 import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
 
+import biz.karms.sinkit.exception.EndUserConfigurationValidationException;
+import biz.karms.sinkit.exception.ResolverConfigurationValidationException;
+import biz.karms.sinkit.resolver.EndUserConfiguration;
+import biz.karms.sinkit.resolver.ResolverConfiguration;
 import javax.ejb.Local;
 import java.util.HashMap;
 import java.util.List;
@@ -47,4 +51,20 @@ public interface WebApi {
     List<?> getAllRules();
 
     String deleteRulesByCustomer(Integer customerId);
+
+    ResolverConfiguration putResolverConfiguration(ResolverConfiguration configuration) throws ResolverConfigurationValidationException;
+
+    ResolverConfiguration getResolverConfiguration(int resolverId);
+
+    ResolverConfiguration deleteResolverConfiguration(int resolverId);
+
+    List<ResolverConfiguration> getAllResolverConfigurations();
+
+    EndUserConfiguration putEndUserConfiguration(EndUserConfiguration configuration) throws EndUserConfigurationValidationException;
+
+    EndUserConfiguration getEndUserConfiguration(String identity);
+
+    EndUserConfiguration deleteEndUserConfiguration(String identity);
+
+    List<EndUserConfiguration> getAllEndUserConfigurations();
 }

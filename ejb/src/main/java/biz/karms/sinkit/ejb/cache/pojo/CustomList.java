@@ -1,12 +1,15 @@
 package biz.karms.sinkit.ejb.cache.pojo;
 
 import com.google.gson.Gson;
-
 import java.io.Serializable;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * @author Michal Karm Babacek
  */
+@Getter
+@Setter
 public class CustomList implements Serializable {
 
     private static final long serialVersionUID = 14109218311141111L;
@@ -44,78 +47,6 @@ public class CustomList implements Serializable {
      * ```<B|W|L>``` stands for Black White Log
      */
     private String whiteBlackLog;
-
-    public String getClientStartAddress() {
-        return clientStartAddress;
-    }
-
-    public void setClientStartAddress(String clientStartAddress) {
-        this.clientStartAddress = clientStartAddress;
-    }
-
-    public String getClientEndAddress() {
-        return clientEndAddress;
-    }
-
-    public void setClientEndAddress(String clientEndAddress) {
-        this.clientEndAddress = clientEndAddress;
-    }
-
-    public String getClientCidrAddress() {
-        return clientCidrAddress;
-    }
-
-    public void setClientCidrAddress(String clientCidrAddress) {
-        this.clientCidrAddress = clientCidrAddress;
-    }
-
-    public int getCustomerId() {
-        return customerId;
-    }
-
-    public void setCustomerId(int customerId) {
-        this.customerId = customerId;
-    }
-
-    public String getFqdn() {
-        return fqdn;
-    }
-
-    public void setFqdn(String fqdn) {
-        this.fqdn = fqdn;
-    }
-
-    public String getListStartAddress() {
-        return listStartAddress;
-    }
-
-    public void setListStartAddress(String listStartAddress) {
-        this.listStartAddress = listStartAddress;
-    }
-
-    public String getListEndAddress() {
-        return listEndAddress;
-    }
-
-    public void setListEndAddress(String listEndAddress) {
-        this.listEndAddress = listEndAddress;
-    }
-
-    public String getListCidrAddress() {
-        return listCidrAddress;
-    }
-
-    public void setListCidrAddress(String listCidrAddress) {
-        this.listCidrAddress = listCidrAddress;
-    }
-
-    public String getWhiteBlackLog() {
-        return whiteBlackLog;
-    }
-
-    public void setWhiteBlackLog(String whiteBlackLog) {
-        this.whiteBlackLog = whiteBlackLog;
-    }
 
     @Override
     public boolean equals(Object o) {

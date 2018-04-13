@@ -4,10 +4,14 @@ import com.google.gson.Gson;
 
 import java.io.Serializable;
 import java.util.HashMap;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * @author Michal Karm Babacek
  */
+@Getter
+@Setter
 public class Rule implements Serializable {
 
     private static final long serialVersionUID = 187732233347691L;
@@ -24,46 +28,6 @@ public class Rule implements Serializable {
      * Feed UID : Mode <L|S|D>
      */
     private HashMap<String, String> sources;
-
-    public String getStartAddress() {
-        return startAddress;
-    }
-
-    public void setStartAddress(String startAddress) {
-        this.startAddress = startAddress;
-    }
-
-    public String getEndAddress() {
-        return endAddress;
-    }
-
-    public void setEndAddress(String endAddress) {
-        this.endAddress = endAddress;
-    }
-
-    public String getCidrAddress() {
-        return cidrAddress;
-    }
-
-    public void setCidrAddress(String cidrAddress) {
-        this.cidrAddress = cidrAddress;
-    }
-
-    public int getCustomerId() {
-        return customerId;
-    }
-
-    public void setCustomerId(int customerId) {
-        this.customerId = customerId;
-    }
-
-    public HashMap<String, String> getSources() {
-        return sources;
-    }
-
-    public void setSources(HashMap<String, String> sources) {
-        this.sources = sources;
-    }
 
     @Override
     public boolean equals(Object o) {

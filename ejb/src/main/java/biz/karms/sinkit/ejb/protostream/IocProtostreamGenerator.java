@@ -153,7 +153,7 @@ public class IocProtostreamGenerator {
         // TODO: bulk? Super slow and inefficient :-/
         blacklistCache.withFlags(Flag.SKIP_CACHE_LOAD).keySet().forEach(key -> {
             final BlacklistedRecord b = blacklistCache.withFlags(Flag.SKIP_CACHE_LOAD).get(key);
-            if (!b.isPresentOnWhiteList()) {
+            if (!b.getPresentOnWhiteList()) {
                 b.getSources().keySet().forEach(feeduid -> {
                     custIdFeedUidsLog.entrySet().stream().filter(e -> e.getValue().contains(feeduid)).forEach(found -> {
                         if (preparedHashes.containsKey(found.getKey())) {
