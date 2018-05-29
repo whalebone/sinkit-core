@@ -104,12 +104,12 @@ public class ResolverConfigurationValidator {
                 .map(Policy::getStrategy)
                 .filter(strategy -> StrategyType.accuracy == strategy.getStrategyType())
                 .map(Strategy::getStrategyParams)
-                .anyMatch(params -> params.getAudit() >= params.getBlock());
+                .anyMatch(params -> params.getAudit() < params.getBlock());
 
         if (hasError) {
             throw new ResolverConfigurationValidationException(
                     "'Audit' parameter value in 'Resolver configuration.policy.strategy params' settings "
-                            + "must be bigger than 'Resolver configuration.policy.strategy.strategy params.block'. ");
+                            + "must not be bigger than 'Resolver configuration.policy.strategy.strategy params.block'. ");
         }
     }
 }
