@@ -5,11 +5,12 @@ import biz.karms.sinkit.resolver.Policy;
 import biz.karms.sinkit.resolver.ResolverConfiguration;
 import biz.karms.sinkit.resolver.Strategy;
 import biz.karms.sinkit.resolver.StrategyType;
+
+import javax.enterprise.context.ApplicationScoped;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import javax.enterprise.context.ApplicationScoped;
 
 import static java.lang.String.format;
 
@@ -104,12 +105,14 @@ public class ResolverConfigurationValidator {
                 .map(Policy::getStrategy)
                 .filter(strategy -> StrategyType.accuracy == strategy.getStrategyType())
                 .map(Strategy::getStrategyParams)
+                .filter(params -> (params.getAudit() != 0 && params.getBlock() != 0))
                 .anyMatch(params -> params.getAudit() < params.getBlock());
 
         if (hasError) {
             throw new ResolverConfigurationValidationException(
                     "'Audit' parameter value in 'Resolver configuration.policy.strategy params' settings "
-                            + "must not be bigger than 'Resolver configuration.policy.strategy.strategy params.block'. ");
+                            + "must not be bigger than 'Resolver configuration.policy.strategy.strategy params.block'. " +
+                            " But for the special case where either 'Audit' or 'Block' are 0 and thus the policy is discarded from validation.");
         }
     }
 }
