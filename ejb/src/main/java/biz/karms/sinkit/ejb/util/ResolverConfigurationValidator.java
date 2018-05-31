@@ -105,14 +105,17 @@ public class ResolverConfigurationValidator {
                 .map(Policy::getStrategy)
                 .filter(strategy -> StrategyType.accuracy == strategy.getStrategyType())
                 .map(Strategy::getStrategyParams)
-                .filter(params -> (params.getAudit() != 0 && params.getBlock() != 0))
-                .anyMatch(params -> params.getAudit() > params.getBlock());
+                .anyMatch(params -> (((params.getAudit() > params.getBlock()) && params.getAudit() != 0 && params.getBlock() != 0) ||
+                                     params.getAudit() > 100 ||
+                                     params.getAudit() < 0 ||
+                                     params.getBlock() > 100 ||
+                                     params.getBlock() < 0));
 
         if (hasError) {
             throw new ResolverConfigurationValidationException(
-                    "'Audit' parameter value in 'Resolver configuration.policy.strategy params' settings "
-                            + "must not be bigger than 'Resolver configuration.policy.strategy.strategy params.block'. " +
-                            " But for the special case where either 'Audit' or 'Block' are 0 and thus the policy is discarded from validation.");
+                    "'Audit' parameter value in 'Resolver configuration.policy.strategy params' settings " +
+                            "must not be bigger than 'Resolver configuration.policy.strategy.strategy params.block' but " +
+                            "for the special case where either 'Audit' or 'Block' are 0. None of the parameters can be outside <0, 100>.");
         }
     }
 }
