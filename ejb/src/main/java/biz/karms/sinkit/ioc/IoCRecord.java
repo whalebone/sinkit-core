@@ -34,8 +34,16 @@ public class IoCRecord implements Indexable {
     @SerializedName("whitelist_name")
     private String whitelistName;
     private HashMap<String, Integer> accuracy;
+    private HashMap<String,String> metadata;
 
 
+    public HashMap<String, String> getMetadata() {
+        return metadata;
+    }
+
+    public void setMetadata(HashMap<String, String> meta) {
+        this.metadata = meta;
+    }
     @Override
     public String toString() {
         return new Gson().toJson(this);

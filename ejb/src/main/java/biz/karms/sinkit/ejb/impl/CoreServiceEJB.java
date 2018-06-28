@@ -14,6 +14,7 @@ import biz.karms.sinkit.ioc.IoCRecord;
 import biz.karms.sinkit.ioc.IoCSeen;
 import biz.karms.sinkit.ioc.IoCSourceId;
 import biz.karms.sinkit.ioc.IoCSourceIdType;
+import biz.karms.sinkit.ioc.IoCAccuCheckerReport;
 import biz.karms.sinkit.ioc.util.IoCSourceIdBuilder;
 import com.google.gson.Gson;
 import org.apache.commons.collections.CollectionUtils;
@@ -101,7 +102,6 @@ public class CoreServiceEJB implements CoreService {
         ioc.getSource().setId(IoCSourceIdBuilder.build(ioc));
 
         ioc.setActive(true);
-
         Date seenFirst;
         Date seenLast;
         if (ioc.getTime().getSource() == null) {
@@ -144,6 +144,40 @@ public class CoreServiceEJB implements CoreService {
         }
 
         return ioc;
+    }
+
+    /**
+     *returns true if all archivations and saves to cache succeed, otherwise returns false(or throws ArchiveException)
+     */
+    @Override
+    public boolean updateWithAccuCheckerReport(IoCAccuCheckerReport report) throws ArchiveException, IoCValidationException {
+
+        if (report.getSource() == null || report.getSource().getId() == null || report.getSource().getId().getValue() == null) {
+            throw new IoCValidationException("Accuchecker report doesn't have required field source.id.value.");
+        }
+        if (report.getAccuracy() == null) {
+            throw new IoCValidationException("Accuchecker report doesn't have required field accuracy.");
+        }
+        boolean response = true;
+        final HashMap<String, Integer> report_accuracy = report.getAccuracy();
+        String source_id_value = report.getSource().getId().getValue();
+        List<IoCRecord> iocs = archiveService.getMatchingEntries("source.id.value", source_id_value);
+        for( IoCRecord ioc : iocs)
+         {
+
+            HashMap<String, Integer> combined_accuracy = new HashMap<>(report_accuracy);
+            if (ioc.getAccuracy() != null) { //nullity shouldn't happen
+                combined_accuracy.putAll(ioc.getAccuracy());
+            }
+            ioc.setAccuracy(combined_accuracy);
+
+            archiveService.setReportToIoCRecord(report, ioc.getDocumentId());
+            boolean cache_response = blacklistCacheService.addToCache(ioc);
+            if (cache_response == false) {
+                response = false;
+            }
+        }
+        return response;
     }
 
     @Override

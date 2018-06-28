@@ -1,6 +1,8 @@
 package biz.karms.sinkit.rest;
 
+import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCValidationException;
+import com.google.gson.JsonParseException;
 import com.google.gson.JsonSyntaxException;
 
 import javax.enterprise.context.RequestScoped;
@@ -65,6 +67,26 @@ public class SinkitREST implements Serializable {
     @Produces({"application/json;charset=UTF-8"})
     public String deleteBlacklistedRecord(@PathParam("key") String key) {
         return sinkitService.deleteBlacklistedRecord(key);
+    }
+
+    @POST
+    @Path("/blacklist/accuracyupdate/")
+    @Produces({"application/json;charset=UTF-8"})
+    //@Consumes({"application/json;charset=UTF-8"})
+    public Response updateAccuracy(String report) {
+        try{
+            sinkitService.updateAccuracy(report);
+            return Response.status(Response.Status.OK).entity("Succeeded in updating with accuchecker report: "+report).build();
+        } catch (ArchiveException ex) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex.getMessage()).build();
+        } catch (JsonParseException ex) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(ex.getMessage()).build();
+        } catch (IoCValidationException ex){
+
+            return Response.status(Response.Status.BAD_REQUEST).entity(ex.getMessage()).build();
+        }
+
+
     }
 
     @POST

@@ -2,6 +2,7 @@ package biz.karms.sinkit.ejb;
 
 import biz.karms.sinkit.eventlog.EventLogRecord;
 import biz.karms.sinkit.exception.ArchiveException;
+import biz.karms.sinkit.ioc.IoCAccuCheckerReport;
 import biz.karms.sinkit.ioc.IoCRecord;
 
 import javax.ejb.Local;
@@ -28,6 +29,8 @@ public interface ArchiveService {
     EventLogRecord archiveEventLogRecordUsingLogstash(EventLogRecord logRecord) throws ArchiveException;
 
     List<IoCRecord> getActiveNotWhitelistedIoCs(int from, int size) throws ArchiveException;
+
+    List<IoCRecord> getMatchingEntries(String name, String value) throws ArchiveException;
 
     IoCRecord getIoCRecordById(String id) throws ArchiveException;
 

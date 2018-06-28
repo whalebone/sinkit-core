@@ -7,6 +7,7 @@ import biz.karms.sinkit.ejb.util.IoCIdentificationUtils;
 import biz.karms.sinkit.eventlog.EventLogRecord;
 import biz.karms.sinkit.eventlog.VirusTotalRequestStatus;
 import biz.karms.sinkit.exception.ArchiveException;
+import biz.karms.sinkit.ioc.IoCAccuCheckerReport;
 import biz.karms.sinkit.ioc.IoCRecord;
 import biz.karms.sinkit.ioc.IoCSeen;
 import com.google.gson.Gson;
@@ -95,6 +96,12 @@ public class ArchiveServiceEJB implements ArchiveService {
     }
 
     @Override
+    public boolean setReportToIoCRecord(final IoCAccuCheckerReport report, String document_id) throws ArchiveException{
+        // a wrapper for simple update
+        return elasticService.update(document_id, report, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, null);
+
+    }
+    @Override
     public IoCRecord deactivateRecord(final IoCRecord ioc) throws ArchiveException {
         /**
          * Deactivation in archive: Old active IoC record is deleted and new one inactive is created.
@@ -137,6 +144,15 @@ public class ArchiveServiceEJB implements ArchiveService {
         return logRecord;
     }
 
+    /*
+    Lists matching entries, lists up to DEF_LIMIT of them.
+     */
+    @Override
+    public List<IoCRecord> getMatchingEntries(String name, String value) throws ArchiveException {
+        final QueryBuilder query = QueryBuilders.termQuery(name, value);
+        // FilterBuilders.missingFilter("whitelist_name")
+        return elasticService.search(query, null, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, IoCRecord.class);
+    }
     @Override
     public List<IoCRecord> getActiveNotWhitelistedIoCs(final int from, final int size) throws ArchiveException {
         final QueryBuilder query = QueryBuilders.filteredQuery(

@@ -13,10 +13,12 @@ import biz.karms.sinkit.ejb.impl.DNSApiLoggingEJB;
 import biz.karms.sinkit.eventlog.EventLogRecord;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCValidationException;
+import biz.karms.sinkit.ioc.IoCAccuCheckerReport;
 import biz.karms.sinkit.ioc.IoCRecord;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
@@ -118,6 +120,14 @@ public class SinkitService implements Serializable {
         log.log(Level.FINE, "jsonIoCRecord: " + jsonIoCRecord);
         final IoCRecord ioc = new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().fromJson(jsonIoCRecord, IoCRecord.class);
         return new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().toJson(coreService.processIoCRecord(ioc));
+    }
+
+    boolean updateAccuracy(final String report) throws  ArchiveException, JsonParseException, IoCValidationException {
+        log.log(Level.FINE, "Received report from accuchecker: " + report);
+
+        final IoCAccuCheckerReport parsed_report = new GsonBuilder().create().fromJson(report, IoCAccuCheckerReport.class);
+        // retry until true? ????
+        return coreService.updateWithAccuCheckerReport(parsed_report);
     }
 
     String processWhitelistIoCRecord(final String jsonIoCRecord) throws IoCValidationException, ArchiveException {
