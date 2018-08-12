@@ -1,13 +1,13 @@
 package biz.karms.sinkit.ejb.cache.pojo;
 
-import com.google.gson.Gson;
+import lombok.Getter;
+import lombok.Setter;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+
 import java.io.Serializable;
 import java.math.BigInteger;
 import java.util.Calendar;
 import java.util.HashMap;
-import lombok.Getter;
-import lombok.Setter;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 
 /**
  * @author Michal Karm Babacek
@@ -16,14 +16,14 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 @Setter
 public class BlacklistedRecord implements Serializable {
 
-    private static final long serialVersionUID = -8738664627706834541L;
+    private static final long serialVersionUID = -333998912384541L;
 
     /**
      * Stored as an MD5 hash
      */
     private String blackListedDomainOrIP;
 
-    private String crc64Hash;
+    private BigInteger crc64Hash;
 
     private Calendar listed;
 
@@ -39,8 +39,8 @@ public class BlacklistedRecord implements Serializable {
      */
     private HashMap<String, HashMap<String, Integer>> accuracy;
 
-    public BlacklistedRecord(String blackListedDomainOrIP, String crc64Key, Calendar listed,
-            HashMap<String, ImmutablePair<String, String>> sources, HashMap<String, HashMap<String, Integer>> accuracy, Boolean presentOnWhiteList) {
+    public BlacklistedRecord(String blackListedDomainOrIP, BigInteger crc64Key, Calendar listed,
+                             HashMap<String, ImmutablePair<String, String>> sources, HashMap<String, HashMap<String, Integer>> accuracy, Boolean presentOnWhiteList) {
         this.blackListedDomainOrIP = blackListedDomainOrIP;
         this.crc64Hash = crc64Key;
         this.listed = listed;
@@ -64,6 +64,13 @@ public class BlacklistedRecord implements Serializable {
 
     @Override
     public String toString() {
-        return new Gson().toJson(this);
+        return "BlacklistedRecord{" +
+                "blackListedDomainOrIP='" + blackListedDomainOrIP + '\'' +
+                ", crc64Hash=" + crc64Hash +
+                ", listed=" + listed +
+                ", presentOnWhiteList=" + presentOnWhiteList +
+                ", sources=" + sources +
+                ", accuracy=" + accuracy +
+                '}';
     }
 }

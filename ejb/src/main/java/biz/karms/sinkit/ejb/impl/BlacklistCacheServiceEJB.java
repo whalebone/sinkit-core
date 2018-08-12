@@ -7,7 +7,6 @@ import biz.karms.sinkit.ejb.cache.annotations.SinkitCacheName;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ioc.IoCRecord;
 import com.google.gson.Gson;
-import java.math.BigInteger;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -17,6 +16,7 @@ import org.infinispan.client.hotrod.RemoteCache;
 
 import javax.ejb.Stateless;
 import javax.inject.Inject;
+import java.math.BigInteger;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.logging.Level;
@@ -51,7 +51,7 @@ public class BlacklistCacheServiceEJB implements BlacklistCacheService {
         log.log(Level.FINE, "PROCESSING IOC for Blacklistcache: " + new Gson().toJson(ioCRecord));
 
         final String md5Key = DigestUtils.md5Hex(ioCRecord.getSource().getId().getValue());
-        final String crc64Key = CRC64.getInstance().crc64String(ioCRecord.getSource().getId().getValue().getBytes());
+        final BigInteger crc64Key = CRC64.getInstance().crc64BigInteger(ioCRecord.getSource().getId().getValue().getBytes());
         try {
             if (blacklistCache.containsKey(md5Key)) {
                 final BlacklistedRecord blacklistedRecord = blacklistCache.withFlags(Flag.SKIP_CACHE_LOAD).get(md5Key);
@@ -73,11 +73,7 @@ public class BlacklistCacheServiceEJB implements BlacklistCacheService {
                 blacklistedRecord.setAccuracy(accuracy);
                 blacklistedRecord.setListed(Calendar.getInstance());
                 blacklistedRecord.setPresentOnWhiteList(StringUtils.isNotBlank(ioCRecord.getWhitelistName()));
-
-                if(StringUtils.isBlank(blacklistedRecord.getCrc64Hash())){
-                    blacklistedRecord.setCrc64Hash(crc64Key);
-                }
-
+                blacklistedRecord.setCrc64Hash(crc64Key);
                 log.log(Level.FINE, "Replacing key [" + ioCRecord.getSource().getId().getValue() + "], hashed: " + md5Key);
                 blacklistCache.replace(md5Key, blacklistedRecord);
             } else {

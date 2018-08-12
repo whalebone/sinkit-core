@@ -16,17 +16,18 @@ import biz.karms.sinkit.ioc.IoCSourceId;
 import biz.karms.sinkit.ioc.IoCSourceIdType;
 import biz.karms.sinkit.ioc.util.IoCSourceIdBuilder;
 import com.google.gson.Gson;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+
+import javax.annotation.PostConstruct;
+import javax.ejb.EJB;
+import javax.ejb.Stateless;
+import javax.inject.Inject;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.PostConstruct;
-import javax.ejb.EJB;
-import javax.ejb.Stateless;
-import javax.inject.Inject;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 
 /**
  * @author Tomas Kozel

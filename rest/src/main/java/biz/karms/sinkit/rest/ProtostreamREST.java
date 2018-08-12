@@ -1,6 +1,7 @@
 package biz.karms.sinkit.rest;
 
-import java.io.InputStreamReader;
+import org.apache.commons.lang3.StringUtils;
+
 import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
@@ -21,19 +22,6 @@ import java.nio.file.Paths;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static biz.karms.sinkit.ejb.protostream.CustomlistProtostreamGenerator.GENERATED_PROTOFILES_DIRECTORY;
-import static biz.karms.sinkit.ejb.protostream.CustomlistProtostreamGenerator.SINKIT_CUSTOMLIST_PROTOSTREAM_GENERATOR_D_H_M_S;
-import static biz.karms.sinkit.ejb.protostream.CustomlistProtostreamGenerator.customListFileMd5;
-import static biz.karms.sinkit.ejb.protostream.CustomlistProtostreamGenerator.customListFilePath;
-import static biz.karms.sinkit.ejb.protostream.IoCWithCustomProtostreamGenerator.SINKIT_ALL_IOC_PROTOSTREAM_GENERATOR_D_H_M_S;
-import static biz.karms.sinkit.ejb.protostream.IoCWithCustomProtostreamGenerator.iocWithCustomFileMd5;
-import static biz.karms.sinkit.ejb.protostream.IoCWithCustomProtostreamGenerator.iocWithCustomFilePath;
-import static biz.karms.sinkit.ejb.protostream.IocProtostreamGenerator.SINKIT_IOC_PROTOSTREAM_GENERATOR_D_H_M_S;
-import static biz.karms.sinkit.ejb.protostream.IocProtostreamGenerator.iocListFileMd5;
-import static biz.karms.sinkit.ejb.protostream.IocProtostreamGenerator.iocListFilePath;
-import static biz.karms.sinkit.ejb.protostream.WhitelistProtostreamGenerator.SINKIT_WHITELIST_PROTOSTREAM_GENERATOR_D_H_M_S;
-import static biz.karms.sinkit.ejb.protostream.WhitelistProtostreamGenerator.whiteListFileMd5;
-import static biz.karms.sinkit.ejb.protostream.WhitelistProtostreamGenerator.whiteListFilePath;
 import static biz.karms.sinkit.rest.DnsREST.CLIENT_ID_HEADER_PARAM;
 import static java.lang.String.format;
 
@@ -45,6 +33,22 @@ import static java.lang.String.format;
 public class ProtostreamREST implements Serializable {
 
     private static final long serialVersionUID = -811275040019884876L;
+
+    private static final String GENERATED_PROTOFILES_DIRECTORY =
+            (System.getenv().containsKey("SINKIT_GENERATED_PROTOFILES_DIRECTORY") && StringUtils.isNotEmpty(System.getenv("SINKIT_GENERATED_PROTOFILES_DIRECTORY")))
+                    ? System.getenv("SINKIT_GENERATED_PROTOFILES_DIRECTORY") : System.getProperty("java.io.tmpdir");
+
+    private static final String iocWithCustomFilePath = GENERATED_PROTOFILES_DIRECTORY + "/iocWithCustom.bin";
+    private static final String iocWithCustomFileMd5 = GENERATED_PROTOFILES_DIRECTORY + "/iocWithCustom.bin.md5";
+
+    private static final String whiteListFilePath = GENERATED_PROTOFILES_DIRECTORY + "/whitelist.bin";
+    private static final String whiteListFileMd5 = GENERATED_PROTOFILES_DIRECTORY + "/whitelist.bin.md5";
+
+    private static final String customListFilePath = GENERATED_PROTOFILES_DIRECTORY + "/customlist.bin";
+    private static final String customListFileMd5 = GENERATED_PROTOFILES_DIRECTORY + "/customlist.bin.md5";
+
+    private static final String iocListFilePath = GENERATED_PROTOFILES_DIRECTORY + "/ioclist.bin";
+    private static final String iocListFileMd5 = GENERATED_PROTOFILES_DIRECTORY + "/ioclist.bin.md5";
 
     @Inject
     SinkitService sinkitService;
@@ -63,7 +67,7 @@ public class ProtostreamREST implements Serializable {
      */
     @GET
     @Path("/protostream/iocwithcustom")
-    @Produces({ "application/x-protobuf" })
+    @Produces({"application/x-protobuf"})
     public Response getProtostreamIoCWithCustom() {
         /*if (SINKIT_ALL_IOC_PROTOSTREAM_GENERATOR_D_H_M_S == null) {
             return Response.status(Response.Status.NOT_FOUND).header(X_ERROR, "This is a wrong node. Protostream generator is not started.").build();
@@ -97,7 +101,7 @@ public class ProtostreamREST implements Serializable {
      */
     @GET
     @Path("/protostream/whitelist")
-    @Produces({ "application/x-protobuf" })
+    @Produces({"application/x-protobuf"})
     public Response getProtostreamWhitelist() {
         /*if (SINKIT_WHITELIST_PROTOSTREAM_GENERATOR_D_H_M_S == null) {
             return Response.status(Response.Status.NOT_FOUND).header(X_ERROR, "This is a wrong node. Protostream generator is not started.").build();
@@ -131,7 +135,7 @@ public class ProtostreamREST implements Serializable {
      */
     @GET
     @Path("/protostream/customlist")
-    @Produces({ "application/x-protobuf" })
+    @Produces({"application/x-protobuf"})
     public Response getProtostreamCustomList(@HeaderParam(CLIENT_ID_HEADER_PARAM) Integer clientId) {
         /*if (SINKIT_CUSTOMLIST_PROTOSTREAM_GENERATOR_D_H_M_S == null) {
             return Response.status(Response.Status.NOT_FOUND).header(X_ERROR, "This is a wrong node. Protostream generator is not started.").build();
@@ -182,7 +186,7 @@ public class ProtostreamREST implements Serializable {
      */
     @GET
     @Path("/protostream/ioclist")
-    @Produces({ "application/x-protobuf" })
+    @Produces({"application/x-protobuf"})
     public Response getProtostreamIOCList(@HeaderParam(CLIENT_ID_HEADER_PARAM) Integer clientId) {
         /*if (SINKIT_IOC_PROTOSTREAM_GENERATOR_D_H_M_S == null) {
             return Response.status(Response.Status.NOT_FOUND).header(X_ERROR, "This is a wrong node. Protostream generator is not started.").build();
@@ -234,7 +238,7 @@ public class ProtostreamREST implements Serializable {
      */
     @GET
     @Path("/protostream/resolvercache")
-    @Produces({ "application/x-protobuf" })
+    @Produces({"application/x-protobuf"})
     public Response getResolverCacheProtostreamFile(@HeaderParam("x-resolver-id") Integer resolverId) {
         if (resolverId == null || resolverId < 0) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).header(X_ERROR, "x-resolver-id" + " seems to be invalid or missing").build();

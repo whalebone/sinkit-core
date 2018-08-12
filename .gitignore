@@ -20,3 +20,4 @@ wildfly.latest
 2016-08-08.notes
 wildfly-10.1.0.Final-vanilla
 wildfly-10.1.0.Final
+run_config.sh
