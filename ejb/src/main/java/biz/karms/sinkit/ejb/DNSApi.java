@@ -16,18 +16,4 @@ import java.util.logging.Logger;
 @Local
 public interface DNSApi {
     Sinkhole getSinkHole(String clientIPAddress, String fqdnOrIp, String fqdn, Integer clientId);
-
-    void logDNSEvent(
-            EventLogAction action,
-            String clientUid,
-            String requestIp,
-            String requestFqdn,
-            String requestType,
-            String reasonFqdn,
-            String reasonIp,
-            // {feed: [type1: iocId1, type2: iocId2, ...]}
-            Map<String, Set<ImmutablePair<String, String>>> matchedIoCs,
-            ArchiveService archiveService,
-            Logger logger
-    ) throws ArchiveException;
 }

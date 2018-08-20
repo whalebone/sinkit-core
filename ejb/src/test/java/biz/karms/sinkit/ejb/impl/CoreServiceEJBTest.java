@@ -9,14 +9,13 @@ import biz.karms.sinkit.ioc.IoCRecord;
 import biz.karms.sinkit.ioc.IoCSource;
 import biz.karms.sinkit.ioc.IoCSourceId;
 import biz.karms.sinkit.ioc.IoCSourceIdType;
+import java.util.ArrayList;
+import java.util.Calendar;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
-
-import java.util.ArrayList;
-import java.util.Calendar;
 
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
@@ -197,7 +196,7 @@ public class CoreServiceEJBTest {
         IoCRecord ioc = new IoCRecord();
         ioc.setSource(new IoCSource());
         ioc.getSource().setIp(ip);
-        ioc.getSource().setFQDN(fqdn);
+        ioc.getSource().setFqdn(fqdn);
         ioc.setFeed(new IoCFeed());
         ioc.getFeed().setName(sourceName);
         if (withId) {

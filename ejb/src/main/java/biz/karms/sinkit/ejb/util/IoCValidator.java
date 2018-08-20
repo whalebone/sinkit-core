@@ -12,7 +12,9 @@ import java.util.Date;
  */
 public class IoCValidator {
 
-    public static IoCRecord validateIoCRecord(IoCRecord ioc, int windowHours) throws IoCValidationException {
+    public static final int MAX_BYTES_FOR_LUCENE = 32766;
+
+    public static IoCRecord validateIoCRecord(final IoCRecord ioc, final int windowHours) throws IoCValidationException {
         if (ioc == null) {
             throw new IoCValidationException("IoC record is null");
         }
@@ -20,7 +22,7 @@ public class IoCValidator {
             throw new IoCValidationException("IoC record doesn't have mandatory field 'feed.name'");
         }
         if (ioc.getSource() == null || (
-                ioc.getSource().getFQDN() == null && ioc.getSource().getIp() == null)) {
+                ioc.getSource().getFqdn() == null && ioc.getSource().getIp() == null)) {
             throw new IoCValidationException("IoC can't have both IP and Domain set as null");
         }
         if (ioc.getClassification() == null || ioc.getClassification().getType() == null) {
@@ -38,14 +40,19 @@ public class IoCValidator {
         }
         if (DateUtils.addWindow(checkedTime, windowHours).before(Calendar.getInstance().getTime())) {
             String field = ioc.getTime().getSource() != null ? "source" : "observation";
-            throw new TooOldIoCException("IoC record is too old. Field 'time." + field + "': " +  checkedTime +
+            throw new TooOldIoCException("IoC record is too old. Field 'time." + field + "': " + checkedTime +
                     " shuld not be older than " + windowHours + " hours.");
+        }
+
+        // raw attribute too long for Elasticsearch upsert?
+        if (ioc.getRaw() != null && ioc.getRaw().length() > MAX_BYTES_FOR_LUCENE) {
+            ioc.setRaw(ioc.getRaw().substring(0, MAX_BYTES_FOR_LUCENE - 1));
         }
 
         return ioc;
     }
 
-    public static IoCRecord validateWhitelistIoCRecord(IoCRecord ioc) throws IoCValidationException {
+    public static IoCRecord validateWhitelistIoCRecord(final IoCRecord ioc) throws IoCValidationException {
         if (ioc == null) {
             throw new IoCValidationException("IoC record is null");
         }
@@ -53,7 +60,7 @@ public class IoCValidator {
             throw new IoCValidationException("IoC record doesn't have mandatory field 'feed.name'");
         }
         if (ioc.getSource() == null ||
-                ioc.getSource().getFQDN() == null && ioc.getSource().getIp() == null) {
+                ioc.getSource().getFqdn() == null && ioc.getSource().getIp() == null) {
             throw new IoCValidationException("IoC can't have both IP and FQDN set as null");
         }
         return ioc;

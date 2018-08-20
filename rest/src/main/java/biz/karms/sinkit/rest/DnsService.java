@@ -26,7 +26,7 @@ public class DnsService implements Serializable {
     private DNSApi dnsApi;
 
     @Inject
-    private Logger log;
+    private transient Logger log;
 
     private static final Gson gson = new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create();
 

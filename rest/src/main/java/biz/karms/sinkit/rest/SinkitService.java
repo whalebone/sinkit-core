@@ -2,7 +2,6 @@ package biz.karms.sinkit.rest;
 
 import biz.karms.sinkit.ejb.ArchiveService;
 import biz.karms.sinkit.ejb.CoreService;
-import biz.karms.sinkit.ejb.DNSApi;
 import biz.karms.sinkit.ejb.GSBService;
 import biz.karms.sinkit.ejb.WebApi;
 import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
@@ -10,11 +9,13 @@ import biz.karms.sinkit.ejb.cache.pojo.WhitelistedRecord;
 import biz.karms.sinkit.ejb.dto.AllDNSSettingDTO;
 import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
 import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
+import biz.karms.sinkit.ejb.impl.DNSApiLoggingEJB;
 import biz.karms.sinkit.eventlog.EventLogRecord;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCValidationException;
 import biz.karms.sinkit.ioc.IoCRecord;
 import com.google.gson.FieldNamingPolicy;
+import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -46,7 +47,7 @@ public class SinkitService implements Serializable {
     private CoreService coreService;
 
     @EJB
-    private DNSApi dnsApi;
+    private DNSApiLoggingEJB dnsApiLoggingEJB;
 
     @EJB
     private GSBService gsbService;
@@ -55,7 +56,7 @@ public class SinkitService implements Serializable {
     private ArchiveService archiveService;
 
     @Inject
-    private Logger log;
+    private transient Logger log;
 
     String createHelloMessage(final String name) {
         return new GsonBuilder().create().toJson(webapi.sayHello(name));
@@ -114,9 +115,9 @@ public class SinkitService implements Serializable {
     }
 
     String processIoCRecord(final String jsonIoCRecord) throws IoCValidationException, ArchiveException {
-        IoCRecord ioc = new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().fromJson(jsonIoCRecord, IoCRecord.class);
-        ioc = coreService.processIoCRecord(ioc);
-        return new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().toJson(ioc);
+        log.log(Level.FINE, "jsonIoCRecord: " + jsonIoCRecord);
+        final IoCRecord ioc = new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().fromJson(jsonIoCRecord, IoCRecord.class);
+        return new GsonBuilder().setDateFormat(IoCRecord.DATE_FORMAT).create().toJson(coreService.processIoCRecord(ioc));
     }
 
     String processWhitelistIoCRecord(final String jsonIoCRecord) throws IoCValidationException, ArchiveException {
@@ -232,14 +233,14 @@ public class SinkitService implements Serializable {
 
     void addEventLogRecord(final String json) throws ArchiveException {
         EventLogRecord logRec = new GsonBuilder().create().fromJson(json, EventLogRecord.class);
-        Map<String, Set<ImmutablePair<String,String>>> ids = new HashMap<>();
-        Set<ImmutablePair<String,String>> typeIoCId;
+        Map<String, Set<ImmutablePair<String, String>>> ids = new HashMap<>();
+        Set<ImmutablePair<String, String>> typeIoCId;
         for (IoCRecord ioc : logRec.getMatchedIocs()) {
             typeIoCId = new HashSet<>();
             typeIoCId.add(new ImmutablePair<>("", ioc.getDocumentId()));
             ids.put(ioc.getDocumentId(), typeIoCId);
         }
-        dnsApi.logDNSEvent(
+        dnsApiLoggingEJB.logDNSEvent(
                 logRec.getAction(),
                 logRec.getClient(),
                 logRec.getRequest().getIp(),
@@ -248,7 +249,7 @@ public class SinkitService implements Serializable {
                 logRec.getReason().getFqdn(),
                 logRec.getReason().getIp(),
                 ids,
-                archiveService,
+                null,
                 log);
     }
 

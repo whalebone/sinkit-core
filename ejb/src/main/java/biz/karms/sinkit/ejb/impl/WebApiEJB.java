@@ -12,6 +12,12 @@ import biz.karms.sinkit.ejb.dto.AllDNSSettingDTO;
 import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
 import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
+import biz.karms.sinkit.ejb.util.EndUserConfigurationValidator;
+import biz.karms.sinkit.ejb.util.ResolverConfigurationValidator;
+import biz.karms.sinkit.exception.EndUserConfigurationValidationException;
+import biz.karms.sinkit.exception.ResolverConfigurationValidationException;
+import biz.karms.sinkit.resolver.EndUserConfiguration;
+import biz.karms.sinkit.resolver.ResolverConfiguration;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
@@ -66,6 +72,20 @@ public class WebApiEJB implements WebApi {
     @SinkitCache(SinkitCacheName.infinispan_gsb)
     private RemoteCache<String, GSBRecord> gsbCache;
 
+    @Inject
+    @SinkitCache(SinkitCacheName.resolver_configuration)
+    private RemoteCache<Integer, ResolverConfiguration> resolverConfigurationCache;
+
+    @Inject
+    @SinkitCache(SinkitCacheName.end_user_configuration)
+    private RemoteCache<String, EndUserConfiguration> endUserConfigurationCache;
+
+    @Inject
+    private ResolverConfigurationValidator resolverConfigurationValidator;
+
+    @Inject
+    private EndUserConfigurationValidator endUserConfigurationValidator;
+
     // Testing/playground purposes
     @Override
     public String sayHello(final String queryString) {
@@ -86,6 +106,8 @@ public class WebApiEJB implements WebApi {
         info.put("Whitelist", whitelistCache.stats().getStatsMap());
         info.put("GSB", gsbCache.stats().getStatsMap());
         info.put("Blacklist", blacklistCache.stats().getStatsMap());
+        info.put("Resolver configurations", resolverConfigurationCache.stats().getStatsMap());
+        info.put("End User configurations", endUserConfigurationCache.stats().getStatsMap());
         return info;
     }
 
@@ -531,5 +553,55 @@ public class WebApiEJB implements WebApi {
     public String postCreateFeedSettings(FeedSettingCreateDTO feedSettingCreate) {
         //TODO
         throw new NotImplementedException("We are sorry, this is not suported at the moment.");
+    }
+
+    @Override
+    public ResolverConfiguration putResolverConfiguration(ResolverConfiguration configuration) throws ResolverConfigurationValidationException {
+        resolverConfigurationValidator.validate(configuration);
+        return resolverConfigurationCache.put(configuration.getResolverId(), configuration);
+    }
+
+    @Override
+    public ResolverConfiguration getResolverConfiguration(int resolverId) {
+        return resolverConfigurationCache.get(resolverId);
+    }
+
+    @Override
+    public ResolverConfiguration deleteResolverConfiguration(int resolverId) {
+        return resolverConfigurationCache.remove(resolverId);
+    }
+
+    @Override
+    public List<ResolverConfiguration> getAllResolverConfigurations() {
+        final RemoteCache<Integer, ResolverConfiguration> resolverConfigurationCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.resolver_configuration
+                .name());
+        final QueryFactory qf = Search.getQueryFactory(resolverConfigurationCache);
+        final Query query = qf.from(ResolverConfiguration.class).build();
+        return query.list();
+    }
+
+    @Override
+    public EndUserConfiguration putEndUserConfiguration(EndUserConfiguration configuration) throws EndUserConfigurationValidationException {
+        endUserConfigurationValidator.validate(configuration);
+        return endUserConfigurationCache.put(configuration.getId(), configuration);
+    }
+
+    @Override
+    public EndUserConfiguration getEndUserConfiguration(String id) {
+        return endUserConfigurationCache.get(id);
+    }
+
+    @Override
+    public EndUserConfiguration deleteEndUserConfiguration(String id) {
+        return endUserConfigurationCache.remove(id);
+    }
+
+    @Override
+    public List<EndUserConfiguration> getAllEndUserConfigurations() {
+        final RemoteCache<String, EndUserConfiguration> endUserConfigurationRemoteCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.end_user_configuration
+                .name());
+        final QueryFactory qf = Search.getQueryFactory(endUserConfigurationRemoteCache);
+        final Query query = qf.from(EndUserConfiguration.class).build();
+        return query.list();
     }
 }

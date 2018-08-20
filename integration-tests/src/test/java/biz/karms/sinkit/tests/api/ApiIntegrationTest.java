@@ -300,7 +300,7 @@ public class ApiIntegrationTest extends Arquillian {
         Calendar c = Calendar.getInstance();
         c.add(Calendar.HOUR, -coreService.getIocActiveHours());
         assertTrue(ioc.getSeen().getLast().after(c.getTime()), "Expected seen.last is not older than " + coreService.getIocActiveHours() + " hours, but got " + ioc.getSeen().getLast());
-        assertTrue(ioc.isActive(), "Expected ioc to be active, but got active: false");
+        assertTrue(ioc.getActive(), "Expected ioc to be active, but got active: false");
         assertNotNull(ioc.getTime().getObservation(), "Expecting time.observation, but got null");
     }
 

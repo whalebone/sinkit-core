@@ -12,10 +12,10 @@
     </container>-->
     <container qualifier="jboss" default="true">
         <configuration>
-            <property name="managementAddress">${sinkit_management_address:192.168.122.156}</property>
+            <property name="managementAddress">${sinkit_management_address:172.16.163.100}</property>
             <property name="managementPort">${sinkit_management_port:9990}</property>
             <property name="username">${sinkit_username:karm}</property>
-            <property name="password">${sinkit_password:changeit}</property>
+            <property name="password">${sinkit_password:HOVNO666-}</property>
             <property name="outputToConsole">true</property>
         </configuration>
     </container>

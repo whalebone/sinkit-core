@@ -51,7 +51,7 @@ public class IoCFactory {
         ioCSource.setAsn(666);
         ioCSource.setAsnName("DevilASN");
         ioCSource.setBgpPrefix("Meh");
-        ioCSource.setFQDN(fqdn); //Nope, this is not the key
+        ioCSource.setFqdn(fqdn); //Nope, this is not the key
         IoCGeolocation ioCGeolocation = new IoCGeolocation();
         ioCGeolocation.setCc("CC_test");
         ioCGeolocation.setCity("Zion");
@@ -89,7 +89,7 @@ public class IoCFactory {
         classification.setType(taxonomyType);
         ioc.setClassification(classification);
         IoCSource source = new IoCSource();
-        if (sourcetype == IoCSourceIdType.FQDN) source.setFQDN(sourceId);
+        if (sourcetype == IoCSourceIdType.FQDN) source.setFqdn(sourceId);
         else if (sourcetype == IoCSourceIdType.IP) source.setIp(sourceId);
         else if (sourcetype == IoCSourceIdType.URL) source.setUrl(sourceId);
         else throw new Exception("Unknown source type: " + sourcetype);
@@ -106,7 +106,7 @@ public class IoCFactory {
         IoCRecord ioc = new IoCRecord();
         ioc.setSource(new IoCSource());
         ioc.getSource().setIp(ip);
-        ioc.getSource().setFQDN(fqdn);
+        ioc.getSource().setFqdn(fqdn);
         ioc.setFeed(new IoCFeed());
         ioc.getFeed().setName(sourceName);
         if (withId) {

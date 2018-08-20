@@ -15,6 +15,7 @@ import biz.karms.sinkit.ioc.IoCSeen;
 import biz.karms.sinkit.ioc.IoCSourceId;
 import biz.karms.sinkit.ioc.IoCSourceIdType;
 import biz.karms.sinkit.ioc.util.IoCSourceIdBuilder;
+import com.google.gson.Gson;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -90,6 +91,8 @@ public class CoreServiceEJB implements CoreService {
 
     @Override
     public IoCRecord processIoCRecord(final IoCRecord ioc) throws ArchiveException, IoCValidationException {
+        log.log(Level.FINE, "PROCESSING IOC: " + new Gson().toJson(ioc));
+
         // validate ioc
         IoCValidator.validateIoCRecord(ioc, iocActiveHours);
 
@@ -114,7 +117,6 @@ public class CoreServiceEJB implements CoreService {
         Date receivedByCore = Calendar.getInstance().getTime();
         ioc.getTime().setReceivedByCore(receivedByCore);
 
-
         WhitelistedRecord white = null;
         if (ioc.getSource().getId().getType() == IoCSourceIdType.FQDN) {
             final String[] fqdns = WhitelistUtils.explodeDomains(ioc.getSource().getId().getValue());
@@ -126,6 +128,8 @@ public class CoreServiceEJB implements CoreService {
             white = whitelistCacheService.get(ioc.getSource().getId().getValue());
         }
         if (white == null) {
+            // Accuracy endeavour: Not on whitelist. Explicitly set to null.
+            ioc.setWhitelistName(null);
             // ioc is inserted as is if does not exist or last.seen is updated
             // ioc has to be inserted before blacklist record, because it needs the documentId to be computed
             archiveService.archiveReceivedIoCRecord(ioc);
@@ -134,7 +138,10 @@ public class CoreServiceEJB implements CoreService {
             ioc.setWhitelistName(white.getSourceName());
             ioc.getTime().setWhitelisted(receivedByCore);
             archiveService.archiveReceivedIoCRecord(ioc);
+            // Accuracy endeavour: Whitelisted, but we store it anyway.
+            blacklistCacheService.addToCache(ioc);
         }
+
         return ioc;
     }
 
@@ -187,12 +194,12 @@ public class CoreServiceEJB implements CoreService {
         final IoCSourceId sid = IoCSourceIdBuilder.build(whiteIoC);
         whiteIoC.getSource().setId(sid);
         // TODO: remove when ttl is received from IntelMQ
-        whiteIoC.getSource().setTTL(whitelistValidSeconds);
+        whiteIoC.getSource().setTtl(whitelistValidSeconds);
         WhitelistedRecord white = whitelistCacheService.get(whiteIoC.getSource().getId().getValue());
         boolean putToCacheBefore = true;
         if (white != null) {
             final Calendar expiresAt = Calendar.getInstance();
-            expiresAt.add(Calendar.SECOND, whiteIoC.getSource().getTTL().intValue());
+            expiresAt.add(Calendar.SECOND, whiteIoC.getSource().getTtl().intValue());
             // if old whitelist record needs update
             if (expiresAt.after(white.getExpiresAt())) {
                 // if old whitelist record was completely processed during last run just update it and quit the process

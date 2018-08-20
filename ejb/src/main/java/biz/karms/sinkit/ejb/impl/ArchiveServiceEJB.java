@@ -62,6 +62,7 @@ public class ArchiveServiceEJB implements ArchiveService {
         //log.info("Searching archive for active IoCs with seen.last older than " + hours + " hours.");
         final Calendar c = Calendar.getInstance();
         c.add(Calendar.HOUR, -hours);
+        //TODO: Is this thread safe?
         final String tooOld = DATEFORMATTER.format(c.getTime());
         final QueryBuilder query = QueryBuilders.filteredQuery(
                 QueryBuilders.termQuery("active", true),
@@ -86,12 +87,10 @@ public class ArchiveServiceEJB implements ArchiveService {
         //compute uniqueReference
         ioc.setUniqueRef(IoCIdentificationUtils.computeUniqueReference(ioc));
         final Map<String, Map<String, Object>> fieldsToUpdate = new HashMap<>();
-        fieldsToUpdate.put("seen", new HashMap<>());
-        fieldsToUpdate.get("seen").put("last", ioc.getSeen().getLast());
-        if (ioc.getFeed().getAccuracy() != null) {
-            fieldsToUpdate.put("feed", new HashMap<>());
-            fieldsToUpdate.get("feed").put("accuracy", ioc.getFeed().getAccuracy());
-        }
+        HashMap<String, Object> lastseen = new HashMap<String, Object>();
+        lastseen.put("last", ioc.getSeen().getLast());
+        fieldsToUpdate.put("seen", lastseen);
+        fieldsToUpdate.put("accuracy", new HashMap<String, Object>(ioc.getAccuracy())); //need to convert <String,Integer> to <String,Object>
         return elasticService.update(ioc.getDocumentId(), fieldsToUpdate, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, ioc);
     }
 

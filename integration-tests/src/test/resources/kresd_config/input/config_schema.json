@@ -1,0 +1,204 @@
+{
+  "$id": "http://portal.whalebone.io/api/v1/policy/resolver.json",
+  "type": "object",
+  "properties": {
+    "resolver_id": {
+      "$id": "/properties/resolver_id",
+      "type": "integer",
+      "title": "Resolver ID",
+      "description": "Portal ID of resolver of this policy",
+      "default": 0,
+      "examples": [
+        12
+      ]
+    },
+    "policies": {
+      "$id": "/properties/policies",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$id": "/properties/policies/items",
+        "type": "object",
+        "properties": {
+          "ip_ranges": {
+            "$id": "/properties/policies/items/properties/ip_ranges",
+            "type": "array",
+            "minItems": 0,
+            "items": {
+              "$id": "/properties/policies/items/properties/ip_ranges/items",
+              "type": "string",
+              "title": "IP Ranges",
+              "description": "IPv4 or IPv6 CIDR",
+              "examples": [
+                "10.10.0.0/16",
+                "10.20.0.0/16"
+              ]
+            }
+          },
+          "strategy": {
+            "$id": "/properties/policies/items/properties/strategy",
+            "type": "object",
+            "properties": {
+              "type": {
+                "$id": "/properties/policies/items/properties/strategy/properties/type",
+                "type": "string",
+                "title": "The Type Schema ",
+                "description": "Resolution strategy",
+                "default": "accuracy",
+                "examples": [
+                  "accuracy",
+                  "whitelist"
+                ],
+                "enum": [
+                  "accuracy",
+                  "whitelist",
+                  "blacklist",
+                  "drop"
+                ]
+              },
+              "params": {
+                "$id": "/properties/policies/items/properties/strategy/properties/params",
+                "type": "object",
+                "properties": {
+                  "audit": {
+                    "$id": "/properties/policies/items/properties/strategy/properties/params/properties/audit",
+                    "type": "integer",
+                    "title": "The Audit Schema ",
+                    "description": "Accuracy treshold for auditing action",
+                    "default": 0,
+                    "examples": [
+                      50
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "block": {
+                    "$id": "/properties/policies/items/properties/strategy/properties/params/properties/block",
+                    "type": "integer",
+                    "title": "The Block Schema ",
+                    "description": "Accuracy threshold for block action",
+                    "default": 0,
+                    "examples": [
+                      70
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "types": {
+                    "$id": "/properties/policies/items/properties/strategy/properties/params/properties/types",
+                    "type": "array",
+                    "minItems": 0,
+                    "items": {
+                      "$id": "/properties/policies/items/properties/strategy/properties/params/properties/types/items",
+                      "type": "string",
+                      "title": "The 0th Schema ",
+                      "description": "Type of IoC records to process in this policy",
+                      "default": "",
+                      "examples": [
+                        "c&c",
+                        "phishing"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "audit",
+                  "block"
+                ]
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "accuracy_feeds": {
+            "$id": "/properties/policies/items/properties/accuracy_feeds",
+            "type": "array",
+            "minItems": 0,
+            "items": {
+              "$id": "/properties/policies/items/properties/accuracy_feeds/items",
+              "type": "string",
+              "title": "The 0th Schema ",
+              "default": "",
+              "examples": [
+                "accuracy-feed",
+                "accuracy-feed-2"
+              ]
+            }
+          },
+          "blacklisted_feeds": {
+            "$id": "/properties/policies/items/properties/blacklisted_feeds",
+            "type": "array",
+            "minItems": 0,
+            "items": {
+              "$id": "/properties/policies/items/properties/blacklisted_feeds/items",
+              "type": "string",
+              "title": "",
+              "default": "",
+              "examples": [
+                "blacklisted-feed",
+                "blacklisted-feed-2"
+              ]
+            }
+          },
+          "customlist": {
+            "$id": "/properties/policies/items/properties/customlist",
+            "type": "object",
+            "properties": {
+              "block": {
+                "$id": "/properties/policies/items/properties/customlist/properties/block",
+                "type": "array",
+                "items": {
+                  "$id": "/properties/policies/items/properties/customlist/properties/block/items",
+                  "type": "string",
+                  "title": "The 0th Schema ",
+                  "default": "",
+                  "examples": [
+                    "blocked.com",
+                    "blocked2.com"
+                  ]
+                }
+              },
+              "white": {
+                "$id": "/properties/policies/items/properties/customlist/properties/white",
+                "type": "array",
+                "items": {
+                  "$id": "/properties/policies/items/properties/customlist/properties/white/items",
+                  "type": "string",
+                  "title": "The 0th Schema ",
+                  "default": "",
+                  "examples": [
+                    "whitelisted.com",
+                    "whitelisted2.com"
+                  ]
+                }
+              },
+              "audit": {
+                "$id": "/properties/policies/items/properties/customlist/properties/audit",
+                "type": "array",
+                "items": {
+                  "$id": "/properties/policies/items/properties/customlist/properties/audit/items",
+                  "type": "string",
+                  "title": "The 0th Schema ",
+                  "default": "",
+                  "examples": [
+                    "audit.com",
+                    "audit2.com"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "ip_ranges",
+          "strategy"
+        ]
+      }
+    }
+  },
+  "required": [
+    "resolver_id",
+    "policies"
+  ]
+}

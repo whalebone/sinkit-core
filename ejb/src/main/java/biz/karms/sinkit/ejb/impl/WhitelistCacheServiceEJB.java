@@ -39,12 +39,12 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
 
         final WhitelistedRecord white = WhitelistUtils.createWhitelistedRecord(iocRecord, completed);
         final String key = DigestUtils.md5Hex(white.getRawId());
-        log.log(Level.FINE, "Whitelist key: " + key + ", ttl in s: " + iocRecord.getSource().getTTL());
+        log.log(Level.FINE, "Whitelist key: " + key + ", ttl in s: " + iocRecord.getSource().getTtl());
         try {
             if (!whitelistCache.containsKey(key)) {
-                whitelistCache.put(key, white, iocRecord.getSource().getTTL(), TimeUnit.SECONDS);
+                whitelistCache.put(key, white, iocRecord.getSource().getTtl(), TimeUnit.SECONDS);
             } else {
-                whitelistCache.replace(key, white, iocRecord.getSource().getTTL(), TimeUnit.SECONDS);
+                whitelistCache.replace(key, white, iocRecord.getSource().getTtl(), TimeUnit.SECONDS);
             }
         } catch (Exception e) {
             log.log(Level.SEVERE, "put", e);
@@ -115,7 +115,7 @@ public class WhitelistCacheServiceEJB implements WhitelistCacheService {
             log.log(Level.SEVERE, "put: Cannot put entry to whitelist - ioc or ioc.source.id.value is null or blank");
             return false;
         }
-        if (iocRecord.getSource().getTTL() == null) {
+        if (iocRecord.getSource().getTtl() == null) {
             log.log(Level.SEVERE, "put: Cannot put entry to whitelist - ioc.source.ttl is null");
             return false;
         }

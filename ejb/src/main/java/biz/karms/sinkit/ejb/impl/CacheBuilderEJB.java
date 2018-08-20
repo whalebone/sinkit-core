@@ -20,7 +20,7 @@ import java.util.logging.Logger;
 
 /**
  * @author Tomas Kozel
- * Maintains state
+ *         Maintains state
  */
 @Stateless
 public class CacheBuilderEJB implements CacheBuilder {

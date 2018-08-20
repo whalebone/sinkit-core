@@ -30,7 +30,7 @@ public class SinkitREST implements Serializable {
     SinkitService sinkitService;
 
     @Inject
-    private Logger log;
+    private transient Logger log;
 
     @GET
     @Path("/hello/{name}")

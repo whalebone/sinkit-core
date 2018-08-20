@@ -2,7 +2,7 @@ FROM fedora:25
 MAINTAINER Michal Karm Babacek <karm@email.cz
 LABEL description="Codename Feed: Sinkit Core POC"
 
-ENV DEPS            java-1.8.0-openjdk-devel.x86_64 unzip wget gawk sed openssl jna.x86_64 jsch-agent-proxy-usocket-jna.noarch
+ENV DEPS            java-1.8.0-openjdk-devel.x86_64 unzip wget gawk sed openssl jna.x86_64 jsch-agent-proxy-usocket-jna.noarch nfs-utils sudo
 ENV JBOSS_HOME      "/opt/sinkit/wildfly"
 ENV JAVA_HOME       "/usr/lib/jvm/java-1.8.0"
 
@@ -39,7 +39,11 @@ RUN echo 'JAVA_OPTS="\
  -XX:HeapDumpPath=/opt/sinkit \
 "' >> /opt/sinkit/wildfly/bin/standalone.conf
 RUN mkdir -p /opt/sinkit/wildfly/standalone/log/ && mkdir -p /opt/sinkit/certs && mkdir -p /opt/sinkit/protobuf && \
-    chown sinkit /opt/sinkit/ -R && chgrp sinkit /opt/sinkit/ -R && chmod g+s /opt/sinkit/ -R
+    chown sinkit /opt/sinkit/ -R && chgrp sinkit /opt/sinkit/ -R && chmod g+s /opt/sinkit/ -R && \
+    # NFS - hardcoded, we shouldn't take arbirtary strings here...
+    echo 'mount -o ro,nolock -t nfs ispn-dump2proto.core:/exports /opt/sinkit/protobuf' > /opt/sinkit/mount.sh && \
+    chmod ugo-w /opt/sinkit/mount.sh && chmod ugo+rx /opt/sinkit/mount.sh && \
+    echo 'sinkit ALL=NOPASSWD:/opt/sinkit/mount.sh' >> /etc/sudoers
 ADD sinkit.sh /opt/sinkit/
 USER sinkit
 # Deployment

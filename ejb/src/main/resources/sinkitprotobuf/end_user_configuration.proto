@@ -1,0 +1,13 @@
+package sinkitprotobuf;
+
+/* @Indexed */
+message EndUserConfiguration {
+    /* @IndexedField */
+    required int32 clientId = 1;
+    required string userId = 2;
+    required int32 policyId = 3;
+    repeated string identities = 4;
+    repeated string whitelist = 5;
+    repeated string blacklist = 6;
+
+}
