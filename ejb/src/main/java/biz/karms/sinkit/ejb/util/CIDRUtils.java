@@ -43,6 +43,11 @@ public class CIDRUtils {
     }
 
     public static ImmutablePair<String, String> getStartEndAddresses(final String cidr) throws UnknownHostException {
+        final ImmutablePair<BigInteger, BigInteger> startEnd = getStartEndAddressesBigInt(cidr);
+        return new ImmutablePair<>(String.format("%040d", startEnd.getLeft()), String.format("%040d", startEnd.getRight()));
+    }
+
+    public static ImmutablePair<BigInteger, BigInteger> getStartEndAddressesBigInt(final String cidr) throws UnknownHostException {
         //TODO: This is silly. Refactor CIDRUtils so as to accept actual IPs as well as subnets.
         //TODO: Validate the thing before processing. Guava?
         final String fixedCIDR;
@@ -73,6 +78,6 @@ public class CIDRUtils {
         final BigInteger startIp = ipVal.and(mask);
         final BigInteger endIp = startIp.add(mask.not());
 
-        return new ImmutablePair<>(String.format("%040d", startIp), String.format("%040d", endIp));
+        return new ImmutablePair<>(startIp, endIp);
     }
 }
