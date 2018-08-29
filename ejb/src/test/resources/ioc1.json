@@ -1,0 +1,23 @@
+{
+	"document_id": "3babcf489b67dfaa54f9f8b3d92d16ec",
+	"feed": {
+		"name": "feed1"
+	},
+	"classification": {
+		"type": "SomeType"
+	},
+	"source": {
+		"fqdn": "whalebone.io",
+		"id": {
+			"value": "whalebone.io",
+			"type": "fqdn"
+		}
+	},
+	"time": {
+		"observation": "2018-03-20T05:37:09+0000"
+	},
+	"accuracy": {
+		"feed": 34,
+		"passivedns": 30
+	}
+}

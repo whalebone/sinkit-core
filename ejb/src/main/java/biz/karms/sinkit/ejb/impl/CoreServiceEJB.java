@@ -306,4 +306,6 @@ public class CoreServiceEJB implements CoreService {
     public void setWhitelistValidSeconds(final long whitelistValidSeconds) {
         this.whitelistValidSeconds = whitelistValidSeconds;
     }
+
+
 }

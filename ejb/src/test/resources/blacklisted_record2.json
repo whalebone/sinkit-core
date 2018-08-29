@@ -1,0 +1,23 @@
+{
+  "blackListedDomainOrIP":"19059174cfbd451678e3c2dc889f2c36",
+  "presentOnWhiteList":"false",
+  "listed": "2018-04-01",
+  "sources":{
+    "feed1":{
+      "SomeType":"3babcf489b67dfaa54f9f8b3d92d16ec"
+    }
+    ,"feed2":{
+      "SomeType":"21ac3ba24c11e08b8c5ab205b7b45eee"
+    }
+  },
+  "accuracy":{
+    "feed1":{
+      "feed":"34",
+      "passivedns":"30"
+    },
+    "feed2":{
+      "feed":"20",
+      "passivedns":"30"
+    }
+  }
+}
