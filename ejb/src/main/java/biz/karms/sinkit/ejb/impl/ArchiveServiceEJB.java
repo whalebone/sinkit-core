@@ -95,9 +95,15 @@ public class ArchiveServiceEJB implements ArchiveService {
         return elasticService.update(ioc.getDocumentId(), fieldsToUpdate, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, ioc);
     }
 
+    /**
+     * Wrapper method for elasticService.update
+     * @param report
+     * @param document_id
+     * @return true if update is processed
+     * @throws ArchiveException
+     */
     @Override
     public boolean setReportToIoCRecord(final IoCAccuCheckerReport report, String document_id) throws ArchiveException{
-        // a wrapper for simple update
         return elasticService.update(document_id, report, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, null);
 
     }
@@ -144,8 +150,12 @@ public class ArchiveServiceEJB implements ArchiveService {
         return logRecord;
     }
 
-    /*
-    Lists matching entries, lists up to DEF_LIMIT of them.
+    /**
+     * Lists matching entris, lists up to DEF_LIMIT of them (defined in ElasticServiceEJB.class)
+     * @param name name of the field to be matched  against
+     * @param value value of this field
+     * @return List of matching entries
+     * @throws ArchiveException
      */
     @Override
     public List<IoCRecord> getMatchingEntries(String name, String value) throws ArchiveException {

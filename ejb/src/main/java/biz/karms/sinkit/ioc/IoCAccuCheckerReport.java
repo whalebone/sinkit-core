@@ -3,8 +3,9 @@ package biz.karms.sinkit.ioc;
 import java.io.Serializable;
 import java.util.HashMap;
 
-/*
-* Class that represents an AccuCheckerReport
+/**
+ * Class representing AccuCheckerReport
+ *
  */
 public class IoCAccuCheckerReport implements Serializable {
 

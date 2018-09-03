@@ -147,7 +147,11 @@ public class CoreServiceEJB implements CoreService {
     }
 
     /**
-     *returns true if all archivations and saves to cache succeed, otherwise returns false(or throws ArchiveException)
+     * updates all entries in cache and in elastic with report
+     * @param report
+     * @return true if all archivations and cache updates succeed
+     * @throws ArchiveException
+     * @throws IoCValidationException
      */
     @Override
     public boolean updateWithAccuCheckerReport(IoCAccuCheckerReport report) throws ArchiveException, IoCValidationException {
