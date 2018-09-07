@@ -8,6 +8,7 @@ import biz.karms.sinkit.eventlog.EventLogRecord;
 import biz.karms.sinkit.eventlog.VirusTotalRequestStatus;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.ioc.IoCRecord;
+import biz.karms.sinkit.ioc.IoCSeen;
 import biz.karms.sinkit.ioc.IoCVirusTotalReport;
 import com.google.gson.Gson;
 import org.apache.commons.collections.CollectionUtils;
@@ -86,11 +87,13 @@ public class ArchiveServiceEJB implements ArchiveService {
         ioc.setDocumentId(IoCIdentificationUtils.computeHashedId(ioc));
         //compute uniqueReference
         ioc.setUniqueRef(IoCIdentificationUtils.computeUniqueReference(ioc));
-        final Map<String, Map<String, Object>> fieldsToUpdate = new HashMap<>();
-        HashMap<String, Object> lastseen = new HashMap<String, Object>();
-        lastseen.put("last", ioc.getSeen().getLast());
-        fieldsToUpdate.put("seen", lastseen);
-        fieldsToUpdate.put("accuracy", new HashMap<String, Object>(ioc.getAccuracy())); //need to convert <String,Integer> to <String,Object>
+
+        final IoCRecord fieldsToUpdate = new IoCRecord();
+        IoCSeen seen = new IoCSeen();
+        seen.setLast(ioc.getSeen().getLast());
+        fieldsToUpdate.setAccuracy(ioc.getAccuracy());
+        fieldsToUpdate.setSeen(seen);
+
         return elasticService.update(ioc.getDocumentId(), fieldsToUpdate, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, ioc);
     }
 

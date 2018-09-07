@@ -48,6 +48,12 @@ public class BlacklistCacheServiceEJB implements BlacklistCacheService {
             return false;
         }
 
+        if (ioCRecord.getAccuracy() == null) {
+            log.log(Level.INFO, "addToCache: ioCRecord has accuracy null.");
+            final HashMap<String, Integer> accuracy = new HashMap<>();
+            ioCRecord.setAccuracy(accuracy);
+        }
+
         log.log(Level.FINE, "PROCESSING IOC for Blacklistcache: " + new Gson().toJson(ioCRecord));
 
         final String md5Key = DigestUtils.md5Hex(ioCRecord.getSource().getId().getValue());
