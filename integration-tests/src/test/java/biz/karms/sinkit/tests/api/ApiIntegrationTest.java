@@ -7,6 +7,7 @@ import biz.karms.sinkit.ejb.CoreService;
 import biz.karms.sinkit.ejb.impl.ArchiveServiceEJB;
 import biz.karms.sinkit.ioc.IoCRecord;
 import biz.karms.sinkit.ioc.IoCSourceIdType;
+import biz.karms.sinkit.tests.util.FileUtils;
 import biz.karms.sinkit.tests.util.InfinispanManager;
 import biz.karms.sinkit.tests.util.IoCFactory;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
@@ -29,6 +30,7 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import static org.testng.Assert.assertEquals;
@@ -64,31 +66,10 @@ public class ApiIntegrationTest extends Arquillian {
         WebRequest requestSettings = new WebRequest(new URL(context + "rest/rules/all"), HttpMethod.POST);
         requestSettings.setAdditionalHeader("Content-Type", "application/json");
         requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
-        requestSettings.setRequestBody(
-                "[{\"dns_client\":\"10.10.10.10/32\"," +
-                        "\"settings\":{\"feed-3\":\"D\"," +
-                        "\"feed2\":\"S\"," +
-                        "\"test-feed1\":\"L\"}," +
-                        "\"customer_id\":2," +
-                        "\"customer_name\":\"yadayada-2\"}," +
-                        "{\"dns_client\":\"10.10.10.11/32\"," +
-                        "\"settings\":{\"feed-3\":\"D\"," +
-                        "\"feed2\":\"S\"," +
-                        "\"test-feed1\":\"L\"}," +
-                        "\"customer_id\":2," +
-                        "\"customer_name\":\"yadayada-2\"}," +
-                        "{\"dns_client\":\"10.11.12.0/24\"," +
-                        "\"settings\":{\"test-feed1\":\"L\"," +
-                        "\"feed2\":\"S\"," +
-                        "\"feed-3\":\"D\"}," +
-                        "\"customer_id\":1," +
-                        "\"customer_name\":\"test-yadayada\"}," +
-                        "{\"dns_client\":\"10.11.30.30/32\"," +
-                        "\"settings\":{\"test-feed1\":\"L\"," +
-                        "\"feed2\":\"S\"," +
-                        "\"feed-3\":\"D\"}," +
-                        "\"customer_id\":1," +
-                        "\"customer_name\":\"test-yadayada\"}]");
+
+        String clientSettings = FileUtils.readFileIntoString("DNSClientSettings.json");
+        requestSettings.setRequestBody(clientSettings);
+
         Page page = webClient.getPage(requestSettings);
         assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
@@ -97,7 +78,7 @@ public class ApiIntegrationTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "Expected " + expected + ", but got: " + responseBody);
     }
 
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 2)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 2)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void putCustomListsTest(@ArquillianResource URL context) throws Exception {
@@ -105,17 +86,10 @@ public class ApiIntegrationTest extends Arquillian {
         WebRequest requestSettings = new WebRequest(new URL(context + "rest/lists/2"), HttpMethod.PUT);
         requestSettings.setAdditionalHeader("Content-Type", "application/json");
         requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
-        requestSettings.setRequestBody(
-                "[{\"dns_client\":\"10.10.10.10/32\"," +
-                        "\"lists\":{\"seznam.cz\":\"W\"," +
-                        "\"google.com\":\"B\"," +
-                        "\"example.com\":\"L\"}" +
-                        "}," +
-                        "{\"dns_client\":\"fe80::3ea9:f4ff:fe81:c450/64\"," +
-                        "\"lists\":{\"seznam.cz\":\"L\"," +
-                        "\"google.com\":\"W\"," +
-                        "\"example.com\":\"W\"}" +
-                        "}]");
+
+        String customLists = FileUtils.readFileIntoString("customLists.json");
+        requestSettings.setRequestBody(customLists);
+
         Page page = webClient.getPage(requestSettings);
         assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
@@ -124,14 +98,25 @@ public class ApiIntegrationTest extends Arquillian {
         assertTrue(responseBody.contains(expected), "Expected: " + expected + ", but got: " + responseBody);
     }
 
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 3)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 3)
     public void addIoCsTest() throws Exception {
-        IoCRecord ioCRecord = IoCFactory.getIoCRecord("hosted", "blacklist", "myDocumentId", "feed2", "feed2", "seznam.cz", IoCSourceIdType.FQDN, "seznam.cz", null, "seznam.cz");
+        IoCRecord ioCRecord = IoCFactory.getIoCRecord("hosted",
+                "blacklist",
+                "myDocumentId",
+                "feed2",
+                "feed2",
+                "seznam.cz",
+                 IoCSourceIdType.FQDN,
+                "seznam.cz",
+                null,
+                "seznam.cz");
         assertTrue(blacklistCacheService.dropTheWholeCache(), "Dropping the whole cache failed.");
         assertTrue(blacklistCacheService.addToCache(ioCRecord), "Adding a new IoC to a presumably empty cache failed.");
     }
 
 
+    //stats webApi.getStats now returns much more than that
+    //TODO:Fix for this to reflect that
     @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 4)
     @OperateOnDeployment("ear")
     @RunAsClient
@@ -149,7 +134,7 @@ public class ApiIntegrationTest extends Arquillian {
     }
 
 
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 5)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 5)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void getIoCsTest(@ArquillianResource URL context) throws Exception {
@@ -166,7 +151,7 @@ public class ApiIntegrationTest extends Arquillian {
     }
 
 
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 6)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 6)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void getIoCTest(@ArquillianResource URL context) throws Exception {
@@ -180,12 +165,12 @@ public class ApiIntegrationTest extends Arquillian {
         LOGGER.info("getIoCTest Response:" + responseBody);
         String expected = "\"black_listed_domain_or_i_p\":\"aed14ad7ed6c543f818a4cfe89cb8f20\""; // md5 of seznam.cz
         assertTrue(responseBody.contains(expected), "IoC response should have contained " + expected + ", but got:" + responseBody);
-        expected = "\"sources\":{\"feed2\":{\"a\":\"blacklist\",\"b\":\"myDocumentId\"}}";
+        expected = "\"sources\":{\"feed2\":{\"left\":\"blacklist\",\"right\":\"myDocumentId\"}}";
         assertTrue(responseBody.contains(expected), "IoC should have contained " + expected + ", but got: " + responseBody);
     }
 
 
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 7)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 7)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void getSinkHoleTest(@ArquillianResource URL context) throws Exception {
@@ -212,10 +197,14 @@ public class ApiIntegrationTest extends Arquillian {
     @OperateOnDeployment("ear")
     @RunAsClient
     public void cleanElasticTest(@ArquillianResource URL context) throws Exception {
+
+        LOGGER.info("Cleaning elastic");
         WebClient webClient = new WebClient();
+        //REST port is not SINKIT_ELASTIC_PORT
         WebRequest requestSettings = new WebRequest(
-                new URL("http://" + System.getenv("SINKIT_ELASTIC_HOST") + ":" + System.getenv("SINKIT_ELASTIC_PORT") +
+                new URL("http://" + System.getenv("SINKIT_ELASTIC_HOST") + ":" + System.getenv("SINKIT_ELASTIC_REST_PORT")  +
                         "/" + ArchiveServiceEJB.ELASTIC_IOC_INDEX + "/"), HttpMethod.DELETE);
+
         Page page;
         try {
             page = webClient.getPage(requestSettings);
@@ -226,7 +215,8 @@ public class ApiIntegrationTest extends Arquillian {
     }
 
 
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 9)
+
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 9)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void receiveIoCTest(@ArquillianResource URL context) throws Exception {
@@ -238,40 +228,12 @@ public class ApiIntegrationTest extends Arquillian {
         String feed = "integrationTest";
         String type = "phishing";
         String fqdn = "phishing.ru";
-        requestSettings.setRequestBody(
-                "{" +
-                        "\"feed\":{" +
-                        "\"name\":\"" + feed + "\"," +
-                        "\"url\":\"http://www.greatfeed.com/feed.txt\"" +
-                        "}," +
-                        "\"classification\":{" +
-                        "\"type\": \"" + type + "\"," +
-                        "\"taxonomy\": \"Fraud\"" +
-                        "}," +
-                        "\"raw\":\"aHR0cDovL2luZm9ybWF0aW9uLnVwZGF0ZS5teWFjY291bnQtc2VjdXJlLmNvbS85ODI0YTYxOGRlNTlmYjE2MTlmNTUzNTgwYWFmZjcxMS9mMWI2YTE2OTc2MDRiNmI2M2IwODBmODQ2N2FiNGZiNS8=\"," +
-                        "\"source\":{" +
-                        "\"fqdn\":\"" + fqdn + "\"," +
-                        "\"bgp_prefix\":\"some_prefix\"," +
-                        "\"asn\":\"123456\"," +
-                        "\"asn_name\":\"some_name\"," +
-                        "\"geolocation\":{" +
-                        "\"cc\":\"RU\"," +
-                        "\"city\":\"City\"," +
-                        "\"latitude\":\"85.12645\"," +
-                        "\"longitude\":\"-12.9788\"" +
-                        "}" +
-                        "}," +
-                        "\"time\":{" +
-                        "\"observation\":\"" + new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(Calendar.getInstance().getTime()) + "\"" +
-                        "}," +
-                        "\"protocol\":{" +
-                        "\"application\":\"ssh\"" +
-                        "}," +
-                        "\"description\":{" +
-                        "   \"text\":\"description\"" +
-                        "}" +
-                        "}"
-        );
+
+        String ioc = FileUtils.readFileIntoString("ioc1.json");
+        ioc = ioc.replace("TIME_OBSERVATION",
+                new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(Calendar.getInstance().getTime()));
+        requestSettings.setRequestBody(ioc);
+
         Page page = webClient.getPage(requestSettings);
         assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
@@ -281,7 +243,7 @@ public class ApiIntegrationTest extends Arquillian {
     }
 
 
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 10)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 10)
     public void iocInElasticTest() throws Exception {
 
         String feed = "integrationTest";
@@ -305,7 +267,7 @@ public class ApiIntegrationTest extends Arquillian {
     }
 
 
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 11)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 11)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void iocInCacheTest(@ArquillianResource URL context) throws Exception {
@@ -319,12 +281,12 @@ public class ApiIntegrationTest extends Arquillian {
         LOGGER.info("iocInCacheTest Response:" + responseBody);
         String expected = "\"black_listed_domain_or_i_p\":\"926dab5157943daed27851a34f30b701\"";  // md5 of phishing.ru
         assertTrue(responseBody.contains(expected), "IoC response should have contained " + expected + ", but got:" + responseBody);
-        expected = "\"sources\":{\"integrationTest\":{\"a\":\"phishing\",\"b\":\"";
+        expected = "\"sources\":{\"integrationTest\":{\"left\":\"phishing\",\"right\":\"";
         assertTrue(responseBody.contains(expected), "IoC should have contained " + expected + ", but got: " + responseBody);
     }
 
 
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 20)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 20)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void endToEndTest(@ArquillianResource URL context) throws Exception {
@@ -352,7 +314,8 @@ public class ApiIntegrationTest extends Arquillian {
         requestSettingsIoC.setRequestBody("{\"feed\":{\"name\":\"some-intelmq-feed-to-sink\",\"url\":\"http://example.com/feed.txt\"},\"classification\":{\"type\": \"phishing\",\"taxonomy\": \"Fraud\"},\"raw\":\"aHwwwwfdfBmODQ2N244iNGZiNS8=\",\"source\":{\"fqdn\":\"evil-domain-that-is-to-be-listed.cz\",\"bgp_prefix\":\"some_prefix\",\"asn\":\"3355556\",\"asn_name\":\"any_name\",\"geolocation\":{\"cc\":\"RU\",\"city\":\"City\",\"latitude\":\"85.12645\",\"longitude\":\"-12.9788\"}},\"time\":{\"observation\":\"" + observation + "\"},\"protocol\":{\"application\":\"ssh\"},\"description\":{\"text\":\"description\"}}");
         Page pageIoC = webClient.getPage(requestSettingsIoC);
         assertEquals(HttpURLConnection.HTTP_OK, pageIoC.getWebResponse().getStatusCode());
-        String responseBodyIoC = pageIoC.getWebResponse().getContentAsString();
+        String responseBodyIoC
+                = pageIoC.getWebResponse().getContentAsString();
         LOGGER.info("endToEndIoC Response:" + responseBodyIoC);
         assertTrue(responseBodyIoC.contains("\"document_id\":\"2350e3c4042fbb9678b7b94269e91e7b\""));
         assertTrue(responseBodyIoC.contains("\"feed\":{\"url\":\"http://example.com/feed.txt\",\"name\":\"some-intelmq-feed-to-sink\"},\"description\":{\"text\":\"description\"},\"classification\":{\"type\":\"phishing\",\"taxonomy\":\"Fraud\"},\"protocol\":{\"application\":\"ssh\"},\"raw\":\"aHwwwwfdfBmODQ2N244iNGZiNS8\\u003d\",\"source\":{\"id\":{\"value\":\"evil-domain-that-is-to-be-listed.cz\",\"type\":\"fqdn\"},\"fqdn\":\"evil-domain-that-is-to-be-listed.cz\",\"asn\":3355556,\"asn_name\":\"any_name\",\"geolocation\":{\"cc\":\"RU\",\"city\":\"City\",\"latitude\":85.12645,\"longitude\":-12.9788},\"bgp_prefix\":\"some_prefix\"}"));
@@ -370,28 +333,17 @@ public class ApiIntegrationTest extends Arquillian {
         String index = IoCFactory.getLogIndex();
 
         WebRequest requestSettingsLog = new WebRequest(new URL(
-                "http://" + System.getenv("SINKIT_ELASTIC_HOST") + ":" + System.getenv("SINKIT_ELASTIC_PORT") + "/" +
+                "http://" + System.getenv("SINKIT_ELASTIC_HOST") + ":" + System.getenv("SINKIT_ELASTIC_REST_PORT") + "/" +
                         index + "/" + ArchiveServiceEJB.ELASTIC_LOG_TYPE + "/_search"
         ), HttpMethod.POST);
         requestSettingsLog.setAdditionalHeader("Content-Type", "application/json");
         requestSettingsLog.setAdditionalHeader("X-sinkit-token", TOKEN);
-        requestSettingsLog.setRequestBody("{\n" +
-                        "   \"query\" : {\n" +
-                        "       \"filtered\" : {\n" +
-                        "           \"query\" : {\n" +
-                        "               \"query_string\" : {\n" +
-                        "                   \"query\": \"action : \\\"block\\\" AND " +
-                        "                       client : \\\"666\\\" AND " +
-                        "                       request.ip : \\\"94.0.0.1\\\" AND " +
-//depracted             "                       request.raw : \\\"requestRaw\\\" AND " +
-                        "                       reason.fqdn : \\\"evil-domain-that-is-to-be-listed.cz\\\"\"\n" +
-//not used in this case "                       reason.ip : \\\"10.1.1.3\\\"\"\n" +
-                        "               }\n" +
-                        "           }\n" +
-                        "       }\n" +
-                        "   }\n" +
-                        "}\n"
-        );
+
+        String query = FileUtils.readFileIntoString("endToEndQuery.json");
+        requestSettingsLog.setRequestBody(query);
+
+        // WAITING necessary for elastic to get updated
+        TimeUnit.SECONDS.sleep(2);
         Page pageLog = webClient.getPage(requestSettingsLog);
         assertEquals(HttpURLConnection.HTTP_OK, pageLog.getWebResponse().getStatusCode());
         String responseBodyLog = pageLog.getWebResponse().getContentAsString();
@@ -400,7 +352,7 @@ public class ApiIntegrationTest extends Arquillian {
         JsonArray hits = jsonParser.parse(responseBodyLog).getAsJsonObject()
                 .get("hits").getAsJsonObject()
                 .get("hits").getAsJsonArray();
-        assertTrue(hits.size() == 1);
+        assertEquals(hits.size(),1);
 
         JsonObject logRecord = hits.get(0).getAsJsonObject().get("_source").getAsJsonObject();
         assertEquals(logRecord.get("action").getAsString(), "block", "Expected LogRecord.action: block, but got: " + logRecord.get("action").getAsString());
@@ -410,7 +362,6 @@ public class ApiIntegrationTest extends Arquillian {
         assertEquals(logRecord.get("reason").getAsJsonObject().get("fqdn").getAsString(), "evil-domain-that-is-to-be-listed.cz", "Expected LogRecord.reason.fqdn: evil-domain-that-is-to-be-listed.cz, but got: " + logRecord.get("reason").getAsJsonObject().get("fqdn").getAsString());
         assertNull(logRecord.get("reason").getAsJsonObject().get("ip")/*, "Expected LogRecord.reason.ip to be null, but got: " + logRecord.get("reason").getAsJsonObject().get("ip").getAsString()*/);
         assertNotNull(logRecord.get("logged").getAsString(), "Expected LogRecord.logged not to be null, but got null");
-        assertEquals(logRecord.get("virus_total_request").getAsJsonObject().get("status").getAsString(), "waiting", "Expected LogRecord.virus_total_request.status: waiting, but got: " + logRecord.get("virus_total_request").getAsJsonObject().get("status").getAsString());
         JsonArray matchedIocs = logRecord.get("matched_iocs").getAsJsonArray();
         assertTrue(matchedIocs.size() == 1, "Expected size of LogRecord.matched_iocs array: 1, but got: " + matchedIocs.size());
         JsonObject matchedIoc1 = matchedIocs.get(0).getAsJsonObject();

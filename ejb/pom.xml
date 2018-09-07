@@ -116,13 +116,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- VirusTotal client-->
-        <dependency>
-            <groupId>com.kanishka.api</groupId>
-            <artifactId>VirustotalPublicV2.0</artifactId>
-            <version>${com.kanishka.api.VirustotalPublicV2.0.version}</version>
-        </dependency>
-
         <!-- jUnit testing -->
         <dependency>
             <groupId>junit</groupId>

@@ -1,0 +1,11 @@
+{
+  "query" : {
+    "filtered" : {
+      "query" : {
+        "query_string" : {
+          "query": "action:block AND client:666 AND request.ip : 94.0.0.1 AND reason.fqdn:evil-domain-that-is-to-be-listed.cz"
+        }
+      }
+    }
+  }
+}

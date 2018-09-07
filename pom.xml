@@ -60,7 +60,7 @@
         <version.surefire.plugin>2.16</version.surefire.plugin>
         <version.ear.plugin>2.6</version.ear.plugin>
         <version.ejb.plugin>2.3</version.ejb.plugin>
-        <version.war.plugin>2.1.2-SNAPSHOT</version.war.plugin>
+        <version.war.plugin>3.2.2</version.war.plugin>
 
         <!-- maven-compiler-plugin -->
         <maven.compiler.target>1.8</maven.compiler.target>
@@ -68,12 +68,12 @@
 
         <!-- Testing -->
         <arquillian.bom.version>1.1.11.Final</arquillian.bom.version>
-        <arquillian.container.managed.version>2.1.2-SNAPSHOT.Final</arquillian.container.managed.version>
+        <arquillian.container.managed.version>2.0.1.Final</arquillian.container.managed.version>
         <version.arquillian_maven>1.0.0.Alpha2</version.arquillian_maven>
         <!-- 1.0.0.Final for remote brings up https://issues.jboss.org/browse/JBTM-2414 :-( with WildFly 9.0.1 -->
         <!-- Not tested with 10.0.0.CR2 :-( -->
         <arquillian.container.remote>2.0.0.Final</arquillian.container.remote>
-        <org.testng.version>6.11</org.testng.version>
+        <org.testng.version>6.9.9</org.testng.version>
         <htmlunit.version>2.18</htmlunit.version>
         <arquillian.extension.version>1.1.2</arquillian.extension.version>
         <junit.version>4.12</junit.version>

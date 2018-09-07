@@ -3,6 +3,7 @@ package biz.karms.sinkit.tests.core;
 import biz.karms.sinkit.ejb.ArchiveService;
 import biz.karms.sinkit.ejb.CoreService;
 import biz.karms.sinkit.ejb.DNSApi;
+import biz.karms.sinkit.ejb.impl.ArchiveServiceEJB;
 import biz.karms.sinkit.ejb.impl.DNSApiLoggingEJB;
 import biz.karms.sinkit.eventlog.EventLogAction;
 import biz.karms.sinkit.exception.TooOldIoCException;
@@ -33,6 +34,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import static org.testng.Assert.assertEquals;
@@ -58,7 +60,7 @@ public class CoreTest extends Arquillian {
     @EJB
     private DNSApiLoggingEJB dnsApiLoggingEJB;
 
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 12)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 12)
     public void deduplicationTest() throws Exception {
         Calendar c = Calendar.getInstance();
         c.set(Calendar.MILLISECOND, 0);
@@ -83,7 +85,7 @@ public class CoreTest extends Arquillian {
         assertEquals(iocIndexed.getSeen().getFirst(), firstObservation, "Expected seen.first: " + firstObservation + ", but got: " + iocIndexed.getSeen().getFirst());
     }
 
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 13, expectedExceptions = TooOldIoCException.class)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 13, expectedExceptions = TooOldIoCException.class)
     public void tooOldSourceTimeTest() throws Exception {
         Calendar c = Calendar.getInstance();
         c.set(Calendar.MILLISECOND, 0);
@@ -95,7 +97,7 @@ public class CoreTest extends Arquillian {
         coreService.processIoCRecord(ioc);
     }
 
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 14, expectedExceptions = TooOldIoCException.class)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 14, expectedExceptions = TooOldIoCException.class)
     public void tooOldObservationTimeTest() throws Exception {
         Calendar c = Calendar.getInstance();
         c.set(Calendar.MILLISECOND, 0);
@@ -105,7 +107,7 @@ public class CoreTest extends Arquillian {
         coreService.processIoCRecord(ioc);
     }
 
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 15)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 15)
     public void goodTimeTest() throws Exception {
         Calendar c = Calendar.getInstance();
         c.set(Calendar.MILLISECOND, 0);
@@ -131,7 +133,7 @@ public class CoreTest extends Arquillian {
         assertTrue(receivedByCore.before(observation.getTime().getReceivedByCore()), "Expected time.receivedByCore to be after " + receivedByCore + ", but was: " + observation.getTime().getReceivedByCore());
     }
 
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 16)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 16)
     public void deactivationTest() throws Exception {
         Calendar c = Calendar.getInstance();
         Date deactivationTime = c.getTime();
@@ -170,6 +172,7 @@ public class CoreTest extends Arquillian {
      * @param context
      * @throws Exception
      */
+
     @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 17)
     @OperateOnDeployment("ear")
     @RunAsClient
@@ -179,7 +182,7 @@ public class CoreTest extends Arquillian {
 
         WebClient webClient = new WebClient();
         WebRequest requestSettings = new WebRequest(
-                new URL("http://" + System.getenv("SINKIT_ELASTIC_HOST") + ":" + System.getenv("SINKIT_ELASTIC_PORT") +
+                new URL("http://" + System.getenv("SINKIT_ELASTIC_HOST") + ":" + System.getenv("SINKIT_ELASTIC_REST_PORT") +
                         "/" + index + "/"), HttpMethod.DELETE);
         Page page;
         try {
@@ -220,17 +223,18 @@ public class CoreTest extends Arquillian {
     }
 
     //Circle CI has a problem with this test -> temporarily ignored until fixed
+    //TODO: REVIVE this test
     @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 19)
-    //@OperateOnDeployment("ear")
-    //@RunAsClient
+    @OperateOnDeployment("ear")
+    @RunAsClient
     public void dnsEventLogTestAssert() throws Exception {
 
         String index = IoCFactory.getLogIndex();
         WebClient webClient = new WebClient();
         webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
         WebRequest requestSettings = new WebRequest(new URL(
-                "http://" + System.getenv("SINKIT_ELASTIC_HOST") + ":" + System.getenv("SINKIT_ELASTIC_PORT") + "/" +
-                        index + "/" /*+ ArchiveServiceEJB.ELASTIC_LOG_TYPE*/ + "/_search"
+                "http://" + System.getenv("SINKIT_ELASTIC_HOST") + ":" + System.getenv("SINKIT_ELASTIC_REST_PORT") + "/" +
+                        index + "/" + ArchiveServiceEJB.ELASTIC_LOG_TYPE + "/_search"
         ), HttpMethod.POST);
         requestSettings.setAdditionalHeader("Content-Type", "application/json");
         requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
@@ -283,8 +287,13 @@ public class CoreTest extends Arquillian {
             }
             hitsCounter++;
         }
+
+        // WAITING necessary for elastic to get updated
+        TimeUnit.SECONDS.sleep(2);
         assertNotNull(jsonHits);
-        assertTrue(jsonHits.size() == 1);
+        LOGGER.severe("jsonHits:" + jsonHits.toString());
+
+        assertEquals(jsonHits.size(),1);
         JsonObject logRecord = jsonHits.get(0).getAsJsonObject().get("_source").getAsJsonObject();
         assertEquals(logRecord.get("action").getAsString(), "block");
         assertEquals(logRecord.get("client").getAsString(), "10.1.1.1");

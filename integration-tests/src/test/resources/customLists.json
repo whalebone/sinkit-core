@@ -1,0 +1,15 @@
+[{
+  "dns_client": "10.10.10.10/32",
+  "lists": {
+    "seznam.cz": "W",
+    "google.com": "B",
+    "example.com": "L"
+  }
+}, {
+  "dns_client": "fe80::3ea9:f4ff:fe81:c450/64",
+  "lists": {
+    "seznam.cz": "L",
+    "google.com": "W",
+    "example.com": "W"
+  }
+}]

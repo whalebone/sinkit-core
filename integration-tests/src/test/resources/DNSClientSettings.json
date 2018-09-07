@@ -1,0 +1,38 @@
+
+[{
+  "dns_client": "10.10.10.10/32",
+  "settings": {
+    "feed-3": "D",
+    "feed2": "S",
+    "test-feed1": "L"
+  },
+  "customer_id": 2,
+  "customer_name": "yadayada-2"
+}, {
+  "dns_client": "10.10.10.11/32",
+  "settings": {
+    "feed-3": "D",
+    "feed2": "S",
+    "test-feed1": "L"
+  },
+  "customer_id": 2,
+  "customer_name": "yadayada-2"
+}, {
+  "dns_client": "10.11.12.0/24",
+  "settings": {
+    "test-feed1": "L",
+    "feed2": "S",
+    "feed-3": "D"
+  },
+  "customer_id": 1,
+  "customer_name": "test-yadayada"
+}, {
+  "dns_client": "10.11.30.30/32",
+  "settings": {
+    "test-feed1": "L",
+    "feed2": "S",
+    "feed-3": "D"
+  },
+  "customer_id": 1,
+  "customer_name": "test-yadayada"
+}]
