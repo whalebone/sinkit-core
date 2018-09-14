@@ -25,6 +25,7 @@ import javax.ejb.Stateless;
 import javax.inject.Inject;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
