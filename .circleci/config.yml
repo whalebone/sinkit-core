@@ -38,19 +38,13 @@ jobs:
           SINKIT_WHITELIST_VALID_HOURS: 1
           SINKIT_MGMT_USER: user
           SINKIT_MGMT_PASS: user
-          SINKIT_WHITELIST_PROTOSTREAM_GENERATOR_D_H_M_S: "* * * */30"
-          SINKIT_CUSTOMLIST_PROTOSTREAM_GENERATOR_D_H_M_S: "* * * */30"
-          SINKIT_IOC_PROTOSTREAM_GENERATOR_D_H_M_S: "* * * */30"
-          SINKIT_ALL_IOC_PROTOSTREAM_GENERATOR_D_H_M_S: "* * * */30"
-          SINKIT_ALL_CUSTOM_PROTOSTREAM_GENERATOR_D_H_M_S: "* * * */30"
-          SINKIT_GENERATED_PROTOFILES_DIRECTORY: /tmp/proto
-    
+
 # ELASTIC
-      - image: hugeox/elastic
+# Image repo: https://github.com/hugeox/elastic-docker
+      - image: hugeox/sinkit-elastic:1.0
         environment:
           ES_CLUSTER: "archive"
           ES_HEAP_SIZE: "256m"
-          ES_HOSTS: "127.0.0.1[9300]"
           ES_INT: "lo"
           ES_SERVICE_NAME: "archive"
           ES_NODE_MASTER: "true"
@@ -59,7 +53,8 @@ jobs:
           ES_SCRIPT_DISABLE: "false"
           ES_MINIMUM_MASTER_NODES: "1"
 
-# ISP
+# ISPN
+# Image repo: https://github.com/Karm/infinispan-docker/
       - image: karm/sinkit-infinispan:1.27
         environment:
           TEST_NODE_NAME: "node2"
@@ -70,7 +65,7 @@ jobs:
           INFINISPAN_MS_RAM: "2g"
           INFINISPAN_MX_RAM: "2g"
           INFINISPAN_NIC: "lo"
-          INFINISPAN_GMS_MAX_JOIN_ATTEMPTS: "3"
+          INFINISPAN_GMS_MAX_JOIN_ATTEMPTS: "1"
     
     steps:
       - checkout
@@ -86,7 +81,7 @@ jobs:
           paths:
             - ~/.m2
 
-         #setup elastic
+         #setup elastic with templates
       - run: curl -XPUT localhost:9200/_template/iocs -d @integration-tests/src/test/resources/elastic_iocs.json
       - run: curl -XPUT localhost:9200/_template/logs -d @integration-tests/src/test/resources/elastic_logs.json
       - run: curl -XPUT localhost:9200/_template/passivedns -d @integration-tests/src/test/resources/elastic_passivedns.json

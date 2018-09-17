@@ -291,8 +291,8 @@ public class CoreTest extends Arquillian {
         // WAITING necessary for elastic to get updated
         TimeUnit.SECONDS.sleep(2);
         assertNotNull(jsonHits);
-        LOGGER.severe("jsonHits:" + jsonHits.toString());
 
+        LOGGER.info(jsonHits.toString());
         assertEquals(jsonHits.size(),1);
         JsonObject logRecord = jsonHits.get(0).getAsJsonObject().get("_source").getAsJsonObject();
         assertEquals(logRecord.get("action").getAsString(), "block");

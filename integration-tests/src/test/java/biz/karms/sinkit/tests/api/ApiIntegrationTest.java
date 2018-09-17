@@ -114,10 +114,7 @@ public class ApiIntegrationTest extends Arquillian {
         assertTrue(blacklistCacheService.addToCache(ioCRecord), "Adding a new IoC to a presumably empty cache failed.");
     }
 
-
-    //stats webApi.getStats now returns much more than that
-    //TODO:Fix for this to reflect that
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 4)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 4)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void getStatsTest(@ArquillianResource URL context) throws Exception {
@@ -129,8 +126,11 @@ public class ApiIntegrationTest extends Arquillian {
         assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("getStatsTest Response:" + responseBody);
-        String expected = "{\"rule\":4,\"ioc\":1}";
-        assertTrue(responseBody.contains(expected), "Expected: " + expected + ". got: " + responseBody);
+        String expected1="Rules\":{\"currentNumberOfEntries\":\"4\"";
+        String expected2="Blacklist\":{\"currentNumberOfEntries\":\"1\"";
+        assertTrue(responseBody.contains(expected1) && responseBody.contains(expected2),
+                "Expected that response body contains " + expected1 + "and"
+                + expected2 + ". got: " + responseBody);
     }
 
 
@@ -344,6 +344,7 @@ public class ApiIntegrationTest extends Arquillian {
 
         // WAITING necessary for elastic to get updated
         TimeUnit.SECONDS.sleep(2);
+
         Page pageLog = webClient.getPage(requestSettingsLog);
         assertEquals(HttpURLConnection.HTTP_OK, pageLog.getWebResponse().getStatusCode());
         String responseBodyLog = pageLog.getWebResponse().getContentAsString();
