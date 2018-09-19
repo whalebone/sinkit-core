@@ -61,6 +61,9 @@ public class ApiIntegrationTest extends Arquillian {
     public void postAllDNSClientSettingsTest(@ArquillianResource URL context) throws Exception {
 
         InfinispanManager.getInfinispanManager().getRuleRemoteCache().clear();
+        InfinispanManager.getInfinispanManager().getWhitelistRemoteCache().clear();
+        InfinispanManager.getInfinispanManager().getCustomListRemoteCache().clear();
+        InfinispanManager.getInfinispanManager().getBlacklistRemoteCache().clear();
 
         WebClient webClient = new WebClient();
         WebRequest requestSettings = new WebRequest(new URL(context + "rest/rules/all"), HttpMethod.POST);
@@ -297,7 +300,10 @@ public class ApiIntegrationTest extends Arquillian {
         WebRequest requestSettingsFeed = new WebRequest(new URL(context + "rest/rules/all"), HttpMethod.POST);
         requestSettingsFeed.setAdditionalHeader("Content-Type", "application/json");
         requestSettingsFeed.setAdditionalHeader("X-sinkit-token", TOKEN);
-        requestSettingsFeed.setRequestBody("[{\"dns_client\":\"94.0.0.0/1\",\"settings\":{\"some-intelmq-feed-to-sink\":\"S\",\"some-feed-to-log\":\"L\"},\"customer_id\":666,\"customer_name\":\"Some Name\"}]");
+        requestSettingsFeed.setRequestBody("[{\"dns_client\":\"94.0.0.0/1\"," +
+                "\"settings\":{\"some-intelmq-feed-to-sink\":\"S\"," +
+                "\"some-feed-to-log\":\"L\"}," +
+                "\"customer_id\":666,\"customer_name\":\"Some Name\"}]");
         Page pageFeed = webClient.getPage(requestSettingsFeed);
         assertEquals(HttpURLConnection.HTTP_OK, pageFeed.getWebResponse().getStatusCode());
         String responseBodyFeed = pageFeed.getWebResponse().getContentAsString();

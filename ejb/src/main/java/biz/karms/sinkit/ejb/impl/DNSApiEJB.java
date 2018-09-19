@@ -14,6 +14,8 @@ import biz.karms.sinkit.ejb.util.CIDRUtils;
 import biz.karms.sinkit.ejb.util.IPorFQDNValidator;
 import biz.karms.sinkit.eventlog.EventLogAction;
 import biz.karms.sinkit.exception.ArchiveException;
+import biz.karms.sinkit.ejb.util.WhitelistUtils;
+
 import com.google.gson.Gson;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
@@ -318,6 +320,8 @@ public class DNSApiEJB implements DNSApi {
         // Next we fetch one and only one or none CustomList for a given fqdnOrIp
         start = System.currentTimeMillis();
         final CustomList customList = retrieveOneCustomList(customerId, isFQDN, fqdnOrIp);
+
+
         log.log(Level.FINE, "retrieveOneCustomList took: " + (System.currentTimeMillis() - start) + " ms.");
         final boolean probablyIsIPv6 = fqdnOrIp.contains(":");
         // Was it found in any of customer's Black/White/Log lists?
@@ -356,12 +360,15 @@ public class DNSApiEJB implements DNSApi {
         // Now it's the time to search IoC cache
         // Lookup BlacklistedRecord from IoC cache (gives feeds)
 
-        final List<String> toBeChecked;
+        final String[] toBeChecked;
         if (isFQDN == IPorFQDNValidator.DECISION.IP) {
-            toBeChecked = Collections.singletonList(fqdnOrIp);
+            toBeChecked = new String[]{ fqdnOrIp};
         } else {
-            toBeChecked = explodeDomain(fqdnOrIp);
+            toBeChecked = WhitelistUtils.explodeDomains(fqdnOrIp);
         }
+
+
+
 
         for (String subdomainOrIp : toBeChecked) {
 
@@ -372,7 +379,7 @@ public class DNSApiEJB implements DNSApi {
 
             if (blacklistedRecord == null) {
                 log.log(Level.FINE, "No hit. The requested fqdnOrIp: " + subdomainOrIp + " is clean.");
-                return null;
+                continue;
             }
 
             // Feed UID : [{Type1, IoCID1}, {Type2, IoCID2}, ...]
