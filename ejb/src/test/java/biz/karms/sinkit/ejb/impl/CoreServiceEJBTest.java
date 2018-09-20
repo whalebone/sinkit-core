@@ -4,6 +4,7 @@ import biz.karms.sinkit.ejb.ArchiveService;
 import biz.karms.sinkit.ejb.BlacklistCacheService;
 import biz.karms.sinkit.ejb.WhitelistCacheService;
 import biz.karms.sinkit.ejb.cache.pojo.WhitelistedRecord;
+import biz.karms.sinkit.ioc.IoCAccuCheckerMetadata;
 import biz.karms.sinkit.ioc.IoCAccuCheckerReport;
 import biz.karms.sinkit.ioc.IoCFeed;
 import biz.karms.sinkit.ioc.IoCRecord;
@@ -76,8 +77,12 @@ public class CoreServiceEJBTest {
         HashMap<String, Integer> accuracy = new HashMap<>();
         accuracy.put("SomeAccuracyProvider", 20);
         report.setAccuracy(accuracy);
-        HashMap<String, String> metadata = new HashMap<>();
-        metadata.put("SomeAccuracyProvider", "SomeAccuracyProvider has no metadata");
+        HashMap<String, IoCAccuCheckerMetadata> metadata = new HashMap<>();
+        IoCAccuCheckerMetadata meta = new IoCAccuCheckerMetadata();
+        meta.setContent("SomeAccuracyProvider has no metadata");
+        meta.setTimestamp(null);
+
+        metadata.put("SomeAccuracyProvider", meta);
         report.setMetadata(metadata);
         IoCAccuCheckerReport accu_report = new IoCAccuCheckerReport(report);
         List<IoCRecord> iocs = new ArrayList<IoCRecord>();

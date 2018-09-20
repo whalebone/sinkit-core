@@ -1,0 +1,24 @@
+{
+  "feed": {
+    "name": "accucheckerTest",
+    "url": "http://www.feed1.com/feed.txt"
+  },
+  "classification": {
+    "type": "phishing",
+    "taxonomy": "Fraud"
+  },
+  "raw": "",
+  "source": {
+    "fqdn": "accuracy.phishing.ru"
+  },
+  "time": {
+    "observation": "TIME_OBSERVATION"
+  },
+  "description": {
+    "text": "description"
+  },
+  "accuracy": {
+    "feed": 80,
+    "passivedns": 40
+  }
+}

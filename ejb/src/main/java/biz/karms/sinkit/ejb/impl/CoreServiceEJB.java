@@ -169,10 +169,12 @@ public class CoreServiceEJB implements CoreService {
         List<IoCRecord> iocs = archiveService.getMatchingEntries("source.id.value", source_id_value);
         for (IoCRecord ioc : iocs) {
 
-            HashMap<String, Integer> combined_accuracy = new HashMap<>(report_accuracy);
+            HashMap<String, Integer> combined_accuracy = new HashMap<>();
             if (ioc.getAccuracy() != null) { //nullity shouldn't happen
                 combined_accuracy.putAll(ioc.getAccuracy());
             }
+            // report gets inserted after original ioc.accuracy to update old values corresponding to the given accuchecker feed
+            combined_accuracy.putAll(report_accuracy);
             ioc.setAccuracy(combined_accuracy);
 
             archiveService.setReportToIoCRecord(report, ioc.getDocumentId());
