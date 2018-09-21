@@ -3,10 +3,11 @@ package biz.karms.sinkit.ejb.cache.pojo.marshallers;
 
 import biz.karms.sinkit.resolver.Policy;
 import biz.karms.sinkit.resolver.ResolverConfiguration;
+import org.infinispan.protostream.MessageMarshaller;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.infinispan.protostream.MessageMarshaller;
 
 public class ResolverConfigurationMessageMarshaller implements MessageMarshaller<ResolverConfiguration> {
 

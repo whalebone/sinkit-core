@@ -1,11 +1,11 @@
 package biz.karms.sinkit.ejb.cache.pojo;
 
 import com.google.gson.Gson;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.io.Serializable;
 import java.util.HashMap;
-import lombok.Getter;
-import lombok.Setter;
 
 /**
  * @author Michal Karm Babacek

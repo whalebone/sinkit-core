@@ -1,15 +1,15 @@
 package biz.karms.sinkit.ejb.cache.pojo.marshallers;
 
 
-import biz.karms.sinkit.resolver.PolicyCustomList;
 import biz.karms.sinkit.resolver.Policy;
+import biz.karms.sinkit.resolver.PolicyCustomList;
 import biz.karms.sinkit.resolver.Strategy;
+import org.infinispan.protostream.MessageMarshaller;
+
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
-import org.infinispan.protostream.MessageMarshaller;
 
 public class PolicyMessageMarshaller implements MessageMarshaller<Policy> {
 

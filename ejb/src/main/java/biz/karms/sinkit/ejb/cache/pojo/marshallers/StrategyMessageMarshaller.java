@@ -4,9 +4,10 @@ package biz.karms.sinkit.ejb.cache.pojo.marshallers;
 import biz.karms.sinkit.resolver.Strategy;
 import biz.karms.sinkit.resolver.StrategyParams;
 import biz.karms.sinkit.resolver.StrategyType;
+import org.infinispan.protostream.MessageMarshaller;
+
 import java.io.IOException;
 import java.util.Optional;
-import org.infinispan.protostream.MessageMarshaller;
 
 public class StrategyMessageMarshaller implements MessageMarshaller<Strategy> {
     @Override

@@ -1,9 +1,10 @@
 package biz.karms.sinkit.ejb.cache.pojo;
 
-import java.io.Serializable;
-import java.util.Calendar;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.io.Serializable;
+import java.util.Calendar;
 
 /**
  * @author Tomas Kozel

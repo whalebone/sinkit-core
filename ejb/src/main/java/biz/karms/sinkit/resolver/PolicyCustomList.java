@@ -1,9 +1,10 @@
 package biz.karms.sinkit.resolver;
 
 import com.google.gson.annotations.SerializedName;
-import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.Set;
 
 @Getter
 @Setter

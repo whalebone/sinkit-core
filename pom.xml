@@ -50,21 +50,35 @@
         <!-- JBoss dependency versions -->
         <version.wildfly.maven.plugin>1.0.2.Final</version.wildfly.maven.plugin>
         <version.wildfly>10.1.0.Final</version.wildfly>
-        <version.jboss.bom>10.1.0.Final</version.jboss.bom>
         <version.jboss.spec.javaee.7.0>1.0.0.Final</version.jboss.spec.javaee.7.0>
         <version.ejb>3.2</version.ejb>
-        <version.jboss.msc>1.2.6.Final</version.jboss.msc>
 
         <!-- other plugin versions -->
-        <version.compiler.plugin>3.2</version.compiler.plugin>
+        <version.compiler.plugin>3.7.0</version.compiler.plugin>
         <version.surefire.plugin>2.16</version.surefire.plugin>
         <version.ear.plugin>2.6</version.ear.plugin>
         <version.ejb.plugin>2.3</version.ejb.plugin>
         <version.war.plugin>3.2.2</version.war.plugin>
+        <version.checkstyle>8.10.1</version.checkstyle>
+        <version.enforcer.plugin>3.0.0-M2</version.enforcer.plugin>
+        <maven.min.version>3.2.5</maven.min.version>
+        <version.install.plugin>2.5.2</version.install.plugin>
+        <version.clean.plugin>3.1.0</version.clean.plugin>
+        <version.resources.plugin>3.1.0</version.resources.plugin>
+        <version.checkstyle.plugin>3.0.0</version.checkstyle.plugin>
+        <version.org.wildfly.checkstyle-config>1.0.6.Final</version.org.wildfly.checkstyle-config>
+        <!-- Checkstyle configuration -->
+        <linkXRef>false</linkXRef>
 
         <!-- maven-compiler-plugin -->
         <maven.compiler.target>1.8</maven.compiler.target>
         <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.testTarget>${maven.compiler.target}</maven.compiler.testTarget>
+        <maven.compiler.testSource>${maven.compiler.source}</maven.compiler.testSource>
+        <maven.compiler.argument.target>${maven.compiler.target}</maven.compiler.argument.target>
+        <maven.compiler.argument.source>${maven.compiler.source}</maven.compiler.argument.source>
+        <maven.compiler.argument.testTarget>${maven.compiler.testTarget}</maven.compiler.argument.testTarget>
+        <maven.compiler.argument.testSource>${maven.compiler.testSource}</maven.compiler.argument.testSource>
 
         <!-- Testing -->
         <arquillian.bom.version>1.1.11.Final</arquillian.bom.version>
@@ -88,18 +102,12 @@
         <es.version>1.7.4</es.version>
         <es.jna.version>4.1.0</es.jna.version>
 
-        <!-- Virus Total -->
-        <com.kanishka.api.VirustotalPublicV2.0.version>1.1.rB-SNAPSHOT</com.kanishka.api.VirustotalPublicV2.0.version>
-
         <!-- Infinispan and business core deps-->
         <infinispan.core.version>8.2.6.Final</infinispan.core.version>
 
         <com.google.code.gson.version>2.6.2</com.google.code.gson.version>
         <commons.validator.version>1.5.0</commons.validator.version>
         <commons.codec.version>1.10</commons.codec.version>
-
-        <!-- Docker -->
-        <docker.plugin.version>0.22.1</docker.plugin.version>
 
         <!-- lombok -->
         <lombok.version>1.16.20</lombok.version>
@@ -155,13 +163,66 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>${version.clean.plugin}</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-install-plugin</artifactId>
+                <version>${version.install.plugin}</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>${version.resources.plugin}</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>${version.checkstyle.plugin}</version>
+                <executions>
+                    <execution>
+                        <id>check-style</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>checkstyle</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.wildfly.checkstyle</groupId>
+                        <artifactId>wildfly-checkstyle-config</artifactId>
+                        <version>${version.org.wildfly.checkstyle-config}</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <configLocation>wildfly-checkstyle/checkstyle.xml</configLocation>
+                    <consoleOutput>true</consoleOutput>
+                    <failsOnError>true</failsOnError>
+                    <includeTestSourceDirectory>true</includeTestSourceDirectory>
+                    <excludes>**/*$logger.java,**/*$bundle.java</excludes>
+                    <suppressionsLocation>checkstyle-suppressions.xml</suppressionsLocation>
+                    <useFile></useFile>
+                </configuration>
+            </plugin>
 
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${version.compiler.plugin}</version>
                 <configuration>
-                    <source>${maven.compiler.source}</source>
-                    <target>${maven.compiler.target}</target>
+                    <showDeprecation>true</showDeprecation>
+                    <showWarnings>true</showWarnings>
+                    <source>${maven.compiler.argument.source}</source>
+                    <target>${maven.compiler.argument.target}</target>
+                    <testSource>${maven.compiler.argument.testSource}</testSource>
+                    <testTarget>${maven.compiler.argument.testTarget}</testTarget>
+                    <compilerArgs>
+                        <arg>-Xlint:unchecked</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
 

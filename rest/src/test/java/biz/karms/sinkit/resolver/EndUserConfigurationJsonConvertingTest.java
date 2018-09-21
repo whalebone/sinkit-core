@@ -2,10 +2,11 @@ package biz.karms.sinkit.resolver;
 
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.GsonBuilder;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
+
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;

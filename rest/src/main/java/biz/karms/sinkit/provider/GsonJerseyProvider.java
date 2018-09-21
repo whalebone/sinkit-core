@@ -1,13 +1,8 @@
 package biz.karms.sinkit.provider;
 
 import com.google.gson.FieldNamingPolicy;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Type;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.Produces;
@@ -17,9 +12,13 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.ext.MessageBodyReader;
 import javax.ws.rs.ext.MessageBodyWriter;
 import javax.ws.rs.ext.Provider;
-
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Type;
 
 @Provider
 @Produces(MediaType.APPLICATION_JSON)
@@ -40,13 +39,13 @@ public class GsonJerseyProvider implements MessageBodyWriter<Object>, MessageBod
 
     @Override
     public boolean isReadable(Class<?> type, Type genericType,
-            java.lang.annotation.Annotation[] annotations, MediaType mediaType) {
+                              java.lang.annotation.Annotation[] annotations, MediaType mediaType) {
         return true;
     }
 
     @Override
     public Object readFrom(Class<Object> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, String> httpHeaders,
-            InputStream entityStream) throws java.io.IOException, javax.ws.rs.WebApplicationException {
+                           InputStream entityStream) throws java.io.IOException, javax.ws.rs.WebApplicationException {
         InputStreamReader streamReader = new InputStreamReader(entityStream, UTF_8);
         try {
             Type jsonType;
@@ -73,7 +72,7 @@ public class GsonJerseyProvider implements MessageBodyWriter<Object>, MessageBod
 
     @Override
     public void writeTo(Object object, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType,
-            MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) throws IOException, WebApplicationException {
+                        MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) throws IOException, WebApplicationException {
         OutputStreamWriter writer = new OutputStreamWriter(entityStream, UTF_8);
         try {
             Type jsonType;

@@ -4,7 +4,7 @@ import java.io.Serializable;
 
 /**
  * @author Michal Karm Babacek
-*/
+ */
 public class Sinkhole implements Serializable {
 
     private static final long serialVersionUID = 109238475691L;

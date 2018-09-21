@@ -5,8 +5,8 @@ import biz.karms.sinkit.ejb.elastic.ElasticService;
 import biz.karms.sinkit.ejb.elastic.logstash.LogstashClient;
 import biz.karms.sinkit.ejb.util.IoCIdentificationUtils;
 import biz.karms.sinkit.eventlog.EventLogRecord;
-import biz.karms.sinkit.eventlog.VirusTotalRequestStatus;
 import biz.karms.sinkit.exception.ArchiveException;
+import biz.karms.sinkit.ioc.IoCAccuCheckerReport;
 import biz.karms.sinkit.ioc.IoCRecord;
 import biz.karms.sinkit.ioc.IoCSeen;
 import com.google.gson.Gson;
@@ -94,6 +94,20 @@ public class ArchiveServiceEJB implements ArchiveService {
         return elasticService.update(ioc.getDocumentId(), fieldsToUpdate, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, ioc);
     }
 
+    /**
+     * Wrapper method for elasticService.update
+     *
+     * @param report
+     * @param document_id
+     * @return true if update is processed
+     * @throws ArchiveException
+     */
+    @Override
+    public boolean setReportToIoCRecord(final IoCAccuCheckerReport report, String document_id) throws ArchiveException {
+        return elasticService.update(document_id, report, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, null);
+
+    }
+
     @Override
     public IoCRecord deactivateRecord(final IoCRecord ioc) throws ArchiveException {
         /**
@@ -135,6 +149,21 @@ public class ArchiveServiceEJB implements ArchiveService {
         log.log(Level.FINE, "archiveService.archiveEventLogRecordUsingLogstash logging logrecord, index=" + index);
         logstashClient.sentToLogstash(logRecord, index, ELASTIC_LOG_TYPE);
         return logRecord;
+    }
+
+    /**
+     * Lists matching entris, lists up to DEF_LIMIT of them (defined in ElasticServiceEJB.class)
+     *
+     * @param name  name of the field to be matched  against
+     * @param value value of this field
+     * @return List of matching entries
+     * @throws ArchiveException
+     */
+    @Override
+    public List<IoCRecord> getMatchingEntries(String name, String value) throws ArchiveException {
+        final QueryBuilder query = QueryBuilders.termQuery(name, value);
+        // FilterBuilders.missingFilter("whitelist_name")
+        return elasticService.search(query, null, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, IoCRecord.class);
     }
 
     @Override

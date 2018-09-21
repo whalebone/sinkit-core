@@ -2,11 +2,12 @@ package biz.karms.sinkit.ejb.cache.pojo.marshallers;
 
 
 import biz.karms.sinkit.resolver.EndUserConfiguration;
+import org.infinispan.protostream.MessageMarshaller;
+
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-import org.infinispan.protostream.MessageMarshaller;
 
 public class EndUserConfigurationMessageMarshaller implements MessageMarshaller<EndUserConfiguration> {
 

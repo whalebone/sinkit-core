@@ -1,10 +1,11 @@
 package biz.karms.sinkit.resolver;
 
 import biz.karms.sinkit.ioc.IoCClassificationType;
-import java.io.Serializable;
-import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.io.Serializable;
+import java.util.Set;
 
 @Getter
 @Setter

@@ -3,10 +3,11 @@ package biz.karms.sinkit.resolver;
 import biz.karms.sinkit.ioc.IoCClassificationType;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.GsonBuilder;
+import org.junit.Test;
+
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.List;
-import org.junit.Test;
 
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasItems;

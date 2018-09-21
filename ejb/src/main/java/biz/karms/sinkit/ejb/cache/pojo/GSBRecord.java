@@ -1,11 +1,12 @@
 package biz.karms.sinkit.ejb.cache.pojo;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.io.Serializable;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.HashSet;
-import lombok.Getter;
-import lombok.Setter;
 
 /**
  * @author Tomas Kozel

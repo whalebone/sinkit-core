@@ -9,7 +9,7 @@ public enum StrategyType {
     drop;
 
     public static StrategyType parse(String strValue) {
-        if(accuracy.name().equals(strValue)){
+        if (accuracy.name().equals(strValue)) {
             return accuracy;
         } else if (whitelist.name().equals(strValue)) {
             return whitelist;

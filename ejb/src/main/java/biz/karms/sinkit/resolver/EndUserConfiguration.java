@@ -1,10 +1,11 @@
 package biz.karms.sinkit.resolver;
 
 import com.google.gson.annotations.SerializedName;
-import java.io.Serializable;
-import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.io.Serializable;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -19,7 +20,7 @@ public class EndUserConfiguration implements Serializable {
     private Set<String> whitelist;
     private Set<String> blacklist;
 
-    public String getId(){
+    public String getId() {
         return new StringBuilder().append(clientId).append(":").append(userId).toString();
     }
 }

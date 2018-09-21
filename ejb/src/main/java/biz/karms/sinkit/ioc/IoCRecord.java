@@ -3,9 +3,10 @@ package biz.karms.sinkit.ioc;
 import biz.karms.sinkit.ejb.elastic.Indexable;
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
-import java.util.HashMap;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.HashMap;
 
 /**
  * @author Tomas Kozel
@@ -34,7 +35,16 @@ public class IoCRecord implements Indexable {
     @SerializedName("whitelist_name")
     private String whitelistName;
     private HashMap<String, Integer> accuracy;
+    private HashMap<String, String> metadata;
 
+
+    public HashMap<String, String> getMetadata() {
+        return metadata;
+    }
+
+    public void setMetadata(HashMap<String, String> meta) {
+        this.metadata = meta;
+    }
 
     @Override
     public String toString() {

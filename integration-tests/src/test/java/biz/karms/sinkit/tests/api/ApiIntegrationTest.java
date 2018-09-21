@@ -109,7 +109,7 @@ public class ApiIntegrationTest extends Arquillian {
                 "feed2",
                 "feed2",
                 "seznam.cz",
-                 IoCSourceIdType.FQDN,
+                IoCSourceIdType.FQDN,
                 "seznam.cz",
                 null,
                 "seznam.cz");
@@ -129,11 +129,11 @@ public class ApiIntegrationTest extends Arquillian {
         assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("getStatsTest Response:" + responseBody);
-        String expected1="Rules\":{\"currentNumberOfEntries\":\"4\"";
-        String expected2="Blacklist\":{\"currentNumberOfEntries\":\"1\"";
+        String expected1 = "Rules\":{\"currentNumberOfEntries\":\"4\"";
+        String expected2 = "Blacklist\":{\"currentNumberOfEntries\":\"1\"";
         assertTrue(responseBody.contains(expected1) && responseBody.contains(expected2),
                 "Expected that response body contains " + expected1 + "and"
-                + expected2 + ". got: " + responseBody);
+                        + expected2 + ". got: " + responseBody);
     }
 
 
@@ -205,7 +205,7 @@ public class ApiIntegrationTest extends Arquillian {
         WebClient webClient = new WebClient();
         //REST port is not SINKIT_ELASTIC_PORT
         WebRequest requestSettings = new WebRequest(
-                new URL("http://" + System.getenv("SINKIT_ELASTIC_HOST") + ":" + System.getenv("SINKIT_ELASTIC_REST_PORT")  +
+                new URL("http://" + System.getenv("SINKIT_ELASTIC_HOST") + ":" + System.getenv("SINKIT_ELASTIC_REST_PORT") +
                         "/" + ArchiveServiceEJB.ELASTIC_IOC_INDEX + "/"), HttpMethod.DELETE);
 
         Page page;
@@ -216,7 +216,6 @@ public class ApiIntegrationTest extends Arquillian {
             //NO-OP index does not exist yet, but it's ok
         }
     }
-
 
 
     @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 9)
@@ -359,7 +358,7 @@ public class ApiIntegrationTest extends Arquillian {
         JsonArray hits = jsonParser.parse(responseBodyLog).getAsJsonObject()
                 .get("hits").getAsJsonObject()
                 .get("hits").getAsJsonArray();
-        assertEquals(hits.size(),1);
+        assertEquals(hits.size(), 1);
 
         JsonObject logRecord = hits.get(0).getAsJsonObject().get("_source").getAsJsonObject();
         assertEquals(logRecord.get("action").getAsString(), "block", "Expected LogRecord.action: block, but got: " + logRecord.get("action").getAsString());

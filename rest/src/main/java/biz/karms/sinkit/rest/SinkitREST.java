@@ -1,6 +1,8 @@
 package biz.karms.sinkit.rest;
 
+import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCValidationException;
+import com.google.gson.JsonParseException;
 import com.google.gson.JsonSyntaxException;
 
 import javax.enterprise.context.RequestScoped;
@@ -65,6 +67,26 @@ public class SinkitREST implements Serializable {
     @Produces({"application/json;charset=UTF-8"})
     public String deleteBlacklistedRecord(@PathParam("key") String key) {
         return sinkitService.deleteBlacklistedRecord(key);
+    }
+
+    @POST
+    @Path("/blacklist/accuracyupdate/")
+    @Produces({"application/json;charset=UTF-8"})
+    //@Consumes({"application/json;charset=UTF-8"})
+    public Response updateAccuracy(String report) {
+        try {
+            sinkitService.updateAccuracy(report);
+            return Response.status(Response.Status.OK).entity("Succeeded in updating with accuchecker report: " + report).build();
+        } catch (ArchiveException ex) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex.getMessage()).build();
+        } catch (JsonParseException ex) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(ex.getMessage()).build();
+        } catch (IoCValidationException ex) {
+
+            return Response.status(Response.Status.BAD_REQUEST).entity(ex.getMessage()).build();
+        }
+
+
     }
 
     @POST
@@ -231,68 +253,5 @@ public class SinkitREST implements Serializable {
             e.printStackTrace();
             return "Not Ok";
         }
-    }
-
-    @PUT
-    @Path("/gsb/{hashPrefix}")
-    @Produces({"application/json;charset=UTF-8"})
-    //@Consumes({"application/json;charset=UTF-8"})
-    public Response putGSBHashRecord(@PathParam("hashPrefix") String hashPrefix) {
-        try {
-            boolean response = sinkitService.putGSBHashPrefix(hashPrefix);
-            Response.Status status;
-            if (response) {
-                status = Response.Status.OK;
-            } else {
-                status = Response.Status.INTERNAL_SERVER_ERROR;
-            }
-            return Response.status(status).entity(response).build();
-        } catch (Exception ex) {
-            log.severe("putGSBHashRecord: Adding hash prefix " + hashPrefix + " to GSB cache went wrong: " + ex.getMessage());
-            ex.printStackTrace();
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex.getMessage()).build();
-        }
-    }
-
-    @DELETE
-    @Path("/gsb/{hashPrefix}")
-    @Produces({"application/json;charset=UTF-8"})
-    //@Consumes({"application/json;charset=UTF-8"})
-    public Response removeGSBHashRecord(@PathParam("hashPrefix") String hashPrefix) {
-        try {
-            boolean response = sinkitService.removeGSBHashPrefix(hashPrefix);
-            Response.Status status;
-            if (response) {
-                status = Response.Status.OK;
-            } else {
-                status = Response.Status.INTERNAL_SERVER_ERROR;
-            }
-            return Response.status(status).entity(response).build();
-        } catch (Exception ex) {
-            log.severe("removeGSBHashRecord: Removing hash prefix " + hashPrefix + " to GSB cache went wrong: " + ex.getMessage());
-            ex.printStackTrace();
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex.getMessage()).build();
-        }
-    }
-
-    @GET
-    @Path("/gsb/stats")
-    @Produces({"application/json;charset=UTF-8"})
-    public String getGSBStats() {
-        return sinkitService.getGSBStats();
-    }
-
-    @GET
-    @Path("/gsb/lookup/{url}")
-    @Produces({"application/json;charset=UTF-8"})
-    public String gsbLookup(@PathParam("url") String url) {
-        return sinkitService.gsbLookup(url);
-    }
-
-    @DELETE
-    @Path("/gsb")
-    @Produces({"application/json;charset=UTF-8"})
-    public String gsbClearCache() {
-        return sinkitService.clearGSBCache();
     }
 }

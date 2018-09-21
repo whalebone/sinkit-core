@@ -38,7 +38,7 @@ public enum IoCClassificationType {
     }
 
     public static IoCClassificationType parse(String strValue) {
-        if(malware.label.equals(strValue)){
+        if (malware.label.equals(strValue)) {
             return malware;
         } else if (cc.label.equals(strValue)) {
             return cc;

@@ -14,7 +14,6 @@ import com.gargoylesoftware.htmlunit.HttpMethod;
 import com.gargoylesoftware.htmlunit.Page;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.WebRequest;
-import jdk.nashorn.internal.ir.annotations.Ignore;
 import org.jboss.arquillian.container.test.api.OperateOnDeployment;
 import org.jboss.arquillian.container.test.api.RunAsClient;
 import org.jboss.arquillian.test.api.ArquillianResource;
@@ -198,7 +197,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         whiteFQDNio = whitelistService.get("whalebone.io");
         whiteFQDNcz = whitelistService.get("subdomain.whalebone.cz");
         int counter = 0;
-        while ((whiteIP != null  || whiteFQDNio != null || whiteFQDNcz != null) && counter < 10 ) {
+        while ((whiteIP != null || whiteFQDNio != null || whiteFQDNcz != null) && counter < 10) {
             Thread.sleep(100);
             whiteIP = whitelistService.get("1.2.3.4");
             whiteFQDNio = whitelistService.get("whalebone.io");
@@ -247,7 +246,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         notWhitelisted = archiveService.getIoCRecordById(notWhiteDocId);
         int counter = 0;
         while ((whiteBR == null || whiteSubBR == null || notWhiteBR == null ||
-                whitelisted == null || whitelistedSubdomain == null || notWhitelisted == null) && counter < 10){
+                whitelisted == null || whitelistedSubdomain == null || notWhitelisted == null) && counter < 10) {
             Thread.sleep(100);
             whiteBR = webApi.getBlacklistedRecord(whiteSourceId);
             whiteSubBR = webApi.getBlacklistedRecord(whiteSubSourceId);
@@ -305,6 +304,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
     }
 
     //TODO: This tests is obsolete (we now store entries that are on whitelist in blacklistcache, but with parameter whitelisted
+
     /**
      * put whitelist entries for IP and FQDN
      * put iocs having same IP or FQDN -> should be whitelisted
@@ -459,7 +459,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         String responseBodyDNS = pageDNS.getWebResponse().getContentAsString();
         LOGGER.info("endToEndDNS Response:" + responseBodyDNS);
         assertTrue(responseBodyDNS.contains("{\"sinkhole\":\"" + System.getenv("SINKIT_SINKHOLE_IP") + "\"}"),
-                "Response body was "+ responseBodyDNS + "Should have contained sinkhole IP");
+                "Response body was " + responseBodyDNS + "Should have contained sinkhole IP");
 
         //add whitelist entry FQDN
         // 2015-12-12T22:52:58+02:00
@@ -494,7 +494,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         assertEquals(HttpURLConnection.HTTP_OK, pageDNS.getWebResponse().getStatusCode());
         responseBodyDNS = pageDNS.getWebResponse().getContentAsString();
         LOGGER.info("endToEndDNSWhitelisted Response:" + responseBodyDNS);
-        assertTrue(responseBodyDNS.contains("null"),"Expected to contain: null, got:" + responseBodyDNS);
+        assertTrue(responseBodyDNS.contains("null"), "Expected to contain: null, got:" + responseBodyDNS);
 
         //dns query (IP) should be whitelisted (not sinkholed)
         requestSettingsDNS = new WebRequest(new URL(context + "rest/blacklist/dns/254.1.1.1/83.215.22.31/trusted.domain.to.be.whitelisted.cz"), HttpMethod.GET);

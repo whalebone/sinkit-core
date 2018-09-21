@@ -30,12 +30,12 @@ public class SinkitDeployment {
                 .addClass(CoreTest.class)
                 .addClass(ApiIntegrationTest.class)
                 .addClass(WhitelistCacheServiceTest.class)
-        .addClass(FailingHttpStatusCodeException.class)
-        .addClass(IoCFactory.class)
-.addClass(com.gargoylesoftware.htmlunit.HttpMethod.class)
-.addClass(com.gargoylesoftware.htmlunit.Page.class)
-.addClass(com.gargoylesoftware.htmlunit.WebClient.class)
-.addClass(com.gargoylesoftware.htmlunit.WebRequest.class);
+                .addClass(FailingHttpStatusCodeException.class)
+                .addClass(IoCFactory.class)
+                .addClass(com.gargoylesoftware.htmlunit.HttpMethod.class)
+                .addClass(com.gargoylesoftware.htmlunit.Page.class)
+                .addClass(com.gargoylesoftware.htmlunit.WebClient.class)
+                .addClass(com.gargoylesoftware.htmlunit.WebRequest.class);
         //.addClass(DeploymentException.class);
         return ear;
     }

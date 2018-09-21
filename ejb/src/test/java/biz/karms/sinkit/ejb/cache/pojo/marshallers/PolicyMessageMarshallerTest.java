@@ -3,10 +3,6 @@ package biz.karms.sinkit.ejb.cache.pojo.marshallers;
 import biz.karms.sinkit.resolver.Policy;
 import biz.karms.sinkit.resolver.PolicyCustomList;
 import biz.karms.sinkit.resolver.Strategy;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Set;
 import org.hamcrest.Matchers;
 import org.infinispan.protostream.MessageMarshaller;
 import org.junit.Before;
@@ -14,6 +10,11 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.instanceOf;

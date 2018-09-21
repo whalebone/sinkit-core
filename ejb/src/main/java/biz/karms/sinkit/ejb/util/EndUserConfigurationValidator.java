@@ -2,8 +2,9 @@ package biz.karms.sinkit.ejb.util;
 
 import biz.karms.sinkit.exception.EndUserConfigurationValidationException;
 import biz.karms.sinkit.resolver.EndUserConfiguration;
-import javax.enterprise.context.ApplicationScoped;
 import org.apache.commons.lang3.StringUtils;
+
+import javax.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
 public class EndUserConfigurationValidator {
