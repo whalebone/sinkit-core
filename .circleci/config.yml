@@ -1,8 +1,4 @@
 version: 2
-general:
-  branches:
-    only:
-      -circleci
 jobs:
   build:
     docker:
