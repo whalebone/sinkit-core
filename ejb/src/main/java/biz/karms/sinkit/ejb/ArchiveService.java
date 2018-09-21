@@ -3,7 +3,6 @@ package biz.karms.sinkit.ejb;
 import biz.karms.sinkit.eventlog.EventLogRecord;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.ioc.IoCRecord;
-import biz.karms.sinkit.ioc.IoCVirusTotalReport;
 
 import javax.ejb.Local;
 import java.util.List;
@@ -33,10 +32,4 @@ public interface ArchiveService {
     IoCRecord getIoCRecordById(String id) throws ArchiveException;
 
     IoCRecord getIoCRecordByUniqueRef(String uniqueRef) throws ArchiveException;
-
-    EventLogRecord getLogRecordWaitingForVTScan(int notAllowedFailedMinutes) throws ArchiveException;
-
-    EventLogRecord getLogRecordWaitingForVTReport(int notAllowedFailedMinutes) throws ArchiveException;
-
-    boolean setVirusTotalReportToIoCRecord(IoCRecord ioc, IoCVirusTotalReport[] reports) throws ArchiveException;
 }

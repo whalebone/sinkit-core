@@ -78,14 +78,6 @@ public class EventLogRecord implements Indexable {
         this.logged = logged;
     }
 
-    public VirusTotalRequest getVirusTotalRequest() {
-        return virusTotalRequest;
-    }
-
-    public void setVirusTotalRequest(VirusTotalRequest virusTotalRequest) {
-        this.virusTotalRequest = virusTotalRequest;
-    }
-
     public IoCRecord[] getMatchedIocs() {
         return matchedIocs;
     }

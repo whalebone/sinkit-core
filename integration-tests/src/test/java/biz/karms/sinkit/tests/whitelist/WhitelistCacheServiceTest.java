@@ -27,6 +27,7 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -65,7 +66,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
      * get white list entry
      * assert its correct data
      */
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 300)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 300)
     public void putAndGetTest() throws Exception {
         LOGGER.log(Level.INFO, "putAndGetTest");
         Calendar before = Calendar.getInstance();
@@ -90,7 +91,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         assertTrue(after.after(whiteFQDN.getExpiresAt()));
     }
 
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 301)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 301)
     public void putAndGetSubdomainTest() throws Exception {
         LOGGER.log(Level.INFO, "putAndGetSubdomainTest");
         assertTrue(coreService.processWhitelistIoCRecord(IoCFactory.getIoCForWhitelist(null, "subdomain.whalebone.cz", "subdomain", false)));
@@ -102,7 +103,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         assertNull(theSameWhite);
     }
 
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 302)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 302)
     public void getNonExistingTest() throws Exception {
         LOGGER.log(Level.INFO, "getNonExistingTest");
         assertNull(whitelistService.get("not exist"));
@@ -113,7 +114,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
      * put whitelist entry having same fqdn and longer expiration
      * assert the first one has been replaced by the second one
      */
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 303)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 303)
     public void putUpdateTest() throws Exception {
         LOGGER.log(Level.INFO, "putUpdateTest");
         Thread.sleep(1001); // get some time for whitelist to get old
@@ -149,7 +150,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
      * put second whitelist entry having same fqdn and shorter expiration
      * assert the first one is not touched and the second is discarded
      */
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 304)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 304)
     public void putNotUpdateTest() throws Exception {
         LOGGER.log(Level.INFO, "putNotUpdateTest");
         assertTrue(coreService.processWhitelistIoCRecord(IoCFactory.getIoCForWhitelist(null, "whalebone.net", "oldWhalebone", false)));
@@ -167,7 +168,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
     /**
      * put whitelist entry and wait until it expires and disappears from whitelist cache
      */
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 305)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 305)
     public void expirationTest() throws Exception {
         LOGGER.log(Level.INFO, "expirationTest");
         coreService.setWhitelistValidSeconds(1);
@@ -183,7 +184,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         assertNull(white);
     }
 
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 306)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 306)
     public void dropTheWholeCacheTest() throws Exception {
         LOGGER.log(Level.INFO, "dropTheWholeCacheTest");
         WhitelistedRecord whiteIP = whitelistService.get("1.2.3.4");
@@ -220,7 +221,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
      * assert phishing.cz and subdomain.phishing.cz were whitelisted and removed from infinispan blacklist
      * assert phishing.ru is untouched in archive and in infinispan blacklist
      */
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 307)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 307)
     public void existingIoCsAreWhitelistedTest() throws Exception {
         LOGGER.log(Level.INFO, "whitelistedIoCTest");
         coreService.setWhitelistValidSeconds(VALID_HOURS * 3600);
@@ -303,6 +304,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         assertNull(notWhitelisted.getTime().getWhitelisted());
     }
 
+    //TODO: This tests is obsolete (we now store entries that are on whitelist in blacklistcache, but with parameter whitelisted
     /**
      * put whitelist entries for IP and FQDN
      * put iocs having same IP or FQDN -> should be whitelisted
@@ -371,6 +373,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         assertNotNull(trusted.getTime().getWhitelisted());
         assertTrue(before.getTimeInMillis() < trusted.getTime().getWhitelisted().getTime(), before.getTimeInMillis() + " = " + trusted.getTime().getWhitelisted().getTime());
         assertTrue(after.getTimeInMillis() > trusted.getTime().getWhitelisted().getTime());
+
         assertNull(webApi.getBlacklistedRecord(trusted.getSource().getId().getValue()));
 
         assertNotNull(veryTrusted.getWhitelistName());
@@ -405,7 +408,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
      * do FQDN lookup -> response mustn't be sinkholed
      * do IP lookup -> response mustn't be sinkholed
      */
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 308)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 308)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void endToEndTest(@ArquillianResource URL context) throws Exception {
@@ -436,7 +439,18 @@ public class WhitelistCacheServiceTest extends Arquillian {
         LOGGER.info("endToEndIoC Response:" + responseBodyIoC);
         assertTrue(responseBodyIoC.contains("\"fqdn\":\"trusted.domain.to.be.whitelisted.cz\""));
 
+        //Checking that our entry is there
+        TimeUnit.SECONDS.sleep(2);
+        WebRequest requestSettings = new WebRequest(new URL(context + "rest/blacklist/record/trusted.domain.to.be.whitelisted.cz"), HttpMethod.GET);
+        requestSettings.setAdditionalHeader("Content-Type", "application/json");
+        requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
+        Page pageBlack = webClient.getPage(requestSettings);
+        assertEquals(HttpURLConnection.HTTP_OK, pageBlack.getWebResponse().getStatusCode());
+        String responseBody = pageBlack.getWebResponse().getContentAsString();
+        LOGGER.info("endToEndBlacklist Response:" + responseBody);
+
         //dns query should be blacklisted
+
         WebRequest requestSettingsDNS = new WebRequest(new URL(context + "rest/blacklist/dns/254.1.1.1/trusted.domain.to.be.whitelisted.cz/trusted.domain.to.be.whitelisted.cz"), HttpMethod.GET);
         requestSettingsDNS.setAdditionalHeader("Content-Type", "application/json");
         requestSettingsDNS.setAdditionalHeader("X-sinkit-token", TOKEN);
@@ -444,7 +458,8 @@ public class WhitelistCacheServiceTest extends Arquillian {
         assertEquals(HttpURLConnection.HTTP_OK, pageDNS.getWebResponse().getStatusCode());
         String responseBodyDNS = pageDNS.getWebResponse().getContentAsString();
         LOGGER.info("endToEndDNS Response:" + responseBodyDNS);
-        assertTrue(responseBodyDNS.contains("{\"sinkhole\":\"" + System.getenv("SINKIT_SINKHOLE_IP") + "\"}"));
+        assertTrue(responseBodyDNS.contains("{\"sinkhole\":\"" + System.getenv("SINKIT_SINKHOLE_IP") + "\"}"),
+                "Response body was "+ responseBodyDNS + "Should have contained sinkhole IP");
 
         //add whitelist entry FQDN
         // 2015-12-12T22:52:58+02:00
@@ -479,7 +494,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         assertEquals(HttpURLConnection.HTTP_OK, pageDNS.getWebResponse().getStatusCode());
         responseBodyDNS = pageDNS.getWebResponse().getContentAsString();
         LOGGER.info("endToEndDNSWhitelisted Response:" + responseBodyDNS);
-        assertTrue(responseBodyDNS.contains("null"));
+        assertTrue(responseBodyDNS.contains("null"),"Expected to contain: null, got:" + responseBodyDNS);
 
         //dns query (IP) should be whitelisted (not sinkholed)
         requestSettingsDNS = new WebRequest(new URL(context + "rest/blacklist/dns/254.1.1.1/83.215.22.31/trusted.domain.to.be.whitelisted.cz"), HttpMethod.GET);
@@ -503,7 +518,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
 //        assertTrue(responseBodyIoC.contains("\"ip\":\"83.215.22.31\""));
     }
 
-    @Test(enabled = false, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 309)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 309)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void testRESTApi(@ArquillianResource URL context) throws Exception {
@@ -516,7 +531,8 @@ public class WhitelistCacheServiceTest extends Arquillian {
         assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
         String responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("RESTApi Response:" + responseBody);
-        assertTrue(responseBody.contains("trusted.domain.to.be.whitelisted.cz"));
+        assertTrue(responseBody.contains("trusted.domain.to.be.whitelisted.cz"),
+                "Response body should have contained trusted.domain.to.be.whitelisted.cz, got:" + responseBody);
 
         request = new WebRequest(new URL(context + "rest/whitelist/record/trusted.domain.to.be.whitelisted.cz"), HttpMethod.GET);
         request.setAdditionalHeader("Content-Type", "application/json");
@@ -536,7 +552,9 @@ public class WhitelistCacheServiceTest extends Arquillian {
         LOGGER.info("RESTApi Response:" + responseBody);
         assertTrue(responseBody.contains("true"));
 
-        request = new WebRequest(new URL(context + "rest/whitelist/stats/"), HttpMethod.GET);
+        //TODO: What do we want to test here? Stats is now different
+        /*
+        request = new WebRequest(new URL(context + "rest/stats/"), HttpMethod.GET);
         request.setAdditionalHeader("Content-Type", "application/json");
         request.setAdditionalHeader("X-sinkit-token", TOKEN);
         page = webClient.getPage(request);
@@ -544,5 +562,6 @@ public class WhitelistCacheServiceTest extends Arquillian {
         responseBody = page.getWebResponse().getContentAsString();
         LOGGER.info("RESTApi Response:" + responseBody);
         assertTrue(responseBody.contains("5"));
+        */
     }
 }

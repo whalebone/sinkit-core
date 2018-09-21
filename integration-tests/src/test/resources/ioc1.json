@@ -1,0 +1,32 @@
+{
+  "feed": {
+    "name": "integrationTest",
+    "url": "http://www.greatfeed.com/feed.txt"
+  },
+  "classification": {
+    "type": "phishing",
+    "taxonomy": "Fraud"
+  },
+  "raw": "aHR0cDovL2luZm9ybWF0aW9uLnVwZGF0ZS5teWFjY291bnQtc2VjdXJlLmNvbS85ODI0YTYxOGRlNTlmYjE2MTlmNTUzNTgwYWFmZjcxMS9mMWI2YTE2OTc2MDRiNmI2M2IwODBmODQ2N2FiNGZiNS8=",
+  "source": {
+    "fqdn": "phishing.ru",
+    "bgp_prefix": "some_prefix",
+    "asn": "123456",
+    "asn_name": "some_name",
+    "geolocation": {
+      "cc": "RU",
+      "city": "City",
+      "latitude": "85.12645",
+      "longitude": "-12.9788"
+    }
+  },
+  "time": {
+    "observation": "TIME_OBSERVATION"
+  },
+  "protocol": {
+    "application": "ssh"
+  },
+  "description": {
+    "text": "description"
+  }
+}

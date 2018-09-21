@@ -33,8 +33,6 @@ public class IoCRecord implements Indexable {
     private Boolean active;
     @SerializedName("whitelist_name")
     private String whitelistName;
-    @SerializedName("virus_total_reports")
-    private IoCVirusTotalReport[] virusTotalReports;
     private HashMap<String, Integer> accuracy;
 
 

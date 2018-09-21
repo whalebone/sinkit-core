@@ -112,7 +112,6 @@ public class DNSApiLoggingEJB {
         logRecord.setClient(clientUid);
         logRecord.setLogged(Calendar.getInstance().getTime());
 
-        VirusTotalRequestStatus vtRequestStatus;
         if (MapUtils.isNotEmpty(matchedIoCs)) {
             final Set<IoCRecord> matchedIoCsList = new HashSet<>();
             log.log(Level.FINE, "Iterating matchedIoCs...");
@@ -133,14 +132,7 @@ public class DNSApiLoggingEJB {
             }
             final IoCRecord[] matchedIoCsArray = matchedIoCsList.toArray(new IoCRecord[matchedIoCsList.size()]);
             logRecord.setMatchedIocs(matchedIoCsArray);
-            vtRequestStatus = VirusTotalRequestStatus.WAITING;
-        } else {
-            vtRequestStatus = VirusTotalRequestStatus.NOT_NEEDED;
         }
-
-        final VirusTotalRequest vtReq = new VirusTotalRequest();
-        vtReq.setStatus(vtRequestStatus);
-        logRecord.setVirusTotalRequest(vtReq);
 
         Arrays.stream(logRecord.getMatchedIocs()).filter(x -> DNSApiEJB.CUSTOM_LIST_FEED_NAME.equals(x.getFeed().getName())).forEach(x -> x.setUniqueRef(null));
 
@@ -157,7 +149,6 @@ public class DNSApiLoggingEJB {
             log.warning("Match IoC with id " + iocId + " was not found (deactivated??) -> skipping.");
             return null;
         }
-        ioc.setVirusTotalReports(null);
         ioc.getSeen().setLast(null);
         ioc.setRaw(null);
         ioc.setActive(null);
@@ -213,7 +204,6 @@ public class DNSApiLoggingEJB {
                 return null;
             }
 
-            retrievedIoC.setVirusTotalReports(null);
             retrievedIoC.getSeen().setLast(null);
             retrievedIoC.setRaw(null);
             retrievedIoC.setActive(null);

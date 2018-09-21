@@ -1,0 +1,90 @@
+version: 2
+general:
+  branches:
+    only:
+      -circleci
+jobs:
+  build:
+    docker:
+      # specify the version you desire here
+      - image: circleci/openjdk:8-jdk
+        environment:
+          # Customize the JVM maximum heap limit
+          MAVEN_OPTS: -Xmx3200m
+          SINKIT_ACCESS_TOKEN: user
+          SINKIT_ADDR_PREFIX: 127
+          SINKIT_DNS_REQUEST_LOGGING_ENABLED: True
+          SINKIT_ELASTIC_CLUSTER: archive
+          SINKIT_ELASTIC_HOST: 127.0.0.1
+          SINKIT_ELASTIC_PORT: 9300
+          SINKIT_ELASTIC_REST_PORT: 9200
+          SINKIT_HOTROD_HOST: 127.0.0.1
+          SINKIT_HOTROD_PORT: 11322
+          SINKIT_HOTROD_CONN_TIMEOUT_S: 300
+          SINKIT_IOC_ACTIVE_HOURS: 1
+          IOC_ACTIVE_HOURS_ENV: 1
+          WHITELIST_VALID_HOURS_ENV: 1
+          SINKIT_IOC_DEACTIVATOR_SKIP: True
+          SINKIT_LOCAL_CACHE_LIFESPAN: 1000
+          SINKIT_LOCAL_CACHE_SIZE: 10
+          SINKIT_LOGLEVEL: ALL
+          SINKIT_MS_RAM: 256m
+          SINKIT_MX_RAM: 256m
+          SINKIT_NIC: lo
+          SINKIT_SINKHOLE_IP: 127.0.0.1
+          SINKIT_SINKHOLE_IPV6: ::1
+          SINKIT_VERIFY_CLIENT: REQUIRED
+          SINKIT_VIRUS_TOTAL_SKIP: True
+          SINKIT_WHITELIST_VALID_HOURS: 1
+          SINKIT_MGMT_USER: user
+          SINKIT_MGMT_PASS: user
+
+# ELASTIC
+# Image repo: https://github.com/hugeox/elastic-docker
+      - image: hugeox/sinkit-elastic:1.0
+        environment:
+          ES_CLUSTER: "archive"
+          ES_HEAP_SIZE: "256m"
+          ES_INT: "lo"
+          ES_SERVICE_NAME: "archive"
+          ES_NODE_MASTER: "true"
+          ES_NODE_DATA: "true"
+          ES_GROOVY_ENABLED: "true"
+          ES_SCRIPT_DISABLE: "false"
+          ES_MINIMUM_MASTER_NODES: "1"
+
+# ISPN
+# Image repo: https://github.com/Karm/infinispan-docker/
+      - image: karm/sinkit-infinispan:1.27
+        environment:
+          TEST_NODE_NAME: "node2"
+          TEST_NODE_OFFSET: "100"
+          INFINISPAN_ADDR_PREFIX: "127"
+          INFINISPAN_LOGLEVEL: "DEBUG"
+          INFINISPAN_FILEPING_PATH: "/tmp"
+          INFINISPAN_MS_RAM: "2g"
+          INFINISPAN_MX_RAM: "2g"
+          INFINISPAN_NIC: "lo"
+          INFINISPAN_GMS_MAX_JOIN_ATTEMPTS: "1"
+    
+    steps:
+      - checkout
+
+      - restore_cache: # restore the saved cache after the first run or if `pom.xml` has changed
+          key: sinkit-core
+      
+      - run: mvn install -DskipTests
+# gets the project dependencies
+      
+      - save_cache: # saves the project dependencies
+          key: sinkit-core
+          paths:
+            - ~/.m2
+
+         #setup elastic with templates
+      - run: curl -XPUT localhost:9200/_template/iocs -d @integration-tests/src/test/resources/elastic_iocs.json
+      - run: curl -XPUT localhost:9200/_template/logs -d @integration-tests/src/test/resources/elastic_logs.json
+      - run: curl -XPUT localhost:9200/_template/passivedns -d @integration-tests/src/test/resources/elastic_passivedns.json
+
+      # run tests!
+      - run: mvn integration-test -Parq-wildfly-managed -Dhotrod_host=127.0.0.1 -Dhotrod_port=11322
