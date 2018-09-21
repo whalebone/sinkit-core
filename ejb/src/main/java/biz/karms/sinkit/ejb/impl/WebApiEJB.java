@@ -471,7 +471,7 @@ public class WebApiEJB implements WebApi {
             }
             //}
         }
-        return customListsElementCounter + " CUSTOM LISTS ELEMENTS PROCESSED, " + customListsCache.size() + " PRESENT"+ customListsCache.keySet().toString();
+        return customListsElementCounter + " CUSTOM LISTS ELEMENTS PROCESSED, " + customListsCache.size() + " PRESENT" + customListsCache.keySet().toString();
     }
 
     /**

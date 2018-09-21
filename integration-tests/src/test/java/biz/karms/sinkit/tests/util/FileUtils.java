@@ -12,7 +12,7 @@ public class FileUtils {
     /**
      * Reads file on classpath(in resources folder)
      */
-    public static String readFileIntoString(String filename) throws java.io.IOException{
+    public static String readFileIntoString(String filename) throws java.io.IOException {
         URL url = Resources.getResource(filename);
         return Resources.toString(url, Charsets.UTF_8);
     }

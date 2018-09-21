@@ -1,7 +1,6 @@
 package biz.karms.sinkit.ejb;
 
 import biz.karms.sinkit.ejb.cache.pojo.WhitelistedRecord;
-import biz.karms.sinkit.ejb.protostream.IocProtostreamGenerator;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCValidationException;
 import biz.karms.sinkit.ioc.IoCAccuCheckerReport;

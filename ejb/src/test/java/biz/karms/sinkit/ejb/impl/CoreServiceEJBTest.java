@@ -4,23 +4,26 @@ import biz.karms.sinkit.ejb.ArchiveService;
 import biz.karms.sinkit.ejb.BlacklistCacheService;
 import biz.karms.sinkit.ejb.WhitelistCacheService;
 import biz.karms.sinkit.ejb.cache.pojo.WhitelistedRecord;
+import biz.karms.sinkit.ioc.IoCAccuCheckerReport;
 import biz.karms.sinkit.ioc.IoCFeed;
 import biz.karms.sinkit.ioc.IoCRecord;
 import biz.karms.sinkit.ioc.IoCSource;
 import biz.karms.sinkit.ioc.IoCSourceId;
 import biz.karms.sinkit.ioc.IoCSourceIdType;
-
-import java.util.ArrayList;
-import java.util.Calendar;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
-import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -47,6 +50,7 @@ public class CoreServiceEJBTest {
 
     /**
      * Tests the update of accuracy with a report from AccuChecker
+     *
      * @throws Exception
      */
     @Test
@@ -56,32 +60,32 @@ public class CoreServiceEJBTest {
         IoCRecord ioc1 = getIoCForWhitelist(null, "mal.com", "OneFeed", true);
         ioc1.setDocumentId("1");
         //give this ioc a feed accuracy
-        HashMap<String,Integer> feed_accuracy_1 = new HashMap<>();
+        HashMap<String, Integer> feed_accuracy_1 = new HashMap<>();
         feed_accuracy_1.put("feed", 80);
         ioc1.setAccuracy(feed_accuracy_1);
 
         //2nd ioc, feed accuracy setup
         IoCRecord ioc2 = getIoCForWhitelist(null, "mal.com", "SomeOtherFeed", true);
         ioc2.setDocumentId("2");
-        HashMap<String,Integer> feed_accuracy_2 = new HashMap<>();
+        HashMap<String, Integer> feed_accuracy_2 = new HashMap<>();
         feed_accuracy_2.put("feed", 50);
         ioc2.setAccuracy(feed_accuracy_2);
 
         //accuchecker report setup
-        IoCRecord report = getIoCForWhitelist(null, "mal.com",null,true);
-        HashMap<String,Integer> accuracy = new HashMap<>();
+        IoCRecord report = getIoCForWhitelist(null, "mal.com", null, true);
+        HashMap<String, Integer> accuracy = new HashMap<>();
         accuracy.put("SomeAccuracyProvider", 20);
         report.setAccuracy(accuracy);
-        HashMap<String,String> metadata = new HashMap<>();
-        metadata.put("SomeAccuracyProvider","SomeAccuracyProvider has no metadata");
+        HashMap<String, String> metadata = new HashMap<>();
+        metadata.put("SomeAccuracyProvider", "SomeAccuracyProvider has no metadata");
         report.setMetadata(metadata);
         IoCAccuCheckerReport accu_report = new IoCAccuCheckerReport(report);
         List<IoCRecord> iocs = new ArrayList<IoCRecord>();
         iocs.add(ioc1);
         iocs.add(ioc2);
-        when( archiveService.getMatchingEntries("source.id.value", "mal.com")).thenReturn(iocs);
-        when(archiveService.setReportToIoCRecord(accu_report,"1")).thenReturn(true);
-        when(archiveService.setReportToIoCRecord(accu_report,"2")).thenReturn(true);
+        when(archiveService.getMatchingEntries("source.id.value", "mal.com")).thenReturn(iocs);
+        when(archiveService.setReportToIoCRecord(accu_report, "1")).thenReturn(true);
+        when(archiveService.setReportToIoCRecord(accu_report, "2")).thenReturn(true);
         when(blacklistCacheService.addToCache(iocs.get(0))).thenReturn(true);
         when(blacklistCacheService.addToCache(iocs.get(1))).thenReturn(true);
 
@@ -89,15 +93,15 @@ public class CoreServiceEJBTest {
         assertTrue(coreService.updateWithAccuCheckerReport(accu_report));
 
         //verify
-        verify(archiveService).getMatchingEntries("source.id.value","mal.com");
-        verify(archiveService).setReportToIoCRecord(accu_report,"1");
-        verify(archiveService).setReportToIoCRecord(accu_report,"2");
+        verify(archiveService).getMatchingEntries("source.id.value", "mal.com");
+        verify(archiveService).setReportToIoCRecord(accu_report, "1");
+        verify(archiveService).setReportToIoCRecord(accu_report, "2");
         verify(blacklistCacheService).addToCache(iocs.get(0));
         verify(blacklistCacheService).addToCache(iocs.get(1));
-        assertEquals(new Integer(80),iocs.get(0).getAccuracy().get("feed"));
-        assertEquals(new Integer(20),iocs.get(0).getAccuracy().get("SomeAccuracyProvider"));
-        assertEquals(new Integer(50),iocs.get(1).getAccuracy().get("feed"));
-        assertEquals(new Integer(20),iocs.get(1).getAccuracy().get("SomeAccuracyProvider"));
+        assertEquals(new Integer(80), iocs.get(0).getAccuracy().get("feed"));
+        assertEquals(new Integer(20), iocs.get(0).getAccuracy().get("SomeAccuracyProvider"));
+        assertEquals(new Integer(50), iocs.get(1).getAccuracy().get("feed"));
+        assertEquals(new Integer(20), iocs.get(1).getAccuracy().get("SomeAccuracyProvider"));
         verifyNoMoreInteractions(archiveService);
         verifyNoMoreInteractions(blacklistCacheService);
     }

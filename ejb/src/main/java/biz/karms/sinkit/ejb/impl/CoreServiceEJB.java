@@ -10,11 +10,11 @@ import biz.karms.sinkit.ejb.util.IoCValidator;
 import biz.karms.sinkit.ejb.util.WhitelistUtils;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCValidationException;
+import biz.karms.sinkit.ioc.IoCAccuCheckerReport;
 import biz.karms.sinkit.ioc.IoCRecord;
 import biz.karms.sinkit.ioc.IoCSeen;
 import biz.karms.sinkit.ioc.IoCSourceId;
 import biz.karms.sinkit.ioc.IoCSourceIdType;
-import biz.karms.sinkit.ioc.IoCAccuCheckerReport;
 import biz.karms.sinkit.ioc.util.IoCSourceIdBuilder;
 import com.google.gson.Gson;
 import org.apache.commons.collections.CollectionUtils;
@@ -148,6 +148,7 @@ public class CoreServiceEJB implements CoreService {
 
     /**
      * updates all entries in cache and in elastic with report
+     *
      * @param report
      * @return true if all archivations and cache updates succeed
      * @throws ArchiveException
@@ -166,8 +167,7 @@ public class CoreServiceEJB implements CoreService {
         final HashMap<String, Integer> report_accuracy = report.getAccuracy();
         String source_id_value = report.getSource().getId().getValue();
         List<IoCRecord> iocs = archiveService.getMatchingEntries("source.id.value", source_id_value);
-        for( IoCRecord ioc : iocs)
-         {
+        for (IoCRecord ioc : iocs) {
 
             HashMap<String, Integer> combined_accuracy = new HashMap<>(report_accuracy);
             if (ioc.getAccuracy() != null) { //nullity shouldn't happen
@@ -177,7 +177,7 @@ public class CoreServiceEJB implements CoreService {
 
             archiveService.setReportToIoCRecord(report, ioc.getDocumentId());
             boolean cache_response = blacklistCacheService.addToCache(ioc);
-            if (cache_response == false) {
+            if (!cache_response) {
                 response = false;
             }
         }

@@ -35,4 +35,6 @@ public interface ArchiveService {
     IoCRecord getIoCRecordById(String id) throws ArchiveException;
 
     IoCRecord getIoCRecordByUniqueRef(String uniqueRef) throws ArchiveException;
+
+    boolean setReportToIoCRecord(final IoCAccuCheckerReport report, final String document_id) throws ArchiveException;
 }

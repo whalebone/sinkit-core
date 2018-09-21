@@ -2,18 +2,16 @@ package biz.karms.sinkit.ejb.cache.pojo.marshallers;
 
 import biz.karms.sinkit.ioc.IoCClassificationType;
 import biz.karms.sinkit.resolver.StrategyParams;
-import biz.karms.sinkit.resolver.StrategyType;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Set;
-import org.hamcrest.Matchers;
 import org.infinispan.protostream.MessageMarshaller;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasItems;
@@ -85,7 +83,7 @@ public class StrategyParamsMessageMarshallerTest {
         marshaller.writeTo(writer, strategyParams);
 
         // verification
-        verify(writer).writeInt("audit", (Integer)33);
+        verify(writer).writeInt("audit", (Integer) 33);
         verify(writer).writeInt("block", (Integer) 66);
         verify(writer).writeCollection(eq("types"),
                 (Set<String>) argThat(hasItems(IoCClassificationType.malware.getLabel(), IoCClassificationType.cc.getLabel())), eq(String.class));

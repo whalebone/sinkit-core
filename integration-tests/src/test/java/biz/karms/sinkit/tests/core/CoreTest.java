@@ -273,7 +273,7 @@ public class CoreTest extends Arquillian {
 
         assertNotNull(jsonHits);
 
-        assertEquals(jsonHits.size(),1);
+        assertEquals(jsonHits.size(), 1);
         JsonObject logRecord = jsonHits.get(0).getAsJsonObject().get("_source").getAsJsonObject();
         assertEquals(logRecord.get("action").getAsString(), "block");
         assertEquals(logRecord.get("client").getAsString(), "10.1.1.1");
@@ -288,7 +288,7 @@ public class CoreTest extends Arquillian {
 
         //We want to get the ioc that is from greatfeed.com (not the one from phishing.ru
         JsonObject matchedIoc1 = matchedIocs.get(0).getAsJsonObject();
-        if (!matchedIoc1.toString().contains("greatfeed.com")){
+        if (!matchedIoc1.toString().contains("greatfeed.com")) {
             matchedIoc1 = matchedIocs.get(1).getAsJsonObject();
         }
 

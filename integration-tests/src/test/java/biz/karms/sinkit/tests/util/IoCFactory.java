@@ -24,7 +24,7 @@ import java.util.Date;
 public class IoCFactory {
     public static IoCRecord getIoCRecord(String taxonomy, String type, String documentId, String feedName, String feedURL,
                                          String fqdn, IoCSourceIdType sourceType, String sourceIdKey,
-                                         String  sourceIPKey, String reverseDomainName) {
+                                         String sourceIPKey, String reverseDomainName) {
         IoCRecord ioCRecord = new IoCRecord();
         ioCRecord.setActive(true);
         IoCClassification ioCClassification = new IoCClassification();

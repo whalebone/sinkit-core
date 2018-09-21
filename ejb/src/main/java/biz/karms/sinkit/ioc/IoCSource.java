@@ -1,10 +1,10 @@
 package biz.karms.sinkit.ioc;
 
 import com.google.gson.annotations.SerializedName;
-
-import java.io.Serializable;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.io.Serializable;
 
 /**
  * @author Tomas Kozel

@@ -3,6 +3,8 @@ package biz.karms.sinkit.ejb.cache.pojo.marshallers;
 
 import biz.karms.sinkit.ioc.IoCClassificationType;
 import biz.karms.sinkit.resolver.StrategyParams;
+import org.infinispan.protostream.MessageMarshaller;
+
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
@@ -10,7 +12,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.infinispan.protostream.MessageMarshaller;
 
 public class StrategyParamsMessageMarshaller implements MessageMarshaller<StrategyParams> {
     @Override

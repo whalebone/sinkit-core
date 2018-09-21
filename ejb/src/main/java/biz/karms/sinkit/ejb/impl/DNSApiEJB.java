@@ -12,10 +12,9 @@ import biz.karms.sinkit.ejb.cache.pojo.Rule;
 import biz.karms.sinkit.ejb.dto.Sinkhole;
 import biz.karms.sinkit.ejb.util.CIDRUtils;
 import biz.karms.sinkit.ejb.util.IPorFQDNValidator;
+import biz.karms.sinkit.ejb.util.WhitelistUtils;
 import biz.karms.sinkit.eventlog.EventLogAction;
 import biz.karms.sinkit.exception.ArchiveException;
-import biz.karms.sinkit.ejb.util.WhitelistUtils;
-
 import com.google.gson.Gson;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
@@ -362,12 +361,10 @@ public class DNSApiEJB implements DNSApi {
 
         final String[] toBeChecked;
         if (isFQDN == IPorFQDNValidator.DECISION.IP) {
-            toBeChecked = new String[]{ fqdnOrIp};
+            toBeChecked = new String[]{fqdnOrIp};
         } else {
             toBeChecked = WhitelistUtils.explodeDomains(fqdnOrIp);
         }
-
-
 
 
         for (String subdomainOrIp : toBeChecked) {

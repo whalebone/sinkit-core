@@ -8,8 +8,6 @@ import biz.karms.sinkit.eventlog.EventDNSRequest;
 import biz.karms.sinkit.eventlog.EventLogAction;
 import biz.karms.sinkit.eventlog.EventLogRecord;
 import biz.karms.sinkit.eventlog.EventReason;
-import biz.karms.sinkit.eventlog.VirusTotalRequest;
-import biz.karms.sinkit.eventlog.VirusTotalRequestStatus;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.exception.IoCSourceIdException;
 import biz.karms.sinkit.ioc.IoCClassification;

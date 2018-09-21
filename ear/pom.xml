@@ -69,32 +69,32 @@
                     <defaultLibBundleDir>lib</defaultLibBundleDir>
                     <archive>
                         <addMavenDescriptor>false</addMavenDescriptor>
-            <!-- No longer needed, we don't rely on private APIs -->
-            <!--
-            <manifestEntries>
-                <Dependencies>
-                    org.infinispan,org.infinispan.commons
-                </Dependencies>
-            </manifestEntries>
-            -->
-        </archive>
-        <modules>
-            <webModule>
-                <groupId>biz.karms.sinkit</groupId>
-                <artifactId>sinkit-rest</artifactId>
-                <contextRoot>/sinkit</contextRoot>
-            </webModule>
-            <ejbModule>
-                <groupId>biz.karms.sinkit</groupId>
-                <artifactId>sinkit-ejb</artifactId>
-                <bundleFileName>sinkit-ejb.jar</bundleFileName>
-            </ejbModule>
-        </modules>
-        <fileNameMapping>no-version</fileNameMapping>
-    </configuration>
-</plugin>
+                        <!-- No longer needed, we don't rely on private APIs -->
+                        <!--
+                        <manifestEntries>
+                            <Dependencies>
+                                org.infinispan,org.infinispan.commons
+                            </Dependencies>
+                        </manifestEntries>
+                        -->
+                    </archive>
+                    <modules>
+                        <webModule>
+                            <groupId>biz.karms.sinkit</groupId>
+                            <artifactId>sinkit-rest</artifactId>
+                            <contextRoot>/sinkit</contextRoot>
+                        </webModule>
+                        <ejbModule>
+                            <groupId>biz.karms.sinkit</groupId>
+                            <artifactId>sinkit-ejb</artifactId>
+                            <bundleFileName>sinkit-ejb.jar</bundleFileName>
+                        </ejbModule>
+                    </modules>
+                    <fileNameMapping>no-version</fileNameMapping>
+                </configuration>
+            </plugin>
 
-<!-- WildFly plugin to deploy ear -->
+            <!-- WildFly plugin to deploy ear -->
             <plugin>
                 <groupId>org.wildfly.plugins</groupId>
                 <artifactId>wildfly-maven-plugin</artifactId>

@@ -1,24 +1,21 @@
 package biz.karms.sinkit.ejb.cache.pojo.marshallers;
 
 import biz.karms.sinkit.resolver.EndUserConfiguration;
-import biz.karms.sinkit.resolver.Strategy;
-import biz.karms.sinkit.resolver.StrategyParams;
-import biz.karms.sinkit.resolver.StrategyType;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
 import org.infinispan.protostream.MessageMarshaller;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doReturn;

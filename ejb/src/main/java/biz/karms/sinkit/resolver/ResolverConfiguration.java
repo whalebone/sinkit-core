@@ -1,13 +1,14 @@
 package biz.karms.sinkit.resolver;
 
-import java.io.Serializable;
-import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.io.Serializable;
+import java.util.List;
+
 @Getter
 @Setter
-public class ResolverConfiguration implements Serializable{
+public class ResolverConfiguration implements Serializable {
 
     private Integer resolverId;
     private Integer clientId;

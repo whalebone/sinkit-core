@@ -21,7 +21,7 @@ import java.util.HashMap;
  *         },
  *         ...
  *         ]
- *
+ *         <p>
  *         dns - could contain * and ?
  *         B|W|L - only B|W implemented ATTOW
  */

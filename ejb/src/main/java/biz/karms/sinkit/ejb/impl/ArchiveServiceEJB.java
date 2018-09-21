@@ -5,7 +5,6 @@ import biz.karms.sinkit.ejb.elastic.ElasticService;
 import biz.karms.sinkit.ejb.elastic.logstash.LogstashClient;
 import biz.karms.sinkit.ejb.util.IoCIdentificationUtils;
 import biz.karms.sinkit.eventlog.EventLogRecord;
-import biz.karms.sinkit.eventlog.VirusTotalRequestStatus;
 import biz.karms.sinkit.exception.ArchiveException;
 import biz.karms.sinkit.ioc.IoCAccuCheckerReport;
 import biz.karms.sinkit.ioc.IoCRecord;
@@ -97,16 +96,18 @@ public class ArchiveServiceEJB implements ArchiveService {
 
     /**
      * Wrapper method for elasticService.update
+     *
      * @param report
      * @param document_id
      * @return true if update is processed
      * @throws ArchiveException
      */
     @Override
-    public boolean setReportToIoCRecord(final IoCAccuCheckerReport report, String document_id) throws ArchiveException{
+    public boolean setReportToIoCRecord(final IoCAccuCheckerReport report, String document_id) throws ArchiveException {
         return elasticService.update(document_id, report, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, null);
 
     }
+
     @Override
     public IoCRecord deactivateRecord(final IoCRecord ioc) throws ArchiveException {
         /**
@@ -152,7 +153,8 @@ public class ArchiveServiceEJB implements ArchiveService {
 
     /**
      * Lists matching entris, lists up to DEF_LIMIT of them (defined in ElasticServiceEJB.class)
-     * @param name name of the field to be matched  against
+     *
+     * @param name  name of the field to be matched  against
      * @param value value of this field
      * @return List of matching entries
      * @throws ArchiveException
@@ -163,6 +165,7 @@ public class ArchiveServiceEJB implements ArchiveService {
         // FilterBuilders.missingFilter("whitelist_name")
         return elasticService.search(query, null, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, IoCRecord.class);
     }
+
     @Override
     public List<IoCRecord> getActiveNotWhitelistedIoCs(final int from, final int size) throws ArchiveException {
         final QueryBuilder query = QueryBuilders.filteredQuery(

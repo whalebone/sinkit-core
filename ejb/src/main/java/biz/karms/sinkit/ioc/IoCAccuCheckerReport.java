@@ -5,20 +5,18 @@ import java.util.HashMap;
 
 /**
  * Class representing AccuCheckerReport
- *
  */
 public class IoCAccuCheckerReport implements Serializable {
 
 
     private IoCSource source;
     private HashMap<String, Integer> accuracy;
-    private HashMap<String,String> metadata;
+    private HashMap<String, String> metadata;
 
-    public IoCAccuCheckerReport(IoCRecord ioc)
-    {
-        source=ioc.getSource();
-        accuracy=ioc.getAccuracy();
-        metadata=ioc.getMetadata();
+    public IoCAccuCheckerReport(IoCRecord ioc) {
+        source = ioc.getSource();
+        accuracy = ioc.getAccuracy();
+        metadata = ioc.getMetadata();
     }
 
     public IoCSource getSource() {

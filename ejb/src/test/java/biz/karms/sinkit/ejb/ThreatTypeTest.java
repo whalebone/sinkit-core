@@ -11,7 +11,7 @@ import static org.junit.Assert.assertNull;
 public class ThreatTypeTest {
 
     @Test
-    public void  parseTest() {
+    public void parseTest() {
         assertEquals(ThreatType.BLACKLIST, ThreatType.parseName("blacklist"));
         assertEquals(ThreatType.C_C, ThreatType.parseName("c&c"));
         assertEquals(ThreatType.MALWARE, ThreatType.parseName("malware"));

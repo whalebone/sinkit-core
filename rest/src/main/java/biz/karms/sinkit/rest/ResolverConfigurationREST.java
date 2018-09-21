@@ -5,8 +5,7 @@ import biz.karms.sinkit.exception.EndUserConfigurationValidationException;
 import biz.karms.sinkit.exception.ResolverConfigurationValidationException;
 import biz.karms.sinkit.resolver.EndUserConfiguration;
 import biz.karms.sinkit.resolver.ResolverConfiguration;
-import java.util.List;
-import java.util.logging.Logger;
+
 import javax.ejb.EJB;
 import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
@@ -16,6 +15,8 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Response;
+import java.util.List;
+import java.util.logging.Logger;
 
 @RequestScoped
 @Path("/")

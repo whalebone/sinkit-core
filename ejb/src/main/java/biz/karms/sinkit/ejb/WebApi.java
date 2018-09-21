@@ -4,11 +4,11 @@ import biz.karms.sinkit.ejb.cache.pojo.BlacklistedRecord;
 import biz.karms.sinkit.ejb.dto.AllDNSSettingDTO;
 import biz.karms.sinkit.ejb.dto.CustomerCustomListDTO;
 import biz.karms.sinkit.ejb.dto.FeedSettingCreateDTO;
-
 import biz.karms.sinkit.exception.EndUserConfigurationValidationException;
 import biz.karms.sinkit.exception.ResolverConfigurationValidationException;
 import biz.karms.sinkit.resolver.EndUserConfiguration;
 import biz.karms.sinkit.resolver.ResolverConfiguration;
+
 import javax.ejb.Local;
 import java.util.HashMap;
 import java.util.List;

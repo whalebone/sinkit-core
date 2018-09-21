@@ -2,14 +2,15 @@ package biz.karms.sinkit.ejb.cache.pojo.marshallers;
 
 import biz.karms.sinkit.resolver.Policy;
 import biz.karms.sinkit.resolver.ResolverConfiguration;
-import java.util.Collections;
-import java.util.List;
 import org.infinispan.protostream.MessageMarshaller;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+
+import java.util.Collections;
+import java.util.List;
 
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;

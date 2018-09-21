@@ -36,8 +36,7 @@ public class CoreCacheMarshaller implements MessageMarshaller<HashMap> {
 
     @Override
     public void writeTo(ProtoStreamWriter writer, HashMap map) throws IOException {
-        @SuppressWarnings("unchecked")
-        final Stream<Map.Entry<String, Action>> map1 = map.entrySet().stream();
+        @SuppressWarnings("unchecked") final Stream<Map.Entry<String, Action>> map1 = map.entrySet().stream();
         final List<ImmutablePair> records = map1.map(e -> new ImmutablePair<>(e.getKey(), e.getValue())).collect(Collectors.toList());
         writer.writeCollection("record", records, ImmutablePair.class);
     }

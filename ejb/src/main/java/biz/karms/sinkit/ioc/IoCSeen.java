@@ -1,9 +1,10 @@
 package biz.karms.sinkit.ioc;
 
-import java.io.Serializable;
-import java.util.Date;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.io.Serializable;
+import java.util.Date;
 
 /**
  * @author Tomas Kozel

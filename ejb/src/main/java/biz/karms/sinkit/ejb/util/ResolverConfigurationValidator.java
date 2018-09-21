@@ -106,10 +106,10 @@ public class ResolverConfigurationValidator {
                 .filter(strategy -> StrategyType.accuracy == strategy.getStrategyType())
                 .map(Strategy::getStrategyParams)
                 .anyMatch(params -> (((params.getAudit() > params.getBlock()) && params.getAudit() != 0 && params.getBlock() != 0) ||
-                                     params.getAudit() > 100 ||
-                                     params.getAudit() < 0 ||
-                                     params.getBlock() > 100 ||
-                                     params.getBlock() < 0));
+                        params.getAudit() > 100 ||
+                        params.getAudit() < 0 ||
+                        params.getBlock() > 100 ||
+                        params.getBlock() < 0));
 
         if (hasError) {
             throw new ResolverConfigurationValidationException(
