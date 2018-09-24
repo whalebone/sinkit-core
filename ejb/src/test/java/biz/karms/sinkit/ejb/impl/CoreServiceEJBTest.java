@@ -88,7 +88,7 @@ public class CoreServiceEJBTest {
         List<IoCRecord> iocs = new ArrayList<IoCRecord>();
         iocs.add(ioc1);
         iocs.add(ioc2);
-        when(archiveService.getMatchingEntries("source.id.value", "mal.com")).thenReturn(iocs);
+        when(archiveService.getMatchingActiveEnries("source.id.value", "mal.com")).thenReturn(iocs);
         when(archiveService.setReportToIoCRecord(accu_report, "1")).thenReturn(true);
         when(archiveService.setReportToIoCRecord(accu_report, "2")).thenReturn(true);
         when(blacklistCacheService.addToCache(iocs.get(0))).thenReturn(true);
@@ -98,7 +98,7 @@ public class CoreServiceEJBTest {
         assertTrue(coreService.updateWithAccuCheckerReport(accu_report));
 
         //verify
-        verify(archiveService).getMatchingEntries("source.id.value", "mal.com");
+        verify(archiveService).getMatchingActiveEnries("source.id.value", "mal.com");
         verify(archiveService).setReportToIoCRecord(accu_report, "1");
         verify(archiveService).setReportToIoCRecord(accu_report, "2");
         verify(blacklistCacheService).addToCache(iocs.get(0));

@@ -166,7 +166,7 @@ public class CoreServiceEJB implements CoreService {
         boolean response = true;
         final HashMap<String, Integer> report_accuracy = report.getAccuracy();
         String source_id_value = report.getSource().getId().getValue();
-        List<IoCRecord> iocs = archiveService.getMatchingEntries("source.id.value", source_id_value);
+        List<IoCRecord> iocs = archiveService.getMatchingActiveEnries("source.id.value", source_id_value);
         for (IoCRecord ioc : iocs) {
 
             HashMap<String, Integer> combined_accuracy = new HashMap<>();
