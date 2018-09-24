@@ -288,7 +288,7 @@ public class ApiIntegrationTest extends Arquillian {
     }
 
 
-    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 20)
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 12)
     @OperateOnDeployment("ear")
     @RunAsClient
     public void endToEndTest(@ArquillianResource URL context) throws Exception {
@@ -393,5 +393,81 @@ public class ApiIntegrationTest extends Arquillian {
         assertNotNull(matchedIoc1.get("seen").getAsJsonObject().get("first"));
         assertNull(matchedIoc1.get("seen").getAsJsonObject().get("last"));
         assertNull(matchedIoc1.get("active"));
+    }
+
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 13)
+    @OperateOnDeployment("ear")
+    @RunAsClient
+    public void accuCheckerTest(@ArquillianResource URL context) throws Exception {
+        //Insert IoC
+        WebClient webClient = new WebClient();
+        WebRequest requestSettings = new WebRequest(new URL(context + "rest/blacklist/ioc/"), HttpMethod.POST);
+        requestSettings.setAdditionalHeader("Content-Type", "application/json");
+        requestSettings.setAdditionalHeader("X-sinkit-token", TOKEN);
+
+        String ioc = FileUtils.readFileIntoString("ioc2_accuracyUpdateTest.json");
+        ioc = ioc.replace("TIME_OBSERVATION",
+                new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(Calendar.getInstance().getTime()));
+        requestSettings.setRequestBody(ioc);
+
+        Page page = webClient.getPage(requestSettings);
+        assertEquals(HttpURLConnection.HTTP_OK, page.getWebResponse().getStatusCode());
+
+        //Update accuracy
+        WebRequest requestSettingsAccu = new WebRequest(new URL(context + "rest/blacklist/accuracyupdate/"), HttpMethod.POST);
+        requestSettingsAccu.setAdditionalHeader("Content-Type", "application/json");
+        requestSettingsAccu.setAdditionalHeader("X-sinkit-token", TOKEN);
+
+        String report = FileUtils.readFileIntoString("accucheckerreport.json");
+        report = report.replace("TIMESTAMP",
+                new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(Calendar.getInstance().getTime()));
+        requestSettingsAccu.setRequestBody(report);
+
+        Page pageAccuUpdate = webClient.getPage(requestSettingsAccu);
+        assertEquals(HttpURLConnection.HTTP_OK, pageAccuUpdate.getWebResponse().getStatusCode());
+
+        //Check Cache
+        WebRequest requestSettingsCache = new WebRequest(new URL(context + "rest/blacklist/record/accuracy.phishing.ru"), HttpMethod.GET);
+        requestSettingsCache.setAdditionalHeader("Content-Type", "application/json");
+        requestSettingsCache.setAdditionalHeader("X-sinkit-token", TOKEN);
+        Page pageCache = webClient.getPage(requestSettingsCache);
+        assertEquals(HttpURLConnection.HTTP_OK, pageCache.getWebResponse().getStatusCode());
+
+        String responseBodyCache = pageCache.getWebResponse().getContentAsString();
+        LOGGER.info("Cache Response:" + responseBodyCache);
+        JsonParser jsonParser = new JsonParser();
+        JsonObject accuracy = jsonParser.parse(responseBodyCache).getAsJsonObject()
+                .get("accuracy").getAsJsonObject()
+                .get("accucheckerTest").getAsJsonObject();
+        assertEquals(accuracy.get("feed").getAsInt(), 80);
+        assertEquals(accuracy.get("passivedns").getAsInt(), 40);
+        assertEquals(accuracy.get("accufeed1").getAsInt(), 80);
+
+    }
+
+
+    /**
+     * Test checking whether accuracy has also been updated in Elastic
+     * @throws Exception
+     */
+    @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 14)
+    public void accuCheckerElasticTest() throws Exception {
+
+        String feed = "accucheckerTest";
+        String type = "phishing";
+        String fqdn = "accuracy.phishing.ru";
+        String iocId = "d9ada7e11d0a2917fd6473cac15fe74f";  // id hash from values above
+
+        IoCRecord ioc = archiveService.getIoCRecordById(iocId);
+        assertNotNull(ioc, "Excpecting IoC, but got null ");
+        assertEquals(ioc.getFeed().getName(), feed, "Expected feed.name: " + feed + ", but got: " + ioc.getFeed().getName());
+        assertEquals(ioc.getSource().getId().getType(), IoCSourceIdType.FQDN, "Expected source.id.type: " + IoCSourceIdType.FQDN + ", but got: " + ioc.getSource().getId().getType());
+        assertEquals(ioc.getSource().getId().getValue(), fqdn, "Expected source.id.value: " + fqdn + ", but got: " + ioc.getSource().getId().getValue());
+        assertEquals(ioc.getClassification().getType(), type, "Expected classification.type: " + type + ", but got: " + ioc.getClassification().getType());
+        assertEquals(ioc.getAccuracy().get("feed"), new Integer(80));
+        assertEquals(ioc.getAccuracy().get("accufeed1"), new Integer(80));
+        assertEquals(ioc.getAccuracy().get("passivedns"), new Integer(40));
+        assertEquals(ioc.getMetadata().get("accufeed1").getContent(), "Some content");
+        assertNotNull(ioc.getTime().getObservation(), "Expecting time.observation, but got null");
     }
 }

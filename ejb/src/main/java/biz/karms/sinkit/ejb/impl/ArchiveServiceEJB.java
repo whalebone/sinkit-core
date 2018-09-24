@@ -152,7 +152,7 @@ public class ArchiveServiceEJB implements ArchiveService {
     }
 
     /**
-     * Lists matching entris, lists up to DEF_LIMIT of them (defined in ElasticServiceEJB.class)
+     * Lists matching active entries, lists up to DEF_LIMIT of them (defined in ElasticServiceEJB.class)
      *
      * @param name  name of the field to be matched  against
      * @param value value of this field
@@ -160,8 +160,9 @@ public class ArchiveServiceEJB implements ArchiveService {
      * @throws ArchiveException
      */
     @Override
-    public List<IoCRecord> getMatchingEntries(String name, String value) throws ArchiveException {
-        final QueryBuilder query = QueryBuilders.termQuery(name, value);
+    public List<IoCRecord> getMatchingActiveEnries(String name, String value) throws ArchiveException {
+        final QueryBuilder query = QueryBuilders.boolQuery().must(
+                QueryBuilders.termQuery(name, value)).must(QueryBuilders.termQuery("active", true));
         // FilterBuilders.missingFilter("whitelist_name")
         return elasticService.search(query, null, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, IoCRecord.class);
     }

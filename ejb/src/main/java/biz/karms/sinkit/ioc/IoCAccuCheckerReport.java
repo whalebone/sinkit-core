@@ -2,46 +2,28 @@ package biz.karms.sinkit.ioc;
 
 import java.io.Serializable;
 import java.util.HashMap;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Class representing AccuCheckerReport
+ * @author Krystof Kolar
  */
+@Getter
+@Setter
 public class IoCAccuCheckerReport implements Serializable {
 
 
+    public static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
+
     private IoCSource source;
     private HashMap<String, Integer> accuracy;
-    private HashMap<String, String> metadata;
+    private HashMap<String, IoCAccuCheckerMetadata> metadata;
 
     public IoCAccuCheckerReport(IoCRecord ioc) {
         source = ioc.getSource();
         accuracy = ioc.getAccuracy();
         metadata = ioc.getMetadata();
     }
-
-    public IoCSource getSource() {
-        return source;
-    }
-
-    public void setSource(IoCSource source) {
-        this.source = source;
-    }
-
-    public HashMap<String, Integer> getAccuracy() {
-        return accuracy;
-    }
-
-    public void setAccuracy(HashMap<String, Integer> accuracy) {
-        this.accuracy = accuracy;
-    }
-
-    public HashMap<String, String> getMetadata() {
-        return metadata;
-    }
-
-    public void setMetadata(HashMap<String, String> meta) {
-        this.metadata = meta;
-    }
-
 
 }

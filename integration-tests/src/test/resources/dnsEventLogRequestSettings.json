@@ -1,0 +1,11 @@
+{
+  "query": {
+    "filtered": {
+      "query": {
+        "query_string": {
+          "query": "action : block AND client : 10.1.1.1 AND  request.ip : 10.1.1.2 AND request.fqdn : requestFqdn AND request.type : requestType AND  reason.fqdn : seznam.cz AND reason.ip : 10.1.1.3"
+        }
+      }
+    }
+  }
+}
