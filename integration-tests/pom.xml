@@ -210,20 +210,6 @@
                     <scope>test</scope>
                 </dependency>
             </dependencies>
-            <!--<build>-->
-                <!--<plugins>-->
-                    <!--<plugin>-->
-                        <!--&lt;!&ndash; skip unpacking bundled wildfly since we use remote instance &ndash;&gt;-->
-                        <!--<artifactId>maven-dependency-plugin</artifactId>-->
-                        <!--<executions>-->
-                            <!--<execution>-->
-                                <!--<id>unpack</id>-->
-                                <!--<phase>none</phase>-->
-                            <!--</execution>-->
-                        <!--</executions>-->
-                    <!--</plugin>-->
-                <!--</plugins>-->
-            <!--</build>-->
         </profile>
     </profiles>
 </project>
