@@ -3,6 +3,7 @@ package biz.karms.sinkit.tests.core;
 import biz.karms.sinkit.ejb.ArchiveService;
 import biz.karms.sinkit.ejb.CoreService;
 import biz.karms.sinkit.ejb.DNSApi;
+import biz.karms.sinkit.ejb.dto.Sinkhole;
 import biz.karms.sinkit.ejb.impl.ArchiveServiceEJB;
 import biz.karms.sinkit.ejb.impl.DNSApiLoggingEJB;
 import biz.karms.sinkit.eventlog.EventLogAction;
@@ -38,6 +39,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
@@ -79,7 +81,7 @@ public class CoreTest extends Arquillian {
         iocDupl = coreService.processIoCRecord(iocDupl);
         assertEquals(iocDupl.getDocumentId(), ioc.getDocumentId(), "Expected documentId: " + ioc.getDocumentId() + ", but got: " + iocDupl.getDocumentId());
         assertTrue(iocDupl.getActive(), "Expected iocDupl to be active, but got inactive");
-        IoCRecord iocIndexed = archiveService.getIoCRecordById(iocDupl.getDocumentId());
+        IoCRecord iocIndexed = archiveService.getActiveIoCRecordById(iocDupl.getDocumentId());
         assertNotNull(iocIndexed, "Expecting ioc to be found in elastic, but got null");
         assertEquals(iocIndexed.getDocumentId(), ioc.getDocumentId(), "Expexted found document id: " + ioc.getDocumentId() + ", but got: " + iocIndexed.getDocumentId());
         assertEquals(iocIndexed.getSeen().getLast(), lastObservation, "Expected seen.last: " + lastObservation + ", but got: " + iocIndexed.getSeen().getLast());
@@ -145,20 +147,26 @@ public class CoreTest extends Arquillian {
         c.add(Calendar.HOUR, 1);
         Date activeDate = c.getTime();
 
-        IoCRecord willNotBeActive = IoCFactory.getIoCRecordAsRecieved("notActive", "phishing", "phishing.ru", IoCSourceIdType.FQDN, inactiveDate, null);
-        IoCRecord willBeActive = IoCFactory.getIoCRecordAsRecieved("active", "phishing", "phishing.ru", IoCSourceIdType.FQDN, activeDate, null);
+        IoCRecord willNotBeActive = IoCFactory.getIoCRecordAsRecieved("some-intelmq-feed-to-sink", "phishing", "inactive-phishing.ru", IoCSourceIdType.FQDN, inactiveDate, null);
+        IoCRecord willBeActive = IoCFactory.getIoCRecordAsRecieved("some-intelmq-feed-to-sink", "phishing", "active-phishing.cz", IoCSourceIdType.FQDN, activeDate, null);
 
         willNotBeActive = coreService.processIoCRecord(willNotBeActive);
         willBeActive = coreService.processIoCRecord(willBeActive);
 
+        Sinkhole sinkholeNotActive = dnsApi.getSinkHole("1.1.1.1","inactive-phishing.ru", "inactive-phishing.ru", null);
+        assertNotNull(sinkholeNotActive);
+        Sinkhole sinkholeActive = dnsApi.getSinkHole("1.1.1.1","active-phishing.cz", "active-phishing.cz", null);
+        assertNotNull(sinkholeActive);
+
         //wait until the willNotBeActive is too old to be active
         Thread.sleep(2100);
         c = Calendar.getInstance();
-        Date now = c.getTime();
         c.add(Calendar.HOUR, -coreService.getIocActiveHours());
         Date deactivationLimit = c.getTime();
         assertTrue(deactivationLimit.after(willNotBeActive.getSeen().getLast()), "Expected seen.last to be before: " + deactivationLimit + ", but was: " + willNotBeActive.getSeen().getLast());
+
         int deactivated = coreService.deactivateIocs();
+
         assertTrue(deactivated > 0, "Expecting at least 1 deactivated IoC, but got 0");
         willNotBeActive = archiveService.getIoCRecordByUniqueRef(willNotBeActive.getUniqueRef());
         assertFalse(willNotBeActive.getActive(), "Expected not active IoC, but was active");
@@ -166,6 +174,11 @@ public class CoreTest extends Arquillian {
 
         willBeActive = archiveService.getIoCRecordByUniqueRef(willBeActive.getUniqueRef());
         assertTrue(willBeActive.getActive(), "Expected active IoC, but was inactive");
+
+        sinkholeNotActive = dnsApi.getSinkHole("1.1.1.1","inactive-phishing.ru", "inactive-phishing.ru", null);
+        assertNull(sinkholeNotActive);
+        sinkholeActive = dnsApi.getSinkHole("1.1.1.1","active-phishing.cz", "active-phishing.cz", null);
+        assertNotNull(sinkholeActive);
     }
 
     /**
@@ -200,8 +213,8 @@ public class CoreTest extends Arquillian {
         String iocId1 = "d056ec334e3c046f0d7fdde6f3d02c8b";
         String iocId2 = "1c9b683e445fcb631cd86b06c882dd07";
 
-        IoCRecord ioc1 = archiveService.getIoCRecordById(iocId1);
-        IoCRecord ioc2 = archiveService.getIoCRecordById(iocId2);
+        IoCRecord ioc1 = archiveService.getActiveIoCRecordById(iocId1);
+        IoCRecord ioc2 = archiveService.getActiveIoCRecordById(iocId2);
 
         // note: feed name and types will be ignored since iocIds already exists
         // { feed: [type1 : iocId1, type2:iocId2, ...]}
@@ -297,5 +310,4 @@ public class CoreTest extends Arquillian {
         assertNotNull(matchedIoc1.get("time").getAsJsonObject().get("observation"));
         assertNotNull(matchedIoc1.get("time").getAsJsonObject().get("received_by_core"));
     }
-
 }

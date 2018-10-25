@@ -241,9 +241,9 @@ public class WhitelistCacheServiceTest extends Arquillian {
         BlacklistedRecord whiteBR = webApi.getBlacklistedRecord(whiteSourceId);
         BlacklistedRecord whiteSubBR = webApi.getBlacklistedRecord(whiteSubSourceId);
         BlacklistedRecord notWhiteBR = webApi.getBlacklistedRecord(notWhiteSourceId);
-        whitelisted = archiveService.getIoCRecordById(whiteDocId);
-        whitelistedSubdomain = archiveService.getIoCRecordById(whiteSubDocId);
-        notWhitelisted = archiveService.getIoCRecordById(notWhiteDocId);
+        whitelisted = archiveService.getActiveIoCRecordById(whiteDocId);
+        whitelistedSubdomain = archiveService.getActiveIoCRecordById(whiteSubDocId);
+        notWhitelisted = archiveService.getActiveIoCRecordById(notWhiteDocId);
         int counter = 0;
         while ((whiteBR == null || whiteSubBR == null || notWhiteBR == null ||
                 whitelisted == null || whitelistedSubdomain == null || notWhitelisted == null) && counter < 10) {
@@ -251,9 +251,9 @@ public class WhitelistCacheServiceTest extends Arquillian {
             whiteBR = webApi.getBlacklistedRecord(whiteSourceId);
             whiteSubBR = webApi.getBlacklistedRecord(whiteSubSourceId);
             notWhiteBR = webApi.getBlacklistedRecord(notWhiteSourceId);
-            whitelisted = archiveService.getIoCRecordById(whiteDocId);
-            whitelistedSubdomain = archiveService.getIoCRecordById(whiteSubDocId);
-            notWhitelisted = archiveService.getIoCRecordById(notWhiteDocId);
+            whitelisted = archiveService.getActiveIoCRecordById(whiteDocId);
+            whitelistedSubdomain = archiveService.getActiveIoCRecordById(whiteSubDocId);
+            notWhitelisted = archiveService.getActiveIoCRecordById(notWhiteDocId);
             counter++;
         }
         assertNotNull(whiteBR);
@@ -266,18 +266,18 @@ public class WhitelistCacheServiceTest extends Arquillian {
         before.add(Calendar.SECOND, -1);
         assertTrue(coreService.processWhitelistIoCRecord(IoCFactory.getIoCForWhitelist(null, "phishing.cz", "white", false)));
         counter = 0;
-        whitelisted = archiveService.getIoCRecordById(whitelisted.getDocumentId());
+        whitelisted = archiveService.getActiveIoCRecordById(whitelisted.getDocumentId());
         assertNotNull(whitelisted);
-        whitelistedSubdomain = archiveService.getIoCRecordById(whitelistedSubdomain.getDocumentId());
+        whitelistedSubdomain = archiveService.getActiveIoCRecordById(whitelistedSubdomain.getDocumentId());
         assertNotNull(whitelistedSubdomain);
         whiteBR = webApi.getBlacklistedRecord(whitelisted.getSource().getId().getValue());
         whiteSubBR = webApi.getBlacklistedRecord(whitelistedSubdomain.getSource().getId().getValue());
         while ((whitelisted.getWhitelistName() == null || whiteBR != null ||
                 whitelistedSubdomain.getWhitelistName() == null || whiteSubBR != null) && counter < 10) {
             Thread.sleep(100);
-            whitelisted = archiveService.getIoCRecordById(whitelisted.getDocumentId());
+            whitelisted = archiveService.getActiveIoCRecordById(whitelisted.getDocumentId());
             assertNotNull(whitelisted, "Something strange has happend. While waiting for the ioc to be set as whitelisted, it disappeared...");
-            whitelistedSubdomain = archiveService.getIoCRecordById(whitelistedSubdomain.getDocumentId());
+            whitelistedSubdomain = archiveService.getActiveIoCRecordById(whitelistedSubdomain.getDocumentId());
             assertNotNull(whitelistedSubdomain, "Something strange has happend. While waiting for the ioc to be set as whitelisted, it disappeared...");
             whiteBR = webApi.getBlacklistedRecord(whitelisted.getSource().getId().getValue());
             whiteSubBR = webApi.getBlacklistedRecord(whitelistedSubdomain.getSource().getId().getValue());
@@ -297,7 +297,7 @@ public class WhitelistCacheServiceTest extends Arquillian {
         assertTrue(before.getTimeInMillis() < whitelistedSubdomain.getTime().getWhitelisted().getTime());
         assertTrue(after.getTimeInMillis() > whitelisted.getTime().getWhitelisted().getTime());
         assertTrue(after.getTimeInMillis() > whitelistedSubdomain.getTime().getWhitelisted().getTime());
-        notWhitelisted = archiveService.getIoCRecordById(notWhitelisted.getDocumentId());
+        notWhitelisted = archiveService.getActiveIoCRecordById(notWhitelisted.getDocumentId());
         assertNotNull(notWhitelisted);
         assertNull(notWhitelisted.getWhitelistName());
         assertNull(notWhitelisted.getTime().getWhitelisted());
@@ -344,20 +344,20 @@ public class WhitelistCacheServiceTest extends Arquillian {
         assertNotNull(evilIP);
         String evilIPDocId = evilIP.getDocumentId();
 
-        trusted = archiveService.getIoCRecordById(trustedDocId);
-        veryTrusted = archiveService.getIoCRecordById(veryTrustedDocId);
-        whiteIP = archiveService.getIoCRecordById(whiteIPDocId);
-        evil = archiveService.getIoCRecordById(evilDocId);
-        evilIP = archiveService.getIoCRecordById(evilIPDocId);
+        trusted = archiveService.getActiveIoCRecordById(trustedDocId);
+        veryTrusted = archiveService.getActiveIoCRecordById(veryTrustedDocId);
+        whiteIP = archiveService.getActiveIoCRecordById(whiteIPDocId);
+        evil = archiveService.getActiveIoCRecordById(evilDocId);
+        evilIP = archiveService.getActiveIoCRecordById(evilIPDocId);
         int counter = 0;
         while ((trusted == null || veryTrusted == null || whiteIP == null || evil == null || evilIP == null)
                 && counter < 10) {
             Thread.sleep(100);
-            trusted = archiveService.getIoCRecordById(trustedDocId);
-            veryTrusted = archiveService.getIoCRecordById(veryTrustedDocId);
-            whiteIP = archiveService.getIoCRecordById(whiteIPDocId);
-            evil = archiveService.getIoCRecordById(evilDocId);
-            evilIP = archiveService.getIoCRecordById(evilIPDocId);
+            trusted = archiveService.getActiveIoCRecordById(trustedDocId);
+            veryTrusted = archiveService.getActiveIoCRecordById(veryTrustedDocId);
+            whiteIP = archiveService.getActiveIoCRecordById(whiteIPDocId);
+            evil = archiveService.getActiveIoCRecordById(evilDocId);
+            evilIP = archiveService.getActiveIoCRecordById(evilIPDocId);
             counter++;
         }
         assertNotNull(trusted);

@@ -142,7 +142,7 @@ public class DNSApiLoggingEJB {
     }
 
     private static IoCRecord processRegularIoCId(final String iocId, ArchiveService archiveService, Logger log) throws ArchiveException {
-        final IoCRecord ioc = archiveService.getIoCRecordById(iocId);
+        final IoCRecord ioc = archiveService.getActiveIoCRecordById(iocId);
         if (ioc == null) {
             log.warning("Match IoC with id " + iocId + " was not found (deactivated??) -> skipping.");
             return null;
@@ -192,10 +192,10 @@ public class DNSApiLoggingEJB {
 
             archiveService.archiveReceivedIoCRecord(ioc);
 
-            IoCRecord retrievedIoC = archiveService.getIoCRecordById(ioc.getDocumentId());
+            IoCRecord retrievedIoC = archiveService.getActiveIoCRecordById(ioc.getDocumentId());
 
             for (int i = 0; retrievedIoC == null && i < ARCHIVE_FAILED_TRIALS; i++) {
-                retrievedIoC = archiveService.getIoCRecordById(ioc.getDocumentId());
+                retrievedIoC = archiveService.getActiveIoCRecordById(ioc.getDocumentId());
             }
 
             if (retrievedIoC == null) {

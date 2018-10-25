@@ -164,9 +164,9 @@ public class CoreServiceEJB implements CoreService {
             throw new IoCValidationException("Accuchecker report doesn't have required field accuracy.");
         }
         boolean response = true;
-        final HashMap<String, Integer> report_accuracy = report.getAccuracy();
-        String source_id_value = report.getSource().getId().getValue();
-        List<IoCRecord> iocs = archiveService.getMatchingActiveEnries("source.id.value", source_id_value);
+        final HashMap<String, Integer> reportAccuracy = report.getAccuracy();
+        String sourceIdValue = report.getSource().getId().getValue();
+        List<IoCRecord> iocs = archiveService.getMatchingActiveEntries("source.id.value", sourceIdValue);
         for (IoCRecord ioc : iocs) {
 
             HashMap<String, Integer> combined_accuracy = new HashMap<>();
@@ -174,7 +174,7 @@ public class CoreServiceEJB implements CoreService {
                 combined_accuracy.putAll(ioc.getAccuracy());
             }
             // report gets inserted after original ioc.accuracy to update old values corresponding to the given accuchecker feed
-            combined_accuracy.putAll(report_accuracy);
+            combined_accuracy.putAll(reportAccuracy);
             ioc.setAccuracy(combined_accuracy);
 
             archiveService.setReportToIoCRecord(report, ioc.getDocumentId());

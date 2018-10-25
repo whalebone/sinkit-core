@@ -206,7 +206,7 @@ public class ApiIntegrationTest extends Arquillian {
         //REST port is not SINKIT_ELASTIC_PORT
         WebRequest requestSettings = new WebRequest(
                 new URL("http://" + System.getenv("SINKIT_ELASTIC_HOST") + ":" + System.getenv("SINKIT_ELASTIC_REST_PORT") +
-                        "/" + ArchiveServiceEJB.ELASTIC_IOC_INDEX + "/"), HttpMethod.DELETE);
+                        "/" + ArchiveServiceEJB.ELASTIC_IOC_INDEX_ACTIVE + "/"), HttpMethod.DELETE);
 
         Page page;
         try {
@@ -253,7 +253,7 @@ public class ApiIntegrationTest extends Arquillian {
         String fqdn = "phishing.ru";
         String iocId = "d056ec334e3c046f0d7fdde6f3d02c8b";  // id hash from values above
 
-        IoCRecord ioc = archiveService.getIoCRecordById(iocId);
+        IoCRecord ioc = archiveService.getActiveIoCRecordById(iocId);
         assertNotNull(ioc, "Excpecting IoC, but got null with fqdn: " + fqdn + ", type: " + type + ", feed: " + feed);
         assertEquals(ioc.getFeed().getName(), feed, "Expected feed.name: " + feed + ", but got: " + ioc.getFeed().getName());
         assertEquals(ioc.getSource().getId().getType(), IoCSourceIdType.FQDN, "Expected source.id.type: " + IoCSourceIdType.FQDN + ", but got: " + ioc.getSource().getId().getType());
@@ -458,7 +458,7 @@ public class ApiIntegrationTest extends Arquillian {
         String fqdn = "accuracy.phishing.ru";
         String iocId = "d9ada7e11d0a2917fd6473cac15fe74f";  // id hash from values above
 
-        IoCRecord ioc = archiveService.getIoCRecordById(iocId);
+        IoCRecord ioc = archiveService.getActiveIoCRecordById(iocId);
         assertNotNull(ioc, "Excpecting IoC, but got null ");
         assertEquals(ioc.getFeed().getName(), feed, "Expected feed.name: " + feed + ", but got: " + ioc.getFeed().getName());
         assertEquals(ioc.getSource().getId().getType(), IoCSourceIdType.FQDN, "Expected source.id.type: " + IoCSourceIdType.FQDN + ", but got: " + ioc.getSource().getId().getType());
