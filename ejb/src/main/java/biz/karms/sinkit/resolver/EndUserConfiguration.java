@@ -21,6 +21,6 @@ public class EndUserConfiguration implements Serializable {
     private Set<String> blacklist;
 
     public String getId() {
-        return new StringBuilder().append(clientId).append(":").append(userId).toString();
+        return String.valueOf(clientId) + ":" + userId;
     }
 }
