@@ -45,8 +45,6 @@ public class ArchiveServiceEJB implements ArchiveService {
     public static final String ELASTIC_LOG_INDEX_SUFFIX_FORMAT = "yyyy-MM-dd";
     public static final String ELASTIC_LOG_TYPE = "match";
 
-    private static final DateFormat DATEFORMATTER = new SimpleDateFormat(ELASTIC_DATE_FORMAT);
-
     @Inject
     private Logger log;
 
@@ -64,8 +62,7 @@ public class ArchiveServiceEJB implements ArchiveService {
         //log.info("Searching archive for active IoCs with seen.last older than " + hours + " hours.");
         final Calendar c = Calendar.getInstance();
         c.add(Calendar.HOUR, -hours);
-        //TODO: Is this thread safe?
-        final String tooOld = DATEFORMATTER.format(c.getTime());
+        final String tooOld = new SimpleDateFormat(ELASTIC_DATE_FORMAT).format(c.getTime());
         final QueryBuilder query = QueryBuilders.filteredQuery(
                 QueryBuilders.termQuery("active", true),
                 FilterBuilders.rangeFilter("seen.last").lt(tooOld)
