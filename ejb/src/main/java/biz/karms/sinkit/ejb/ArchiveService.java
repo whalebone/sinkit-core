@@ -30,9 +30,9 @@ public interface ArchiveService {
 
     List<IoCRecord> getActiveNotWhitelistedIoCs(int from, int size) throws ArchiveException;
 
-    List<IoCRecord> getMatchingActiveEnries(String name, String value) throws ArchiveException;
+    List<IoCRecord> getMatchingActiveEntries(String name, String value) throws ArchiveException;
 
-    IoCRecord getIoCRecordById(String id) throws ArchiveException;
+    IoCRecord getActiveIoCRecordById(String id) throws ArchiveException;
 
     IoCRecord getIoCRecordByUniqueRef(String uniqueRef) throws ArchiveException;
 

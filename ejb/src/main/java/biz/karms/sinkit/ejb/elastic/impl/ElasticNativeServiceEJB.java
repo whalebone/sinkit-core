@@ -14,6 +14,7 @@ import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.action.update.UpdateRequestBuilder;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.indices.IndexMissingException;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.sort.SortBuilder;
@@ -57,7 +58,7 @@ public class ElasticNativeServiceEJB implements ElasticService {
                     .execute()
                     .actionGet();
             if (!response.isExists()) {
-                log.log(Level.WARNING, "Can't get document with id:  " + id + ". Document doesn't exists.");
+                log.log(Level.FINE, "Can't get document with id:  " + id + ". Document doesn't exists in index" + index);
                 return null;
             }
             if (response.isSourceEmpty()) {
@@ -67,6 +68,9 @@ public class ElasticNativeServiceEJB implements ElasticService {
             T document = gson.fromJson(response.getSourceAsString(), clazz);
             document.setDocumentId(response.getId());
             return document;
+        } catch (IndexMissingException ims) {
+            log.log(Level.FINE, "Can't get document with id: " + id + ". Index [" + index + "] is missing.");
+            return null;
         } catch (Exception ex) {
             log.log(Level.SEVERE, "Getting document by id from elastic failed: " + ex.getMessage());
             ex.printStackTrace();

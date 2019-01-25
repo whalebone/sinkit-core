@@ -36,9 +36,13 @@ import static biz.karms.sinkit.ejb.elastic.ElasticResources.ELASTIC_DATE_FORMAT;
 @Stateless
 public class ArchiveServiceEJB implements ArchiveService {
 
-    public static final String ELASTIC_IOC_INDEX = "iocs";
+    public static final String ELASTIC_IOC_INDEX_ACTIVE = "iocs_v3";
+    public static final String ELASTIC_IOC_INDEX_INACTIVE = "iocs-inactive";
+    public static final String ELASTIC_IOC_INDEX_INACTIVE_SUFFIX_FORMAT = "yyyy-MM";
+    public static final String ELASTIC_IOC_ALIAS = "iocs";
     public static final String ELASTIC_IOC_TYPE = "intelmq";
     public static final String ELASTIC_LOG_INDEX = "logs";
+    public static final String ELASTIC_LOG_INDEX_SUFFIX_FORMAT = "yyyy-MM-dd";
     public static final String ELASTIC_LOG_TYPE = "match";
 
     @Inject
@@ -63,7 +67,7 @@ public class ArchiveServiceEJB implements ArchiveService {
                 QueryBuilders.termQuery("active", true),
                 FilterBuilders.rangeFilter("seen.last").lt(tooOld)
         );
-        return elasticService.search(query, null, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, IoCRecord.class);
+        return elasticService.search(query, null, ELASTIC_IOC_INDEX_ACTIVE, ELASTIC_IOC_TYPE, IoCRecord.class);
     }
 
     @Override
@@ -72,7 +76,7 @@ public class ArchiveServiceEJB implements ArchiveService {
         final String queryString = "active: true AND NOT whitelist_name: * AND " +
                 "(source.id.value: " + sourceId + " OR source.id.value: *." + sourceId + ")";
         final QueryBuilder query = QueryBuilders.queryStringQuery(queryString).analyzeWildcard(true);
-        return elasticService.search(query, null, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, IoCRecord.class);
+        return elasticService.search(query, null, ELASTIC_IOC_INDEX_ACTIVE, ELASTIC_IOC_TYPE, IoCRecord.class);
     }
 
     @Override
@@ -88,31 +92,31 @@ public class ArchiveServiceEJB implements ArchiveService {
         fieldsToUpdate.setAccuracy(ioc.getAccuracy());
         fieldsToUpdate.setSeen(seen);
 
-        return elasticService.update(ioc.getDocumentId(), fieldsToUpdate, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, ioc);
+        return elasticService.update(ioc.getDocumentId(), fieldsToUpdate, ELASTIC_IOC_INDEX_ACTIVE, ELASTIC_IOC_TYPE, ioc);
     }
 
     /**
      * Wrapper method for elasticService.update
      *
      * @param report
-     * @param document_id
+     * @param documentId
      * @return true if update is processed
      * @throws ArchiveException
      */
     @Override
-    public boolean setReportToIoCRecord(final IoCAccuCheckerReport report, String document_id) throws ArchiveException {
-        return elasticService.update(document_id, report, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, null);
+    public boolean setReportToIoCRecord(final IoCAccuCheckerReport report, final String documentId) throws ArchiveException {
+        return elasticService.update(documentId, report, ELASTIC_IOC_INDEX_ACTIVE, ELASTIC_IOC_TYPE, null);
 
     }
 
+    /**
+     * Deactivation in archive: Old active IoC record is deleted from active index and new one inactive is created
+     * in inactive index
+     */
     @Override
     public IoCRecord deactivateRecord(final IoCRecord ioc) throws ArchiveException {
-        /**
-         * Deactivation in archive: Old active IoC record is deleted and new one inactive is created.
-         * This is done because in elastic is not possible to update id of record.
-         */
         //delete old active ioc
-        elasticService.delete(ioc, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE);
+        elasticService.delete(ioc, ELASTIC_IOC_INDEX_ACTIVE, ELASTIC_IOC_TYPE);
 
         //archive deactivated ioc with new id
         ioc.getTime().setDeactivated(Calendar.getInstance().getTime());
@@ -121,28 +125,26 @@ public class ArchiveServiceEJB implements ArchiveService {
         //IMPORTANT - id has to be computed after the deactivated time is set because it's part of the hash
         ioc.setDocumentId(IoCIdentificationUtils.computeHashedId(ioc));
 
-        return elasticService.index(ioc, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE);
+        return elasticService.index(ioc, iocIndexInactive(ioc), ELASTIC_IOC_TYPE);
     }
 
     @Override
     public IoCRecord setRecordWhitelisted(final IoCRecord ioc, final String whitelistName) throws ArchiveException {
         ioc.getTime().setWhitelisted(Calendar.getInstance().getTime());
         ioc.setWhitelistName(whitelistName);
-        return elasticService.index(ioc, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE);
+        return elasticService.index(ioc, ELASTIC_IOC_INDEX_ACTIVE, ELASTIC_IOC_TYPE);
     }
 
     @Override
     public EventLogRecord archiveEventLogRecord(final EventLogRecord logRecord) throws ArchiveException {
-        final DateFormat df = new SimpleDateFormat("YYYY-MM-dd");
-        final String index = ELASTIC_LOG_INDEX + "-" + df.format(logRecord.getLogged());
+        final String index = logIndex(logRecord);
         log.log(Level.FINE, "elasticService.index logging logrecord, index=" + index);
         return elasticService.index(logRecord, index, ELASTIC_LOG_TYPE);
     }
 
     @Override
     public EventLogRecord archiveEventLogRecordUsingLogstash(EventLogRecord logRecord) throws ArchiveException {
-        final DateFormat df = new SimpleDateFormat("YYYY-MM-dd");
-        final String index = ELASTIC_LOG_INDEX + "-" + df.format(logRecord.getLogged());
+        final String index = logIndex(logRecord);
         log.log(Level.FINE, "archiveService.archiveEventLogRecordUsingLogstash logging logrecord, index=" + index);
         logstashClient.sentToLogstash(logRecord, index, ELASTIC_LOG_TYPE);
         return logRecord;
@@ -151,17 +153,16 @@ public class ArchiveServiceEJB implements ArchiveService {
     /**
      * Lists matching active entries, lists up to DEF_LIMIT of them (defined in ElasticServiceEJB.class)
      *
-     * @param name  name of the field to be matched  against
+     * @param name  name of the field to be matched against
      * @param value value of this field
      * @return List of matching entries
      * @throws ArchiveException
      */
     @Override
-    public List<IoCRecord> getMatchingActiveEnries(String name, String value) throws ArchiveException {
+    public List<IoCRecord> getMatchingActiveEntries(String name, String value) throws ArchiveException {
         final QueryBuilder query = QueryBuilders.boolQuery().must(
                 QueryBuilders.termQuery(name, value)).must(QueryBuilders.termQuery("active", true));
-        // FilterBuilders.missingFilter("whitelist_name")
-        return elasticService.search(query, null, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, IoCRecord.class);
+        return elasticService.search(query, null, ELASTIC_IOC_INDEX_ACTIVE, ELASTIC_IOC_TYPE, IoCRecord.class);
     }
 
     @Override
@@ -171,13 +172,13 @@ public class ArchiveServiceEJB implements ArchiveService {
                 FilterBuilders.missingFilter("whitelist_name")
         );
 
-        return elasticService.search(query, null, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, from, size, IoCRecord.class);
+        return elasticService.search(query, null, ELASTIC_IOC_INDEX_ACTIVE, ELASTIC_IOC_TYPE, from, size, IoCRecord.class);
     }
 
     @Override
-    public IoCRecord getIoCRecordById(final String id) throws ArchiveException {
-        //log.log(Level.WARNING, "getIoCRecordById: id: "+id+", ELASTIC_IOC_INDEX: "+ELASTIC_IOC_INDEX+", ELASTIC_IOC_TYPE: "+ELASTIC_IOC_TYPE);
-        return elasticService.getDocumentById(id, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, IoCRecord.class);
+    public IoCRecord getActiveIoCRecordById(final String id) throws ArchiveException {
+        //log.log(Level.WARNING, "getActiveIoCRecordById: id: "+id+", ELASTIC_IOC_INDEX: "+ELASTIC_IOC_INDEX+", ELASTIC_IOC_TYPE: "+ELASTIC_IOC_TYPE);
+        return elasticService.getDocumentById(id, ELASTIC_IOC_INDEX_ACTIVE, ELASTIC_IOC_TYPE, IoCRecord.class);
     }
 
     @Override
@@ -185,7 +186,7 @@ public class ArchiveServiceEJB implements ArchiveService {
         final QueryBuilder query = QueryBuilders.termQuery("unique_ref", uniqueRef);
         final SortBuilder sort = SortBuilders.fieldSort("time.received_by_core").order(SortOrder.DESC);
 
-        final List<IoCRecord> iocs = elasticService.search(query, sort, ELASTIC_IOC_INDEX, ELASTIC_IOC_TYPE, IoCRecord.class);
+        final List<IoCRecord> iocs = elasticService.search(query, sort, ELASTIC_IOC_ALIAS, ELASTIC_IOC_TYPE, IoCRecord.class);
         if (CollectionUtils.isEmpty(iocs)) {
             return null;
         }
@@ -194,5 +195,15 @@ public class ArchiveServiceEJB implements ArchiveService {
                     "Record with document_id: " + iocs.get(0).getDocumentId() + " was used as a reference. Please fix this inconsistency.");
         }
         return iocs.get(0);
+    }
+
+    private static String logIndex(EventLogRecord logRecord) {
+        final DateFormat df = new SimpleDateFormat(ELASTIC_LOG_INDEX_SUFFIX_FORMAT);
+        return ELASTIC_LOG_INDEX + "-" + df.format(logRecord.getLogged());
+    }
+
+    private static String iocIndexInactive(IoCRecord inactiveIoC) {
+        final DateFormat df = new SimpleDateFormat(ELASTIC_IOC_INDEX_INACTIVE_SUFFIX_FORMAT);
+        return ELASTIC_IOC_INDEX_INACTIVE + "-" + df.format(inactiveIoC.getTime().getDeactivated());
     }
 }
