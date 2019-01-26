@@ -66,5 +66,7 @@ public interface WebApi {
 
     EndUserConfiguration deleteEndUserConfiguration(String identity);
 
+    List<EndUserConfiguration> deleteEndUserConfigurationForClient(String identity);
+
     List<EndUserConfiguration> getAllEndUserConfigurations();
 }

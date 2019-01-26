@@ -593,13 +593,27 @@ public class WebApiEJB implements WebApi {
 
     @Override
     public EndUserConfiguration deleteEndUserConfiguration(String id) {
-        return endUserConfigurationCache.remove(id);
+        return (EndUserConfiguration) cacheManagerForIndexableCaches.getCache(SinkitCacheName.end_user_configuration.name()).remove(id);
+    }
+
+    @Override
+    public List<EndUserConfiguration> deleteEndUserConfigurationForClient(String id) {
+        final RemoteCache<String, EndUserConfiguration> endUserConfigurationRemoteCache =
+                cacheManagerForIndexableCaches.getCache(SinkitCacheName.end_user_configuration.name());
+        final QueryFactory qf = Search.getQueryFactory(endUserConfigurationRemoteCache);
+        final Query query = qf.from(EndUserConfiguration.class)
+                .having("clientId").eq(id)
+                .toBuilder()
+                .build();
+        final List<EndUserConfiguration> deletedOnes = query.list();
+        deletedOnes.forEach(c -> endUserConfigurationRemoteCache.remove(c.getId()));
+        return deletedOnes;
     }
 
     @Override
     public List<EndUserConfiguration> getAllEndUserConfigurations() {
-        final RemoteCache<String, EndUserConfiguration> endUserConfigurationRemoteCache = cacheManagerForIndexableCaches.getCache(SinkitCacheName.end_user_configuration
-                .name());
+        final RemoteCache<String, EndUserConfiguration> endUserConfigurationRemoteCache =
+                cacheManagerForIndexableCaches.getCache(SinkitCacheName.end_user_configuration.name());
         final QueryFactory qf = Search.getQueryFactory(endUserConfigurationRemoteCache);
         final Query query = qf.from(EndUserConfiguration.class).build();
         return query.list();
