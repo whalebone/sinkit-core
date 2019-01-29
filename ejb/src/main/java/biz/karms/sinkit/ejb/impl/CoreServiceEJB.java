@@ -26,7 +26,6 @@ import javax.ejb.Stateless;
 import javax.inject.Inject;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -164,20 +163,13 @@ public class CoreServiceEJB implements CoreService {
             throw new IoCValidationException("Accuchecker report doesn't have required field accuracy.");
         }
         boolean response = true;
-        final HashMap<String, Integer> reportAccuracy = report.getAccuracy();
-        String sourceIdValue = report.getSource().getId().getValue();
-        List<IoCRecord> iocs = archiveService.getMatchingActiveEntries("source.id.value", sourceIdValue);
+        String source_id_value = report.getSource().getId().getValue();
+        List<IoCRecord> iocs = archiveService.getMatchingActiveEntries("source.id.value", source_id_value);
         for (IoCRecord ioc : iocs) {
 
-            HashMap<String, Integer> combined_accuracy = new HashMap<>();
-            if (ioc.getAccuracy() != null) { //nullity shouldn't happen
-                combined_accuracy.putAll(ioc.getAccuracy());
-            }
-            // report gets inserted after original ioc.accuracy to update old values corresponding to the given accuchecker feed
-            combined_accuracy.putAll(reportAccuracy);
-            ioc.setAccuracy(combined_accuracy);
+            ioc.updateWithAccuCheckerReport(report);
 
-            archiveService.setReportToIoCRecord(report, ioc.getDocumentId());
+            archiveService.archiveReceivedIoCRecord(ioc);
             boolean cache_response = blacklistCacheService.addToCache(ioc);
             if (!cache_response) {
                 response = false;

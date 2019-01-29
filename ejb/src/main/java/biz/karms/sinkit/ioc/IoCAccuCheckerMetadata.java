@@ -16,11 +16,4 @@ public class IoCAccuCheckerMetadata {
     private Date timestamp;
     private String content;
 
-    @Override
-    public String toString() {
-        return "IoCAccuCheckerMetadata{" +
-                "content=" + content +
-                ", timestamp=" + timestamp.toString() +
-                '}';
-    }
 }

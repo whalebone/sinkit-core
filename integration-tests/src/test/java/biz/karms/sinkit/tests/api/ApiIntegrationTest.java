@@ -448,6 +448,7 @@ public class ApiIntegrationTest extends Arquillian {
 
     /**
      * Test checking whether accuracy has also been updated in Elastic
+     *
      * @throws Exception
      */
     @Test(enabled = true, dataProvider = Arquillian.ARQUILLIAN_DATA_PROVIDER, priority = 14)
@@ -467,6 +468,7 @@ public class ApiIntegrationTest extends Arquillian {
         assertEquals(ioc.getAccuracy().get("feed"), new Integer(80));
         assertEquals(ioc.getAccuracy().get("accufeed1"), new Integer(80));
         assertEquals(ioc.getAccuracy().get("passivedns"), new Integer(40));
+        assertEquals(ioc.getAccuracySum(), new Integer(80 + 40 + 80));
         assertEquals(ioc.getMetadata().get("accufeed1").getContent(), "Some content");
         assertNotNull(ioc.getTime().getObservation(), "Expecting time.observation, but got null");
     }
