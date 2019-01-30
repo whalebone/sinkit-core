@@ -108,8 +108,8 @@ public class CoreServiceEJBTest {
         iocs.add(ioc1);
         iocs.add(ioc2);
         when(archiveService.getMatchingActiveEntries("source.id.value", "mal.com")).thenReturn(iocs);
-        when(archiveService.setReportToIoCRecord(accu_report, "1")).thenReturn(true);
-        when(archiveService.setReportToIoCRecord(accu_report, "2")).thenReturn(true);
+        when(archiveService.archiveReceivedIoCRecord(ioc1)).thenReturn(true);
+        when(archiveService.archiveReceivedIoCRecord(ioc2)).thenReturn(true);
         when(blacklistCacheService.addToCache(iocs.get(0))).thenReturn(true);
         when(blacklistCacheService.addToCache(iocs.get(1))).thenReturn(true);
 
@@ -118,8 +118,8 @@ public class CoreServiceEJBTest {
 
         //verify
         verify(archiveService).getMatchingActiveEntries("source.id.value", "mal.com");
-        verify(archiveService).setReportToIoCRecord(accu_report, "1");
-        verify(archiveService).setReportToIoCRecord(accu_report, "2");
+        verify(archiveService).archiveReceivedIoCRecord(ioc1);
+        verify(archiveService).archiveReceivedIoCRecord(ioc2);
         verify(blacklistCacheService).addToCache(iocs.get(0));
         verify(blacklistCacheService).addToCache(iocs.get(1));
         assertEquals(new Integer(80), iocs.get(0).getAccuracy().get("feed"));

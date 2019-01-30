@@ -91,6 +91,7 @@ public class ArchiveServiceEJB implements ArchiveService {
         seen.setLast(ioc.getSeen().getLast());
         fieldsToUpdate.setAccuracy(ioc.getAccuracy());
         fieldsToUpdate.setSeen(seen);
+        fieldsToUpdate.setMetadata(ioc.getMetadata());
 
         return elasticService.update(ioc.getDocumentId(), fieldsToUpdate, ELASTIC_IOC_INDEX_ACTIVE, ELASTIC_IOC_TYPE, ioc);
     }
