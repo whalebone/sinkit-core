@@ -23,7 +23,7 @@ import java.util.logging.Logger;
 public class ResolverConfigurationREST {
 
     @Inject
-    private transient Logger log;
+    private Logger log;
 
     @EJB
     private WebApi webapi;
@@ -88,6 +88,12 @@ public class ResolverConfigurationREST {
     @Path("/resolver/enduser/{id}")
     public EndUserConfiguration deleteEndUserConfigurationRecord(@PathParam("id") String id) {
         return webapi.deleteEndUserConfiguration(id);
+    }
+
+    @DELETE
+    @Path("/resolver/enduser/client/{id}")
+    public List<EndUserConfiguration> deleteEndUserConfigurationForClient(@PathParam("id") String id) {
+        return webapi.deleteEndUserConfigurationForClient(id);
     }
 
     @GET
