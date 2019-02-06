@@ -67,7 +67,7 @@ jobs:
       - restore_cache: # restore the saved cache after the first run or if `pom.xml` has changed
           key: sinkit-core
       
-      - run: mvn install -DskipTests
+      - run: mvn install -DskipTests -Djdk.net.URLClassPath.disableClassPathURLCheck=true
 # gets the project dependencies
       
       - save_cache: # saves the project dependencies
@@ -81,4 +81,5 @@ jobs:
       - run: curl -XPUT localhost:9200/_template/passivedns -d @integration-tests/src/test/resources/elastic_passivedns.json
 
       # run tests!
-      - run: mvn integration-test -Parq-wildfly-managed -Dhotrod_host=127.0.0.1 -Dhotrod_port=11322
+      - run: mvn integration-test -Parq-wildfly-managed -Dhotrod_host=127.0.0.1 -Dhotrod_port=11322 -Djdk.net.URLClassPath.disableClassPathURLCheck=true
+
